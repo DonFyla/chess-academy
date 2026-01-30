@@ -69,9 +69,9 @@ function ExpertTutorList() {
         </div>
       ))}
       
-      <button className="w-full mt-2 py-2 text-sm text-green-800 hover:text-black border border-black/10 hover:bg-black/5 rounded-lg transition-colors">
+      {/* <button className="w-full mt-2 py-2 text-sm text-green-800 hover:text-black border border-black/10 hover:bg-black/5 rounded-lg transition-colors">
         Click here to see what the Nigerian number one player has to say
-      </button>
+      </button> */}
     </div>
   );
 }

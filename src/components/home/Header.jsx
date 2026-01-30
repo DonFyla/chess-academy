@@ -7,14 +7,13 @@ import { mixedItems } from "@/data";
 import Image from "next/image";
 
 function Header() {
-  return (
-    <>
+  return (<>
     <section className="container mx-auto px-6 ">
       <div className="flex gap-3 sm:gap-5 flex-col justify-center items-center">
         <p className="text-3xl text-center sm:text-5xl font-semibold">
           The Moving Train <br /> Online Chess Academy
         </p>
-       
+
         <p className="text-lg sm:text-xl  text-center ">
           We take Special Delight in preparing our Students for greatness. No
           excuses!!! <br />
@@ -47,15 +46,15 @@ function Header() {
           ></Image>
         </div>
       </div> */}
-       
+
     </section>
     <MediaCarousel
-    items={mixedItems}
-    autoPlay={true}
-    interval={6000}
-    showThumbnails={true}
-    
-  />
+      items={mixedItems}
+      autoPlay={true}
+      interval={6000}
+      showThumbnails={true}
+
+    />
   </>
 
   );
