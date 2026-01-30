@@ -9,6 +9,8 @@ import Testimonial from "@/components/home/Testimonial";
 import Footer from "@/components/Footer";
 import Courses from "@/components/home/Courses";
 import QuizApp from "@/components/home/Quiz";
+import { mixedItems } from "@/data";
+import MediaCarousel from "@/components/cards/MediaCarousel";
 // import Lenis from "@studio-freight/lenis";
 // import { useEffect } from "react";
 
@@ -38,7 +40,9 @@ export default function Home() {
   return (
     <div>
       <Navbar />
+      
       <Header />
+      
       <AboutUs />
 
       <Testimonial />
