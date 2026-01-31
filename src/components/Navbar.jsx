@@ -34,6 +34,8 @@ function Navbar() {
     { link: "/gallery", name: "Gallery" },
     { link: "/#contact-us", name: "Contact Us" },
     { link: "/quiz", name: "Quiz" },
+    // { link: "/course", name: "CourseDetail" },
+
   ];
   const isActive = (pathname) => router.pathname === pathname;
 

@@ -1,12 +1,18 @@
 // components/QuizApp.js
 "use client";
 import React from "react";
+import { useState, useRef } from "react";
+import { toPng } from 'html-to-image';
 import QtakerCard from "../cards/QtakerCard";
 import QuestionCard from "../cards/QuestionCard";
 import AnswerCard from "../cards/AnswerCard";
 import { useQuiz } from "../hooks/useQuiz";
+import ShareLinkBox from "../cards/CopyButtonCard";
 
 function QuizApp() {
+  // Add these hooks at top of your component function
+  const resultCardRef = useRef(null);
+  const [isSharing, setIsSharing] = useState(false);
   const {
     currentView,
     qtaker,
@@ -46,12 +52,12 @@ function QuizApp() {
   // Handle answer submission
   const handleSubmitAnswer = async (answer) => {
     if (!qtaker || !currentQuestion) return;
-  
+
     try {
       // 1. submit – returns last_answer_id
       const res = await submitAnswer(qtaker.id, currentQuestion.id, answer);
       if (res.last_answer_id === undefined) throw new Error('Server did not return last_answer_id');
-  
+
       // 2. details – use the id from the response
       await getAnswerDetails(qtaker.id, res.last_answer_id);
     } catch (err) {
@@ -108,7 +114,7 @@ function QuizApp() {
   // Calculate result data once for the result view
   const resultData = (() => {
     if (currentView !== "result") return null;
-    
+
     const displayScore = answerData?.score ?? 0;
     const totalQuestions = answerData?.total_questions ?? 'N/A';
     const percentage = answerData?.percentage ?? 0;
@@ -178,26 +184,75 @@ function QuizApp() {
 
       case "result":
         if (!resultData) return null;
-        
-        const { 
-          percentage, 
-          passed, 
-          currentSkill, 
-          nextSkill, 
-          nextQuestionnaire, 
-          showJoinClassesMessage 
-        } = resultData;
+
+
+
+        // Add these functions inside your component
+        const generateResultImage = async () => {
+          if (!resultCardRef.current) return null;
+          try {
+            setIsSharing(true);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const dataUrl = await toPng(resultCardRef.current, {
+              quality: 1,
+              pixelRatio: 2,
+              backgroundColor: '#f0fdf4',
+            });
+            return dataUrl;
+          } catch (err) {
+            console.error('Failed:', err);
+            return null;
+          } finally {
+            setIsSharing(false);
+          }
+        };
+
+        const handleShare = async () => {
+          const imageUrl = await generateResultImage();
+          if (!imageUrl) return;
+          const response = await fetch(imageUrl);
+          const blob = await response.blob();
+          const file = new File([blob], `result-${currentSkill}.png`, { type: 'image/png' });
+          const shareText = passed
+            ? `I passed ${currentSkill} with ${percentage.toFixed(1)}%!`
+            : `I scored ${percentage.toFixed(1)}% on ${currentSkill}`;
+
+          if (navigator.canShare?.({ files: [file] })) {
+            try {
+              await navigator.share({ title: 'My Result', text: shareText, files: [file] });
+            } catch (err) {
+              if (err.name !== 'AbortError') {
+                const link = document.createElement('a');
+                link.download = `my-result.png`;
+                link.href = imageUrl;
+                link.click();
+              }
+            }
+          } else {
+            const link = document.createElement('a');
+            link.download = `my-result.png`;
+            link.href = imageUrl;
+            link.click();
+          }
+        };
+
+        const { percentage, passed, currentSkill, nextSkill, nextQuestionnaire, showJoinClassesMessage } = resultData;
 
         return (
           <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 py-8 px-4 flex items-center justify-center">
-            <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
+            {/* This div gets captured - ADD REF HERE */}
+            <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full" ref={resultCardRef}>
               <div className="text-center">
                 <h2 className="text-2xl font-bold text-green-600 mb-4">
                   Assessment Complete!
                 </h2>
 
-                {/* Score Display */}
                 <div className="mb-6">
+                  <p className="text-lg font-semibold mb-2">
+                    Candidate: <span className="text-green-600">
+                      {qtaker?.name}
+                    </span>
+                  </p>
                   <p className="text-lg font-semibold mb-2">
                     Score: <span className={percentage >= 60 ? "text-green-600" : "text-red-600"}>
                       {percentage.toFixed(1)}%
@@ -206,26 +261,8 @@ function QuizApp() {
                   <p className={`text-sm font-medium ${passed ? 'text-green-600' : 'text-red-600'}`}>
                     {passed ? '🎉 Congratulations! You passed!' : 'Keep practicing!'}
                   </p>
-                </div>
-
-                {/* Join Classes Message */}
-                {showJoinClassesMessage && (
-                  <div className="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <h3 className="font-semibold text-yellow-800 mb-2">
-                      {passed ? 'Continue Your Journey!' : 'Time to Improve!'}
-                    </h3>
-                    <p className="text-yellow-700 text-sm">
-                      {!passed
-                        ? `Your current level is ${currentSkill}. Join our ${currentSkill} classes to strengthen your foundation and try again!`
-                        : `You've mastered the ${currentSkill} level! Join our ${currentSkill} classes to further enhance your skills.`
-                      }
-                    </p>
-                  </div>
-                )}
-
-                {/* Next Questionnaire Option */}
-                {passed && nextQuestionnaire && (
-                  <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  {passed && nextQuestionnaire && (
+                  <div className="m-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <h3 className="font-semibold text-blue-800 mb-2">
                       Ready for the next level?
                     </h3>
@@ -240,19 +277,72 @@ function QuizApp() {
                     </button>
                   </div>
                 )}
+                </div>
 
-                {/* Restart Button - Show when no next questionnaire */}
-                {(!passed || !nextQuestionnaire) && (
-                  <div className="border-t pt-4">
-                    <button
-                      onClick={() => navigateToView('registration')}
-                      className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-                    >
-                      Start New Assessment
-                    </button>
+                {/* Skill Badge */}
+                <div className="mb-2 inline-block px-4 py-2 bg-green-50 rounded-full border border-green-100">
+                  <span className="text-green-800 text-sm font-semibold">Level: {currentSkill}</span>
+                </div>
+
+                {showJoinClassesMessage && (
+                  <div className="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <h3 className="font-semibold text-yellow-800 mb-2">
+                      {passed ? 'Continue Your Journey!' : 'Time to Improve!'}
+                    </h3>
+                    <p className="text-yellow-700 text-sm">
+                      {!passed ? `Your current level is ${currentSkill}. Join our classes!`
+                        : `You've mastered ${currentSkill}! Join our classes.`
+                      }
+                    </p>
                   </div>
                 )}
+
+                {/* Hidden footer for image branding */}
+                <div className="mt-2 pt-4 border-t border-gray-100 text-xs text-gray-400">
+                  {new Date().toLocaleDateString()}
+                </div>
               </div>
+            </div>
+
+            {/* Controls - Outside capture area */}
+            <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-3 mt-4">
+              <div className="flex items-center gap-3 bg-white p-3 rounded-2xl shadow-xl border border-gray-100">
+                <ShareLinkBox />
+                <button
+                  onClick={handleShare}
+                  disabled={isSharing}
+                  className="flex items-center gap-2 px-6 py-2 rounded-lg font-medium text-sm bg-gradient-to-r from-purple-600 to-pink-600 text-white disabled:opacity-50"
+                >
+                  {isSharing ? 'Generating...' : 'Share Result'}
+                </button>
+              </div>
+
+              {showJoinClassesMessage && (
+                <a
+                  href={`/${currentSkill}`}
+                  className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium shadow-lg"
+                >
+                  View {currentSkill} Course
+                </a>
+              )}
+            </div>
+
+            {/* Side actions */}
+            <div className="fixed top-8 right-8 space-y-3">
+              {/* {passed && nextQuestionnaire && (
+                <button
+                  onClick={handleStartNextQuestionnaire}
+                  className="block w-full bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg hover:bg-blue-700"
+                >
+                  Next: {nextSkill}
+                </button>
+              )} */}
+              <button
+                onClick={() => navigateToView('registration')}
+                className="block w-full bg-gray-600 text-white px-6 py-3 rounded-xl shadow-lg hover:bg-gray-700"
+              >
+                New Assessment
+              </button>
             </div>
           </div>
         );

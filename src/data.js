@@ -237,11 +237,96 @@ export const events = [
   //   ),
   // },
 ];
+
+export const mixedItems = [
+  {
+    url: require( "../public/images/chi-nwak.jpg"),
+    alt: "Introduction slide",
+    caption: "Chiamaka"
+  },
+  {
+    url: require("../public/images/david-enme.jpeg"),
+    alt: "Architecture diagram",
+    caption: "Dadid Chiz"
+  },
+  {
+    url: require("../public/images/pic1.jpg"),
+    alt: "Architecture diagram",
+    caption: "Coach Mickey"
+  },
+  {
+    url: require("../public/images/danielle.jpeg"),
+    alt: "Architecture diagram",
+    caption: "Danielle"
+  },
+  
+  {
+    url: require("../public/images/gabrielle.jpeg"),
+    alt: "Architecture diagram",
+    caption: "Gabrielle"
+  },
+  {
+    url: require("../public/images/recent/chidubem-min.jpg"),
+    alt: "Architecture diagram",
+    caption: "Chidubem"
+  },
+  {
+    url: require("../public/images/recent/imtiyaz-min.jpg"),
+    alt: "Architecture diagram",
+    caption: "Imtiyaz"
+  },
+  {
+    url: require("../public/images/recent/jas-nwak-min.jpg"),
+    alt: "Architecture diagram",
+    caption: "Jason"
+  },
+  {
+    url: require("../public/images/recent/vic-nwak-min.jpg"),
+    alt: "Architecture diagram",
+    caption: "Victor"
+  },
+  {
+    url: require("../public/images/chi-nwak2.jpg"),
+    alt: "Architecture diagram",
+    caption: "Chiamaka"
+  },
+  {
+    url: require("../public/images/coach_mikey.jpg"),
+    alt: "Architecture diagram",
+    caption: "Mickey"
+  },
+  {
+    url: require("../public/images/triple_a.jpg"),
+    alt: "Architecture diagram",
+    caption: "Triple A"
+  },
+  {
+    url: require("../public/images/with_Trophies.jpg"),
+    alt: "Architecture diagram",
+    caption: "Triple A and kids"
+  },
+  {
+    url: require("../public/images/master-raheem.jpeg"),
+    alt: "Architecture diagram",
+    caption: "Raheem"
+  },
+  {
+    url: require("../public/images/master-win.jpeg"),
+    alt: "Architecture diagram",
+    caption: "Win"
+  },
+  // {
+  //   url: "https://example.com/video.webm",
+  //   type: "video",
+  //   muted: true,
+  //   loop: true
+  // }
+];
 export const courses = [
   {
     type: "Beginner",
     stars: 5,
-    link: "https://wa.link/8eeib2",
+    link: "/beginner",
     details:
       "Our beginner chess program teaches the rules, basic principles, and fundamentals to new students. Learn openings, tactics, strategy and more from expert coaches.",
     imagePath: "course-beginner",
@@ -257,7 +342,7 @@ export const courses = [
   {
     type: "Intermediate",
     stars: 5,
-    link: "https://wa.link/rphgnm",
+    link: "/intermediate",
     details:
       "Take your game to the next level with our intermediate training. Classes cover advanced tactics, positional play, endgames and complex openings to step up your skills.",
     image: (
@@ -271,11 +356,11 @@ export const courses = [
   },
 
   {
-    type: "Elite",
+    type: "Expert",
     stars: 5,
-    link: "https://wa.link/w90b5d",
+    link: "/expert",
     details:
-      "Our elite training is tailored for committed students pursuing a career in competitive chess. Learn from international master and grandmaster coaches to take your game to the master level.",
+      "Our elite training is tailored for committed students pursuing a career in competitive chess. Learn from master coaches to take your game to the master level.",
     image: (
       <Image
         src={require(`../public/images/courses/course-elite.svg`)}

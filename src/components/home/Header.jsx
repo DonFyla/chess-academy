@@ -1,16 +1,19 @@
 import React from "react";
 import headerImage from "../../../public/images/others/header.svg";
 import flags from "../../../public/images/others/flags.svg";
+import MediaCarousel from "../cards/MediaCarousel";
+import { mixedItems } from "@/data";
 
 import Image from "next/image";
 
 function Header() {
-  return (
+  return (<>
     <section className="container mx-auto px-6 ">
       <div className="flex gap-3 sm:gap-5 flex-col justify-center items-center">
         <p className="text-3xl text-center sm:text-5xl font-semibold">
           The Moving Train <br /> Online Chess Academy
         </p>
+
         <p className="text-lg sm:text-xl  text-center ">
           We take Special Delight in preparing our Students for greatness. No
           excuses!!! <br />
@@ -20,13 +23,13 @@ function Header() {
         </p>
         <p className="text-center"></p>
         <a
-          href="https://wa.link/uj48gk"
-          className="px-4 py-3 bg-[#5E5044] text-white rounded-full"
+          href="/quiz"
+          className="px-4 py-3  lg:mt-[-30px]  lg:mb-[10px] bg-blue-900 text-white rounded-full text-center"
         >
-          Learn Now
+          Want to know your chess level? Take a quick quick Quiz😎
         </a>
       </div>
-      <div className="mx-auto mt-10 w-fit flex flex-col-reverse md:flex-row">
+      {/* <div className="mx-auto mt-10 w-fit flex flex-col-reverse md:flex-row">
         <Image
           alt="headerImage"
           src={headerImage}
@@ -42,8 +45,18 @@ function Header() {
             height={200}
           ></Image>
         </div>
-      </div>
+      </div> */}
+
     </section>
+    <MediaCarousel
+      items={mixedItems}
+      autoPlay={true}
+      interval={6000}
+      showThumbnails={true}
+
+    />
+  </>
+
   );
 }
 

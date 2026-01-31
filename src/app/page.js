@@ -38,7 +38,9 @@ export default function Home() {
   return (
     <div>
       <Navbar />
+
       <Header />
+
       <AboutUs />
 
       <Testimonial />
