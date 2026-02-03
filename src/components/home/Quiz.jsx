@@ -262,21 +262,22 @@ function QuizApp() {
                     {passed ? '🎉 Congratulations! You passed!' : 'Keep practicing!'}
                   </p>
                   {passed && nextQuestionnaire && (
-                  <div className="m-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h3 className="font-semibold text-blue-800 mb-2">
-                      Ready for the next level?
-                    </h3>
-                    <p className="text-blue-700 text-sm mb-4">
-                      You have unlocked the <strong>{nextSkill}</strong> questionnaire!
-                    </p>
-                    <button
-                      onClick={handleStartNextQuestionnaire}
-                      className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Start {nextSkill} Questionnaire
-                    </button>
-                  </div>
-                )}
+                    <div className="m-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <h3 className="font-semibold text-blue-800 mb-2">
+                        Ready for the next level?
+                      </h3>
+                      <p className="text-blue-700 text-sm mb-4">
+                        You have unlocked the <strong>{nextSkill}</strong> questionnaire!
+                      </p>
+                      <button
+                        onClick={handleStartNextQuestionnaire}
+                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Start {nextSkill} Questionnaire
+                      </button>
+                    </div>
+                  )}
+                 
                 </div>
 
                 {/* Skill Badge */}
@@ -289,11 +290,13 @@ function QuizApp() {
                     <h3 className="font-semibold text-yellow-800 mb-2">
                       {passed ? 'Continue Your Journey!' : 'Time to Improve!'}
                     </h3>
-                    <p className="text-yellow-700 text-sm">
-                      {!passed ? `Your current level is ${currentSkill}. Join our classes!`
+                    <a   href="https://wa.link/uj48gk" className="text-yellow-700 text-sm">
+                      {!passed ? `Your current level is ${currentSkill}. Ready for a coach to take you to the next level? Click here`
                         : `You've mastered ${currentSkill}! Join our classes.`
                       }
-                    </p>
+                    </a>
+                   
+
                   </div>
                 )}
 
