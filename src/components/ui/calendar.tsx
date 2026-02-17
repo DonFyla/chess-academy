@@ -29,8 +29,8 @@ function Calendar({
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse",
-        head_row: "flex",
-        head_cell: "text-[#5E5044] rounded-md w-10 font-medium text-sm",
+        head_row: "flex w-full justify-between",
+        head_cell: "text-[#5E5044] w-10 font-medium text-sm text-center",
         row: "flex w-full mt-2",
         cell: "h-10 w-10 text-center text-sm p-0 relative",
         day: cn(
@@ -43,7 +43,7 @@ function Calendar({
         day_outside:
           "text-gray-400 opacity-50",
         day_disabled: 
-          "text-gray-300 opacity-50 cursor-not-allowed hover:bg-transparent",
+          "text-gray-200 opacity-40 cursor-not-allowed hover:bg-transparent",
         day_range_middle:
           "bg-[#F5EFE7] text-[#5E5044]",
         day_hidden: "invisible",
