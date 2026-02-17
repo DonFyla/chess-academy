@@ -28,28 +28,32 @@ function Calendar({
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
-        table: "w-full border-spacing-0",
-        thead: "block w-full",
-        head_row: "flex w-full justify-between",
-        head_cell: "text-[#5E5044] w-10 font-medium text-sm text-center",
-        tbody: "block w-full",
-        row: "flex w-full justify-between mt-2",
-        cell: "h-10 w-10 text-center text-sm p-0 relative [&:has([aria-disabled])]:opacity-25",
+        table: "w-full",
+        head_row: "grid grid-cols-7 w-full",
+        head_cell: "text-[#5E5044] font-medium text-sm text-center py-1",
+        row: "grid grid-cols-7 w-full mt-1",
+        cell: "h-10 flex items-center justify-center text-sm p-0 relative",
         day: cn(
-          "h-10 w-10 p-0 font-normal rounded-full transition-colors hover:bg-[#F5EFE7]"
+          "h-9 w-9 p-0 font-normal rounded-full transition-colors hover:bg-[#F5EFE7] flex items-center justify-center"
         ),
         day_selected: 
           "bg-[#5E5044] text-white hover:bg-[#4a3f35] hover:text-white",
         day_today: 
           "bg-[#F5EFE7] text-[#5E5044] font-semibold border border-[#5E5044]",
         day_outside:
-          "text-gray-300 opacity-40 aria-selected:bg-[#5E5044]/50 aria-selected:text-white",
+          "text-gray-300 opacity-40",
         day_disabled: 
-          "text-gray-200 opacity-20 pointer-events-none",
+          "text-gray-200 opacity-20 hover:bg-transparent hover:text-gray-200 cursor-default",
         day_range_middle:
           "bg-[#F5EFE7] text-[#5E5044]",
         day_hidden: "invisible",
         ...classNames,
+      }}
+      modifiersStyles={{
+        disabled: {
+          color: '#e5e5e5',
+          opacity: 0.2,
+        }
       }}
       components={{
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4 text-[#5E5044]" />,
