@@ -31,7 +31,7 @@ function Calendar({
         table: "w-full border-collapse",
         head_row: "flex w-full justify-between",
         head_cell: "text-[#5E5044] w-10 font-medium text-sm text-center",
-        row: "flex w-full mt-2",
+        row: "flex w-full mt-2 justify-between",
         cell: "h-10 w-10 text-center text-sm p-0 relative",
         day: cn(
           "h-10 w-10 p-0 font-normal rounded-full transition-colors hover:bg-[#F5EFE7]"
