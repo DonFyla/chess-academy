@@ -138,22 +138,21 @@
 
 .rdp-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 2px;
 }
 
 .rdp-head_cell {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: #5E5044;
   padding: 8px 0;
   text-align: center;
-  width: 14.28%;
 }
 
 .rdp-cell {
   text-align: center;
   padding: 2px;
-  width: 14.28%;
 }
 
 .rdp-day {
@@ -191,8 +190,7 @@
 }
 
 .rdp-day_disabled {
-  color: #e5e5e5 !important;
-  opacity: 0.4;
+  color: #ccc;
   cursor: not-allowed;
 }
 
