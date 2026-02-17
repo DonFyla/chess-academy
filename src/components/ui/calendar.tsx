@@ -29,12 +29,12 @@ function Calendar({
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
         table: "w-full",
-        head_row: "flex",
-        head_cell: "flex-1 text-[#5E5044] font-medium text-[13px] text-center py-2",
+        head_row: "flex w-full",
+        head_cell: "flex-1 text-[#5E5044] font-medium text-sm text-center py-2",
         row: "flex w-full mt-1",
-        cell: "flex-1 h-10 text-center p-0 relative",
+        cell: "flex-1 h-10 text-center text-sm p-0 relative",
         day: cn(
-          "h-9 w-9 p-0 font-normal rounded-full transition-colors hover:bg-[#F5EFE7] inline-flex items-center justify-center text-sm"
+          "h-10 w-10 p-0 font-normal rounded-full transition-colors hover:bg-[#F5EFE7]"
         ),
         day_selected: 
           "bg-[#5E5044] text-white hover:bg-[#4a3f35] hover:text-white",
@@ -43,17 +43,11 @@ function Calendar({
         day_outside:
           "text-gray-400 opacity-40",
         day_disabled: 
-          "text-gray-200 opacity-20 hover:bg-transparent hover:text-gray-200",
+          "text-gray-200 opacity-20 cursor-not-allowed hover:bg-transparent",
         day_range_middle:
           "bg-[#F5EFE7] text-[#5E5044]",
         day_hidden: "invisible",
         ...classNames,
-      }}
-      modifiersStyles={{
-        disabled: { 
-          color: '#e5e7eb',
-          opacity: 0.2 
-        }
       }}
       components={{
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4 text-[#5E5044]" />,
