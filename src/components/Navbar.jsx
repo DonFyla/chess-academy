@@ -30,12 +30,11 @@ function Navbar() {
     { link: "/#about-us", name: "About Us" },
     { link: "/courses", name: "Courses" },
     { link: "/tutors", name: "Tutors" },
-
+    { link: "/book", name: "Book a Session" },
     { link: "/gallery", name: "Gallery" },
     { link: "/#contact-us", name: "Contact Us" },
     { link: "/quiz", name: "Quiz" },
-    // { link: "/course", name: "CourseDetail" },
-
+    { link: "/coach", name: "Coach Login" },
   ];
   const isActive = (pathname) => router.pathname === pathname;
 
@@ -72,12 +71,20 @@ function Navbar() {
             </a>
           ))}
         </div>
-        <a
-          href="https://wa.link/uj48gk"
-          className="px-4 py-3 border-[#5E5044] border text-[#5E5044] rounded-full"
-        >
-          Sign Up Now!
-        </a>
+        <div className="hidden md:flex items-center gap-3">
+          <Link
+            href="/book"
+            className="px-4 py-3 bg-[#5E5044] text-white rounded-full hover:bg-[#4a3f35] transition-colors"
+          >
+            Book a Session
+          </Link>
+          <a
+            href="https://wa.link/uj48gk"
+            className="px-4 py-3 border-[#5E5044] border text-[#5E5044] rounded-full"
+          >
+            Sign Up
+          </a>
+        </div>
         <div className=" flex md:hidden gap-6 h-fit ">
           <button
             onClick={handleClick}

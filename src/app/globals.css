@@ -1,6 +1,6 @@
 @tailwind base;
-  @tailwind components;
-  @tailwind utilities;
+@tailwind components;
+@tailwind utilities;
 
   @layer base {
     :root {
@@ -74,3 +74,130 @@
       @apply bg-background text-foreground;
     }
   }
+
+/* Custom Calendar Styles for Moving Train */
+.rdp {
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: #5E5044;
+  --rdp-background-color: #F5EFE7;
+  margin: 0;
+}
+
+.rdp-months {
+  display: flex;
+  justify-content: center;
+}
+
+.rdp-month {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.rdp-caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 8px 0;
+  margin-bottom: 16px;
+}
+
+.rdp-caption_label {
+  font-weight: 600;
+  font-size: 16px;
+  color: #5E5044;
+}
+
+.rdp-nav {
+  position: absolute;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 8px;
+}
+
+.rdp-nav_button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #e5e5e5;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rdp-nav_button:hover {
+  background: #F5EFE7;
+  border-color: #5E5044;
+}
+
+.rdp-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 2px;
+}
+
+.rdp-head_cell {
+  font-size: 14px;
+  font-weight: 500;
+  color: #5E5044;
+  padding: 8px 0;
+  text-align: center;
+}
+
+.rdp-cell {
+  text-align: center;
+  padding: 2px;
+}
+
+.rdp-day {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background: transparent;
+}
+
+.rdp-day:hover:not([disabled]) {
+  background: #F5EFE7;
+}
+
+.rdp-day_selected {
+  background: #5E5044 !important;
+  color: white !important;
+}
+
+.rdp-day_selected:hover {
+  background: #4a3f35 !important;
+}
+
+.rdp-day_today {
+  background: #F5EFE7;
+  color: #5E5044;
+  font-weight: 600;
+  border: 2px solid #5E5044;
+}
+
+.rdp-day_disabled {
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.rdp-day_outside {
+  color: #ccc;
+}
+
+.rdp-day_hidden {
+  visibility: hidden;
+}
