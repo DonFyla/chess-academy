@@ -28,26 +28,24 @@ function Calendar({
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
-        table: "w-full border-collapse",
-        head_row: "flex w-full pl-0",
-        head_cell: "text-[#5E5044] w-[14.28%] font-medium text-sm text-center pl-0",
-        row: "flex w-full mt-2",
-        cell: cn(
-          "h-10 w-[14.28%] text-center text-sm p-0 relative",
-          "[&[aria-disabled=true]]:opacity-30",
-          "[&[aria-disabled=true]]:text-gray-300"
-        ),
+        table: "w-full border-spacing-0",
+        thead: "block w-full",
+        head_row: "flex w-full justify-between",
+        head_cell: "text-[#5E5044] w-10 font-medium text-sm text-center",
+        tbody: "block w-full",
+        row: "flex w-full justify-between mt-2",
+        cell: "h-10 w-10 text-center text-sm p-0 relative [&:has([aria-disabled])]:opacity-25",
         day: cn(
-          "h-10 w-10 p-0 font-normal rounded-full transition-colors hover:bg-[#F5EFE7] aria-selected:bg-[#5E5044] aria-selected:text-white"
+          "h-10 w-10 p-0 font-normal rounded-full transition-colors hover:bg-[#F5EFE7]"
         ),
         day_selected: 
           "bg-[#5E5044] text-white hover:bg-[#4a3f35] hover:text-white",
         day_today: 
           "bg-[#F5EFE7] text-[#5E5044] font-semibold border border-[#5E5044]",
         day_outside:
-          "text-gray-400 opacity-50",
+          "text-gray-300 opacity-40 aria-selected:bg-[#5E5044]/50 aria-selected:text-white",
         day_disabled: 
-          "text-gray-200 opacity-25 cursor-not-allowed hover:bg-transparent hover:text-gray-200 !bg-transparent",
+          "text-gray-200 opacity-20 pointer-events-none",
         day_range_middle:
           "bg-[#F5EFE7] text-[#5E5044]",
         day_hidden: "invisible",
