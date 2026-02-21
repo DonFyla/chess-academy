@@ -1,6 +1,6 @@
 // lib/api.js
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/questionnaire/api';
-// export const API_BASE_URL = 'https://mtrain-backend-production.up.railway.app/questionnaire/api';
+// export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/questionnaire/api';
+export const API_BASE_URL = 'https://mtrain-backend-production.up.railway.app/questionnaire/api';
 
 // Generic API client
 export const apiClient = {
