@@ -1,6 +1,6 @@
 @tailwind base;
-  @tailwind components;
-  @tailwind utilities;
+@tailwind components;
+@tailwind utilities;
 
   @layer base {
     :root {
@@ -73,4 +73,129 @@
     body {
       @apply bg-background text-foreground;
     }
+  }
+
+  /* ========================================
+     REACT DAY PICKER V9 - PERFECT ALIGNMENT
+     ======================================== */
+
+  /* Container */
+  .rdp-root {
+    --rdp-accent-color: #5E5044;
+    --rdp-accent-background-color: #F5EFE7;
+    margin: 0;
+  }
+
+  /* Month container */
+  .rdp-month {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  /* Header row (Su Mo Tu We Th Fr Sa) - USE GRID */
+  .rdp-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    width: 100%;
+    margin-bottom: 8px;
+    margin-left: -15px;
+  }
+
+  /* Individual weekday header */
+  .rdp-weekday {
+    font-size: 14px;
+    font-weight: 500;
+    color: #5E5044;
+    text-align: center;
+    padding: 8px 0;
+  }
+
+  /* Week rows - USE GRID */
+  .rdp-week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    width: 100%;
+    gap: 2px;
+  }
+
+  /* Day cell container */
+  .rdp-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* The actual day button */
+  .rdp-day-button {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Hover state */
+  .rdp-day-button:hover:not([disabled]) {
+    background: #F5EFE7;
+  }
+
+  /* Selected day */
+  .rdp-day-button[aria-selected="true"] {
+    background: #5E5044 !important;
+    color: white !important;
+  }
+
+  /* Today */
+  .rdp-today .rdp-day-button {
+    background: #F5EFE7;
+    color: #5E5044;
+    font-weight: 600;
+    border: 2px solid #5E5044;
+  }
+
+  /* DISABLED DAYS - LIGHTER COLOR */
+  .rdp-disabled .rdp-day_button,
+  .rdp-day_button[disabled] {
+    color: #a0a0a0 !important;
+    opacity: 1 !important;
+    cursor: not-allowed;
+    background: transparent !important;
+  }
+  
+  /* Also style the disabled cell container */
+  .rdp-disabled {
+    opacity: 1;
+  }
+
+  /* Outside days (previous/next month) */
+  .rdp-outside .rdp-day-button {
+    color: #ccc;
+    opacity: 0.5;
+  }
+
+  /* Hidden days */
+  .rdp-hidden {
+    visibility: hidden;
+  }
+
+  /* Navigation */
+  .rdp-nav {
+    position: absolute;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 8px;
+  }
+
+  .rdp-chevron {
+    fill: #5E5044;
   }

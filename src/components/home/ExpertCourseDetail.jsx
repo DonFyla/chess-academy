@@ -142,18 +142,21 @@ export default function ExpertCourseDetailPage() {
                             {/* Trust Badges */}
                             <div className="p-6 bg-gradient-to-br from-purple-900/50 to-slate-900/50 rounded-xl border border-black/10 flex flex-col items-center">
                                 <p className="text-center text-base font-semibold text-gray-800 mb-4">Make Champions of your Kids in every aspect of their lives. Begin that chess journey now!</p>
-                                <a
-                                    href="https://wa.link/uj48gk"
-                                    className="px-4 py-3 border-[#5E5044] border text-[#5E5044] rounded-full w-fit text-center"
-                                >
-                                    Sign Up Now!
-                                </a>
-
-                                {/* <div className="flex justify-center items-center gap-6 opacity-50 grayscale hover:grayscale-0 transition-all">
-                                    {['Google', 'Meta', 'Netflix', 'Amazon'].map((company) => (
-                                        <span key={company} className="text-black font-bold text-lg">{company}</span>
-                                    ))}
-                                </div> */}
+                                
+                                <div className="flex flex-col gap-3 w-full">
+                                    <a
+                                        href="/book"
+                                        className="px-4 py-3 bg-[#5E5044] text-white rounded-full w-fit text-center mx-auto hover:bg-[#4a3f35] transition-colors"
+                                    >
+                                        Book a Session
+                                    </a>
+                                    <a
+                                        href="https://wa.link/uj48gk"
+                                        className="px-4 py-3 border-[#5E5044] border text-[#5E5044] rounded-full w-fit text-center mx-auto"
+                                    >
+                                        Chat on WhatsApp
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -166,11 +169,12 @@ export default function ExpertCourseDetailPage() {
                 <h2 className="text-3xl font-bold text-black text-center mb-12">Frequently Asked Questions</h2>
                 <div className="space-y-4">
                     {[
-                        { q: "Is this course suitable for someone without prior knowledge of chess?", a: "This course covers the very fundamentals of chess from what the pieces are, how they move to how they relate in battle. Guaranteed to get zero elo to 1500+ " },
-                        { q: "What tools will I need?", a: "Just a computer and a stable internet connection ." },
-                        { q: "Is there a testing class?", a: "Yes, we offer a one time free lesson to interested students." },
-                        { q: "What are the benefits of online lessons", a: "1. Access to world class coaches 2. Instant access to databases containing millions of games 3. Automatic recording of games which make it easy to track student progress 4. Convenience" },
-                        { q: "Will my child eventually get to play on the board?", a: "Absolutely, in fact, that is our end goal. We have consistently produced many champions who win tournaments over the board" }
+                        { q: "Who is this course for?", a: "This course is designed for serious competitive players rated 1600+ ELO who aim to achieve FIDE ratings, win national championships, and compete at international levels. Students must demonstrate strong fundamentals and competitive drive." },
+                        { q: "What is the coaching approach?", a: "Personalized master-level coaching including: deep game analysis using engines and databases, tournament preparation and psychological training, professional opening repertoire development, advanced endgame mastery, and regular sparring with titled players and strong opponents." },
+                        { q: "What are the prerequisites?", a: "Strong tactical and positional foundation, experience in competitive tournaments (state/national level), commitment to intensive training (minimum 8-10 hours/week study), and coach approval after comprehensive assessment." },
+                        { q: "Who are the coaches?", a: "Training is led by FIDE Masters and titled players with international tournament experience, including Nigeria's #1 rated player FM Akintoye Abdulraheem (2331 peak rating) and other masters who have competed at the Gibraltar Chess Festival and African Championships." },
+                        { q: "What results can we expect?", a: "Our expert students have become: National Champions in multiple age categories, FIDE-rated players with official titles, representatives in international competitions (African Youth, World Youth), and future chess instructors continuing the legacy." },
+                        { q: "Is there a testing class?", a: "Yes, we conduct a comprehensive assessment including game analysis and playing strength evaluation to determine if the student is ready for expert-level training and to create a personalized roadmap for achieving their specific goals." }
                     ].map((faq, idx) => (
                         <div key={idx} className="p-6 bg-black/5 rounded-xl border border-black/10 hover:bg-black/[0.07] transition-colors cursor-pointer group">
                             <h3 className="text-black font-medium mb-2 group-hover:text-purple-400 transition-colors">{faq.q}</h3>

@@ -142,18 +142,21 @@ export default function BeginnerCourseDetailPage() {
                             {/* Trust Badges */}
                             <div className="p-6 bg-gradient-to-br from-purple-900/50 to-slate-900/50 rounded-xl border border-black/10 flex flex-col items-center">
                                 <p className="text-center text-base font-semibold text-gray-800 mb-4">Make Champions of your Kids in every aspect of their lives. Begin that chess journey now!</p>
-                                <a
-                                    href="https://wa.link/uj48gk"
-                                    className="px-4 py-3 border-[#5E5044] border text-[#5E5044] rounded-full w-fit text-center"
-                                >
-                                    Sign Up Now!
-                                </a>
-
-                                {/* <div className="flex justify-center items-center gap-6 opacity-50 grayscale hover:grayscale-0 transition-all">
-                                    {['Google', 'Meta', 'Netflix', 'Amazon'].map((company) => (
-                                        <span key={company} className="text-black font-bold text-lg">{company}</span>
-                                    ))}
-                                </div> */}
+                                
+                                <div className="flex flex-col gap-3 w-full">
+                                    <a
+                                        href="/book"
+                                        className="px-4 py-3 bg-[#5E5044] text-white rounded-full w-fit text-center mx-auto hover:bg-[#4a3f35] transition-colors"
+                                    >
+                                        Book a Free Trial Session
+                                    </a>
+                                    <a
+                                        href="https://wa.link/uj48gk"
+                                        className="px-4 py-3 border-[#5E5044] border text-[#5E5044] rounded-full w-fit text-center mx-auto"
+                                    >
+                                        Chat on WhatsApp
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
