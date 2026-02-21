@@ -71,6 +71,14 @@ function TutorList() {
             </div>
             {/* <span className="text-[10px] text-gray-500">{tutor.students} students</span> */}
           </div>
+
+          {/* Book Coach Button */}
+          <a
+            href="/book"
+            className="px-3 py-1.5 text-xs font-medium bg-[#5E5044] text-white rounded-full hover:bg-[#4a3f35] transition-colors whitespace-nowrap"
+          >
+            Book Coach
+          </a>
         </div>
       ))}
       

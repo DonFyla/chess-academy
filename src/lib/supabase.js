@@ -7,7 +7,29 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+// Create client with cookie persistence for auth
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: typeof window !== 'undefined' ? {
+      getItem: (key) => {
+        const value = document.cookie
+          .split('; ')
+          .find((row) => row.startsWith(`${key}=`))
+          ?.split('=')[1]
+        return value ? decodeURIComponent(value) : null
+      },
+      setItem: (key, value) => {
+        document.cookie = `${key}=${encodeURIComponent(value)}; path=/; max-age=2592000; SameSite=Lax` // 30 days
+      },
+      removeItem: (key) => {
+        document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+      },
+    } : undefined,
+  },
+})
 
 // Helper function to get current user
 export async function getCurrentUser() {

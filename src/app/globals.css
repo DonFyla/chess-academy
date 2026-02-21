@@ -75,129 +75,127 @@
     }
   }
 
-/* Custom Calendar Styles for Moving Train */
-.rdp {
-  --rdp-cell-size: 40px;
-  --rdp-accent-color: #5E5044;
-  --rdp-background-color: #F5EFE7;
-  margin: 0;
-}
+  /* ========================================
+     REACT DAY PICKER V9 - PERFECT ALIGNMENT
+     ======================================== */
 
-.rdp-months {
-  display: flex;
-  justify-content: center;
-}
+  /* Container */
+  .rdp-root {
+    --rdp-accent-color: #5E5044;
+    --rdp-accent-background-color: #F5EFE7;
+    margin: 0;
+  }
 
-.rdp-month {
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
+  /* Month container */
+  .rdp-month {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
 
-.rdp-caption {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  padding: 8px 0;
-  margin-bottom: 16px;
-}
+  /* Header row (Su Mo Tu We Th Fr Sa) - USE GRID */
+  .rdp-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    width: 100%;
+    margin-bottom: 8px;
+    margin-left: -15px;
+  }
 
-.rdp-caption_label {
-  font-weight: 600;
-  font-size: 16px;
-  color: #5E5044;
-}
+  /* Individual weekday header */
+  .rdp-weekday {
+    font-size: 14px;
+    font-weight: 500;
+    color: #5E5044;
+    text-align: center;
+    padding: 8px 0;
+  }
 
-.rdp-nav {
-  position: absolute;
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 8px;
-}
+  /* Week rows - USE GRID */
+  .rdp-week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    width: 100%;
+    gap: 2px;
+  }
 
-.rdp-nav_button {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid #e5e5e5;
-  background: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+  /* Day cell container */
+  .rdp-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-.rdp-nav_button:hover {
-  background: #F5EFE7;
-  border-color: #5E5044;
-}
+  /* The actual day button */
+  .rdp-day-button {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-.rdp-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 2px;
-}
+  /* Hover state */
+  .rdp-day-button:hover:not([disabled]) {
+    background: #F5EFE7;
+  }
 
-.rdp-head_cell {
-  font-size: 14px;
-  font-weight: 500;
-  color: #5E5044;
-  padding: 8px 0;
-  text-align: center;
-}
+  /* Selected day */
+  .rdp-day-button[aria-selected="true"] {
+    background: #5E5044 !important;
+    color: white !important;
+  }
 
-.rdp-cell {
-  text-align: center;
-  padding: 2px;
-}
+  /* Today */
+  .rdp-today .rdp-day-button {
+    background: #F5EFE7;
+    color: #5E5044;
+    font-weight: 600;
+    border: 2px solid #5E5044;
+  }
 
-.rdp-day {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-  background: transparent;
-}
+  /* DISABLED DAYS - LIGHTER COLOR */
+  .rdp-disabled .rdp-day_button,
+  .rdp-day_button[disabled] {
+    color: #a0a0a0 !important;
+    opacity: 1 !important;
+    cursor: not-allowed;
+    background: transparent !important;
+  }
+  
+  /* Also style the disabled cell container */
+  .rdp-disabled {
+    opacity: 1;
+  }
 
-.rdp-day:hover:not([disabled]) {
-  background: #F5EFE7;
-}
+  /* Outside days (previous/next month) */
+  .rdp-outside .rdp-day-button {
+    color: #ccc;
+    opacity: 0.5;
+  }
 
-.rdp-day_selected {
-  background: #5E5044 !important;
-  color: white !important;
-}
+  /* Hidden days */
+  .rdp-hidden {
+    visibility: hidden;
+  }
 
-.rdp-day_selected:hover {
-  background: #4a3f35 !important;
-}
+  /* Navigation */
+  .rdp-nav {
+    position: absolute;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 8px;
+  }
 
-.rdp-day_today {
-  background: #F5EFE7;
-  color: #5E5044;
-  font-weight: 600;
-  border: 2px solid #5E5044;
-}
-
-.rdp-day_disabled {
-  color: #ccc;
-  cursor: not-allowed;
-}
-
-.rdp-day_outside {
-  color: #ccc;
-}
-
-.rdp-day_hidden {
-  visibility: hidden;
-}
+  .rdp-chevron {
+    fill: #5E5044;
+  }

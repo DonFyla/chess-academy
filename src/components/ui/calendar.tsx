@@ -19,7 +19,7 @@ function Calendar({
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-4",
+        month: "space-y-4 bg-white rounded-xl p-4 shadow-sm",
         caption: "flex justify-center pt-1 relative items-center mb-4",
         caption_label: "text-base font-semibold text-[#5E5044]",
         nav: "space-x-1 flex items-center",
@@ -28,24 +28,19 @@ function Calendar({
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
-        table: "w-full border-collapse",
-        head_row: "flex",
-        head_cell: "text-[#5E5044] w-10 font-medium text-sm",
-        row: "flex w-full mt-2",
-        cell: "h-10 w-10 text-center text-sm p-0 relative",
+        table: "w-full border-collapse border-spacing-0",
+        head_row: "flex w-full",
+        head_cell: "flex-1 text-center text-[#5E5044] font-medium text-sm py-2",
+        row: "flex w-full mt-1",
+        cell: "flex-1 h-10 text-center p-0 relative",
         day: cn(
-          "h-10 w-10 p-0 font-normal rounded-full transition-colors hover:bg-[#F5EFE7]"
+          "h-10 w-10 p-0 font-normal rounded-full transition-colors hover:bg-[#F5EFE7] aria-selected:bg-[#5E5044] aria-selected:text-white"
         ),
-        day_selected: 
-          "bg-[#5E5044] text-white hover:bg-[#4a3f35] hover:text-white",
-        day_today: 
-          "bg-[#F5EFE7] text-[#5E5044] font-semibold border border-[#5E5044]",
-        day_outside:
-          "text-gray-400 opacity-50",
-        day_disabled: 
-          "text-gray-300 opacity-40 cursor-not-allowed hover:bg-transparent",
-        day_range_middle:
-          "bg-[#F5EFE7] text-[#5E5044]",
+        day_selected: "bg-[#5E5044] text-white hover:bg-[#4a3f35]",
+        day_today: "bg-[#F5EFE7] text-[#5E5044] font-semibold border border-[#5E5044]",
+        day_outside: "text-gray-400 opacity-50",
+        day_disabled: "text-gray-300 opacity-40",
+        day_range_middle: "bg-[#F5EFE7] text-[#5E5044]",
         day_hidden: "invisible",
         ...classNames,
       }}

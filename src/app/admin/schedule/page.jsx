@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { useCoaches, useCreateCoach, useDeleteCoach } from '@/hooks/useCoaches'
 import { useCoachAvailability, useCreateAvailability, useDeleteAvailability } from '@/hooks/useAvailability'
-import { useAllBookings, useUpdateBookingStatus } from '@/hooks/useBookings'
+import { useAllBookings, useConfirmPayment, useRejectBooking } from '@/hooks/useBookings'
 import AddAvailabilityForm from '@/components/scheduling/AddAvailabilityForm'
 import AvailabilityList from '@/components/scheduling/AvailabilityList'
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 
 function formatTime(time) {
+  if (!time) return '-'
   const [hours, minutes] = time.split(':')
   const hour = parseInt(hours, 10)
   const ampm = hour >= 12 ? 'PM' : 'AM'
@@ -31,11 +32,86 @@ function formatTime(time) {
   return `${displayHour}:${minutes} ${ampm}`
 }
 
+const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+// Format schedule display for admin
+function formatSchedule(booking) {
+  if (!booking.recurring_days || booking.recurring_days.length === 0) {
+    return `${format(new Date(booking.booking_date), 'MMM d')} ${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}`
+  }
+  
+  // For single day
+  if (booking.recurring_days.length === 1) {
+    const day = daysOfWeek[booking.recurring_days[0]]
+    return `${day}s ${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}`
+  }
+  
+  // For two days with different times
+  if (booking.recurring_dates && Array.isArray(booking.recurring_dates)) {
+    const scheduleItems = booking.recurring_days.map(dayIndex => {
+      const dayName = daysOfWeek[dayIndex]
+      const dateInfo = booking.recurring_dates.find(d => {
+        const date = new Date(d.date)
+        return date.getDay() === dayIndex
+      })
+      if (dateInfo) {
+        return `${dayName}s ${formatTime(dateInfo.start_time)} - ${formatTime(dateInfo.end_time)}`
+      }
+      return `${dayName}s ${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}`
+    })
+    return scheduleItems.join(', ')
+  }
+  
+  // Fallback
+  const dayNames = booking.recurring_days.map(d => daysOfWeek[d]).join(', ')
+  return `${dayNames} ${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}`
+}
+
+function getBookingModeLabel(mode) {
+  if (mode === 'double') return '2x/week (8 sessions)'
+  return '1x/week (4 sessions)'
+}
+
 export default function AdminSchedulePage() {
   const router = useRouter()
   const [selectedCoach, setSelectedCoach] = useState(null)
   const [showAddCoach, setShowAddCoach] = useState(false)
-  const [newCoach, setNewCoach] = useState({ name: '', bio: '', specialization: '' })
+  const [newCoach, setNewCoach] = useState({ name: '', bio: '', specialization: '', email: '' })
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Check admin auth
+  useEffect(() => {
+    checkAuth()
+  }, [])
+
+  const checkAuth = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        router.push('/login')
+        return
+      }
+
+      const { data: coach } = await supabase
+        .from('coaches')
+        .select('is_admin')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!coach?.is_admin) {
+        router.push('/')
+        return
+      }
+
+      setIsAdmin(true)
+      setIsLoading(false)
+    } catch (error) {
+      console.error('Auth error:', error)
+      router.push('/login')
+    }
+  }
 
   const { data: coaches, isLoading: loadingCoaches } = useCoaches()
   const { data: allBookings, isLoading: loadingBookings } = useAllBookings()
@@ -45,7 +121,9 @@ export default function AdminSchedulePage() {
   const deleteCoach = useDeleteCoach()
   const createAvailability = useCreateAvailability()
   const deleteAvailability = useDeleteAvailability()
-  const updateBooking = useUpdateBookingStatus()
+  const confirmPayment = useConfirmPayment()
+  const rejectBooking = useRejectBooking()
+  const [rejectNotes, setRejectNotes] = useState('')
 
   // Check if user is admin (simplified - in production, check auth)
   const checkAdmin = async () => {
@@ -63,7 +141,7 @@ export default function AdminSchedulePage() {
     try {
       await createCoach.mutateAsync(newCoach)
       toast.success('Coach added successfully')
-      setNewCoach({ name: '', bio: '', specialization: '' })
+      setNewCoach({ name: '', bio: '', specialization: '', email: '' })
       setShowAddCoach(false)
     } catch (error) {
       toast.error('Failed to add coach')
@@ -109,25 +187,63 @@ export default function AdminSchedulePage() {
     }
   }
 
-  const handleUpdateBookingStatus = async (id, status) => {
+  const handleConfirmPayment = async (booking) => {
     try {
-      await updateBooking.mutateAsync({ id, status })
-      toast.success(`Booking ${status}`)
+      await confirmPayment.mutateAsync({
+        id: booking.id,
+        paymentDetails: {
+          payment_method: 'whatsapp_transfer',
+          payment_amount: booking.monthly_amount || 60000
+        }
+      })
+      toast.success('Payment confirmed and booking approved!')
     } catch (error) {
-      toast.error('Failed to update booking')
+      console.error('Confirm payment error:', error)
+      toast.error('Failed to confirm payment: ' + (error.message || 'Unknown error'))
     }
   }
 
-  const pendingBookings = allBookings?.filter(b => b.status === 'pending') || []
+  const handleRejectBooking = async (booking) => {
+    try {
+      await rejectBooking.mutateAsync({
+        id: booking.id,
+        adminNotes: rejectNotes
+      })
+      toast.success('Booking rejected')
+      setRejectNotes('')
+    } catch (error) {
+      toast.error('Failed to reject booking')
+    }
+  }
+
+  const pendingPaymentBookings = allBookings?.filter(b => b.status === 'pending_payment') || []
   const confirmedBookings = allBookings?.filter(b => b.status === 'confirmed') || []
+  const paymentReceivedBookings = allBookings?.filter(b => b.status === 'payment_received') || []
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F5EFE7] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-[#5E5044] border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking permissions...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
       <Navbar />
       <div className="min-h-screen bg-[#F5EFE7]">
         <header className="border-b bg-white">
-          <div className="container mx-auto px-4 py-4">
+          <div className="container mx-auto px-4 py-4 flex justify-between items-center">
             <h1 className="text-2xl font-bold text-black">Admin Schedule Dashboard</h1>
+            <a 
+              href="/admin/coaches" 
+              className="px-4 py-2 bg-[#5E5044] text-white rounded-lg hover:bg-[#4a3f35] transition-colors"
+            >
+              Manage Coaches & Users
+            </a>
           </div>
         </header>
 
@@ -151,50 +267,68 @@ export default function AdminSchedulePage() {
             {/* Bookings Tab */}
             <TabsContent value="bookings">
               <div className="grid gap-6">
-                {/* Pending Bookings */}
+                {/* Pending Payment Bookings */}
                 <Card className="bg-white">
                   <CardHeader>
                     <CardTitle className="text-black flex items-center gap-2">
-                      Pending Bookings
-                      <Badge variant="secondary">{pendingBookings.length}</Badge>
+                      Awaiting Payment
+                      <Badge variant="secondary" className="bg-yellow-500">{pendingPaymentBookings.length}</Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {loadingBookings ? (
                       <div className="animate-pulse h-32 bg-gray-200 rounded" />
-                    ) : pendingBookings.length === 0 ? (
-                      <p className="text-gray-500 text-center py-8">No pending bookings.</p>
+                    ) : pendingPaymentBookings.length === 0 ? (
+                      <p className="text-gray-500 text-center py-8">No bookings awaiting payment.</p>
                     ) : (
                       <Table>
                         <TableHeader>
                           <TableRow>
                             <TableHead>Student</TableHead>
                             <TableHead>Coach</TableHead>
-                            <TableHead>Date & Time</TableHead>
-                            <TableHead>Course</TableHead>
+                            <TableHead>Schedule</TableHead>
+                            <TableHead>Mode</TableHead>
+                            <TableHead>Amount</TableHead>
                             <TableHead>Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {pendingBookings.map((booking) => (
+                          {pendingPaymentBookings.map((booking) => (
                             <TableRow key={booking.id}>
                               <TableCell>
                                 <div className="font-medium text-black">{booking.student_name}</div>
                                 <div className="text-sm text-gray-500">{booking.student_email}</div>
+                                {booking.student_phone && (
+                                  <div className="text-sm text-gray-400">{booking.student_phone}</div>
+                                )}
                               </TableCell>
                               <TableCell>{booking.coaches?.name}</TableCell>
                               <TableCell>
-                                <div>{format(new Date(booking.booking_date), 'MMM d, yyyy')}</div>
-                                <div className="text-sm text-gray-500">
-                                  {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                                <div className="text-sm">{formatSchedule(booking)}</div>
+                                <div className="text-xs text-gray-500">
+                                  Starts {format(new Date(booking.booking_date), 'MMM d, yyyy')}
                                 </div>
                               </TableCell>
-                              <TableCell className="capitalize">{booking.course_type || '-'}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs">
+                                  {getBookingModeLabel(booking.booking_mode)}
+                                </Badge>
+                                {booking.course_type && (
+                                  <div className="text-xs text-gray-500 capitalize mt-1">
+                                    {booking.course_type}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-medium text-black">
+                                  ₦{parseInt(booking.monthly_amount || 0).toLocaleString()}
+                                </div>
+                              </TableCell>
                               <TableCell>
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
-                                    onClick={() => handleUpdateBookingStatus(booking.id, 'confirmed')}
+                                    onClick={() => handleConfirmPayment(booking)}
                                     className="bg-green-600 hover:bg-green-700"
                                   >
                                     <CheckCircle className="mr-1 h-4 w-4" />
@@ -203,7 +337,7 @@ export default function AdminSchedulePage() {
                                   <Button
                                     size="sm"
                                     variant="destructive"
-                                    onClick={() => handleUpdateBookingStatus(booking.id, 'rejected')}
+                                    onClick={() => handleRejectBooking(booking)}
                                   >
                                     <XCircle className="mr-1 h-4 w-4" />
                                     Reject
@@ -217,6 +351,33 @@ export default function AdminSchedulePage() {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Rejection Notes Modal would go here - simplified for now */}
+                {rejectNotes !== '' && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <Card className="w-full max-w-md mx-4">
+                      <CardHeader>
+                        <CardTitle>Rejection Reason</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Textarea
+                          placeholder="Enter reason for rejection (optional)"
+                          value={rejectNotes}
+                          onChange={(e) => setRejectNotes(e.target.value)}
+                          className="mb-4"
+                        />
+                        <div className="flex gap-2">
+                          <Button onClick={() => handleRejectBooking()} variant="destructive">
+                            Reject Booking
+                          </Button>
+                          <Button onClick={() => setRejectNotes('')} variant="outline">
+                            Cancel
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
                 {/* Confirmed Bookings */}
                 <Card className="bg-white">
@@ -237,8 +398,9 @@ export default function AdminSchedulePage() {
                           <TableRow>
                             <TableHead>Student</TableHead>
                             <TableHead>Coach</TableHead>
-                            <TableHead>Date & Time</TableHead>
-                            <TableHead>Course</TableHead>
+                            <TableHead>Schedule</TableHead>
+                            <TableHead>Mode</TableHead>
+                            <TableHead>Amount</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -250,12 +412,31 @@ export default function AdminSchedulePage() {
                               </TableCell>
                               <TableCell>{booking.coaches?.name}</TableCell>
                               <TableCell>
-                                <div>{format(new Date(booking.booking_date), 'MMM d, yyyy')}</div>
-                                <div className="text-sm text-gray-500">
-                                  {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                                <div className="text-sm">{formatSchedule(booking)}</div>
+                                <div className="text-xs text-gray-500">
+                                  Starts {format(new Date(booking.booking_date), 'MMM d, yyyy')}
                                 </div>
                               </TableCell>
-                              <TableCell className="capitalize">{booking.course_type || '-'}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs bg-green-50">
+                                  {getBookingModeLabel(booking.booking_mode)}
+                                </Badge>
+                                {booking.course_type && (
+                                  <div className="text-xs text-gray-500 capitalize mt-1">
+                                    {booking.course_type}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-medium text-black">
+                                  ₦{parseInt(booking.monthly_amount || 0).toLocaleString()}
+                                </div>
+                                {booking.payment_date && (
+                                  <div className="text-xs text-green-600">
+                                    Paid {format(new Date(booking.payment_date), 'MMM d')}
+                                  </div>
+                                )}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -307,6 +488,16 @@ export default function AdminSchedulePage() {
                           value={newCoach.bio}
                           onChange={(e) => setNewCoach({ ...newCoach, bio: e.target.value })}
                           placeholder="Coach bio..."
+                          className="bg-white"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-black">Email (for notifications)</Label>
+                        <Input
+                          type="email"
+                          value={newCoach.email}
+                          onChange={(e) => setNewCoach({ ...newCoach, email: e.target.value })}
+                          placeholder="coach@example.com"
                           className="bg-white"
                         />
                       </div>
