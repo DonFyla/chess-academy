@@ -158,7 +158,11 @@ export function useCreateBooking() {
         }
         
         // Send emails
-        const bookingWithCoach = { ...data, coach_name: coach?.name || 'Your Coach' }
+        const bookingWithCoach = { 
+          ...data, 
+          coach_name: coach?.name || 'Your Coach',
+          meeting_link: coach?.meeting_link || null
+        }
         
         // Email to student
         try {
@@ -230,10 +234,10 @@ export function useConfirmPayment() {
       console.log('Coach ID:', data.coach_id)
       
       try {
-        // Get coach details including user email
+        // Get coach details including user email and meeting link
         const { data: coach, error: coachError } = await supabase
           .from('coaches')
-          .select('name, user_id, email')
+          .select('name, user_id, email, meeting_link')
           .eq('id', data.coach_id)
           .single()
         
