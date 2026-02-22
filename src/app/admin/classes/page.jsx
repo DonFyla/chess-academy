@@ -78,7 +78,7 @@ export default function AdminClassesPage() {
       const weekStart = startOfWeek(parseISO(selectedWeek), { weekStartsOn: 0 })
       const weekEnd = addDays(weekStart, 6)
 
-      // Build query
+      // Fetch all confirmed bookings (we'll filter by recurring dates in JS)
       let query = supabase
         .from('bookings')
         .select(`
@@ -86,10 +86,6 @@ export default function AdminClassesPage() {
           coaches(name, email)
         `)
         .eq('status', 'confirmed')
-        .gte('booking_date', format(weekStart, 'yyyy-MM-dd'))
-        .lte('booking_date', format(weekEnd, 'yyyy-MM-dd'))
-        .order('booking_date')
-        .order('start_time')
 
       // Filter by coach if selected
       if (selectedCoach && selectedCoach !== 'all') {
@@ -100,12 +96,59 @@ export default function AdminClassesPage() {
 
       if (error) throw error
 
+      // Expand bookings to include all recurring dates
+      const expandedClasses = []
+      
+      ;(data || []).forEach(booking => {
+        // Check if booking has recurring_dates
+        if (booking.recurring_dates && Array.isArray(booking.recurring_dates) && booking.recurring_dates.length > 0) {
+          // Add each recurring date as a separate class entry
+          booking.recurring_dates.forEach(session => {
+            if (session.date) {
+              const sessionDate = parseISO(session.date)
+              // Only include if within selected week
+              if (sessionDate >= weekStart && sessionDate <= weekEnd) {
+                expandedClasses.push({
+                  ...booking,
+                  session_date: session.date,
+                  session_start_time: session.start_time || booking.start_time,
+                  session_end_time: session.end_time || booking.end_time,
+                  _isRecurring: true
+                })
+              }
+            }
+          })
+        } else {
+          // Fallback: use booking_date for single bookings
+          const bookingDate = parseISO(booking.booking_date)
+          if (bookingDate >= weekStart && bookingDate <= weekEnd) {
+            expandedClasses.push({
+              ...booking,
+              session_date: booking.booking_date,
+              session_start_time: booking.start_time,
+              session_end_time: booking.end_time,
+              _isRecurring: false
+            })
+          }
+        }
+      })
+
+      // Sort by date and time
+      expandedClasses.sort((a, b) => {
+        const dateA = parseISO(a.session_date)
+        const dateB = parseISO(b.session_date)
+        if (dateA.getTime() !== dateB.getTime()) {
+          return dateA - dateB
+        }
+        return a.session_start_time.localeCompare(b.session_start_time)
+      })
+
       // Transform data to group by day
       const groupedByDay = daysOfWeek.map((dayName, index) => {
         const dayDate = addDays(weekStart, index)
-        const dayClasses = (data || []).filter(booking => {
-          const bookingDate = parseISO(booking.booking_date)
-          return isSameDay(bookingDate, dayDate)
+        const dayClasses = expandedClasses.filter(cls => {
+          const classDate = parseISO(cls.session_date)
+          return isSameDay(classDate, dayDate)
         })
 
         return {
@@ -231,7 +274,7 @@ export default function AdminClassesPage() {
                           <div className="flex items-center gap-3 min-w-[140px]">
                             <Clock className="h-4 w-4 text-[#5E5044]" />
                             <span className="font-medium text-[#5E5044]">
-                              {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                              {formatTime(booking.session_start_time)} - {formatTime(booking.session_end_time)}
                             </span>
                           </div>
                           
@@ -257,11 +300,18 @@ export default function AdminClassesPage() {
                             </div>
                           </div>
                           
-                          {booking.course_type && (
-                            <Badge variant="outline" className="text-xs">
-                              {booking.course_type}
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {booking.booking_mode === 'double' && (
+                              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                                2x/week
+                              </Badge>
+                            )}
+                            {booking.course_type && (
+                              <Badge variant="outline" className="text-xs">
+                                {booking.course_type}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
