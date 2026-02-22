@@ -236,14 +236,22 @@ export default function AdminSchedulePage() {
       <Navbar />
       <div className="min-h-screen bg-[#F5EFE7]">
         <header className="border-b bg-white">
-          <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="container mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <h1 className="text-2xl font-bold text-black">Admin Schedule Dashboard</h1>
-            <a 
-              href="/admin/coaches" 
-              className="px-4 py-2 bg-[#5E5044] text-white rounded-lg hover:bg-[#4a3f35] transition-colors"
-            >
-              Manage Coaches & Users
-            </a>
+            <div className="flex gap-2">
+              <a 
+                href="/admin/classes" 
+                className="px-4 py-2 bg-[#5E5044] text-white rounded-lg hover:bg-[#4a3f35] transition-colors"
+              >
+                View Weekly Classes
+              </a>
+              <a 
+                href="/admin/coaches" 
+                className="px-4 py-2 bg-[#5E5044] text-white rounded-lg hover:bg-[#4a3f35] transition-colors"
+              >
+                Manage Coaches
+              </a>
+            </div>
           </div>
         </header>
 
