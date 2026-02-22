@@ -26,6 +26,7 @@ export default function AdminCoachesPage() {
   const [users, setUsers] = useState([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [showCreateCoach, setShowCreateCoach] = useState(false)
+  const [activeTab, setActiveTab] = useState('coaches')
   const [selectedUser, setSelectedUser] = useState(null)
   const [newCoach, setNewCoach] = useState({ 
     name: '', 
@@ -227,7 +228,7 @@ export default function AdminCoachesPage() {
         </header>
 
         <main className="container mx-auto px-4 py-8">
-          <Tabs defaultValue="coaches" className="space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="bg-white">
               <TabsTrigger value="coaches" className="data-[state=active]:bg-[#5E5044] data-[state=active]:text-white">
                 <Crown className="mr-2 h-4 w-4" />
@@ -519,8 +520,9 @@ export default function AdminCoachesPage() {
                                 size="sm"
                                 onClick={() => {
                                   setSelectedUser(user)
-                                  setNewCoach({ ...newCoach, user_id: user.id })
+                                  setNewCoach({ ...newCoach, user_id: user.id, name: user.user_metadata?.full_name || '' })
                                   setShowCreateCoach(true)
+                                  setActiveTab('coaches') // Switch to coaches tab
                                 }}
                                 className="bg-[#5E5044]"
                               >
