@@ -238,7 +238,7 @@ export default function BookingForm({ coachId, availability, existingBookings, c
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-7 gap-2 mb-4">
+          <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-4">
             {DAYS_OF_WEEK.map((day, index) => {
               const isAvailable = availableDaysOfWeek.includes(index)
               const isFullyBooked = isDayFullyBooked(index)
@@ -254,7 +254,8 @@ export default function BookingForm({ coachId, availability, existingBookings, c
                     setSelectedSlot1(null)
                   }}
                   className={`
-                    p-3 rounded-lg text-sm font-medium transition-colors
+                    p-2 sm:p-3 rounded-lg text-xs sm:text-sm font-medium transition-colors
+                    min-h-[60px] sm:min-h-[auto]
                     ${isSelected 
                       ? 'bg-[#5E5044] text-white' 
                       : isFullyBooked
@@ -265,8 +266,9 @@ export default function BookingForm({ coachId, availability, existingBookings, c
                     }
                   `}
                 >
-                  {day.slice(0, 3)}
-                  {isFullyBooked && <span className="block text-xs">Full</span>}
+                  <span className="block sm:hidden">{day.slice(0, 1)}</span>
+                  <span className="hidden sm:block">{day.slice(0, 3)}</span>
+                  {isFullyBooked && <span className="block text-[10px] sm:text-xs mt-1">Full</span>}
                 </button>
               )
             })}
@@ -311,7 +313,7 @@ export default function BookingForm({ coachId, availability, existingBookings, c
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-7 gap-2 mb-4">
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-4">
               {DAYS_OF_WEEK.map((day, index) => {
                 const isAvailable = availableDaysOfWeek.includes(index)
                 const isFullyBooked = isDayFullyBooked(index)
@@ -328,7 +330,8 @@ export default function BookingForm({ coachId, availability, existingBookings, c
                       setSelectedSlot2(null)
                     }}
                     className={`
-                      p-3 rounded-lg text-sm font-medium transition-colors
+                      p-2 sm:p-3 rounded-lg text-xs sm:text-sm font-medium transition-colors
+                      min-h-[60px] sm:min-h-[auto]
                       ${isSelected 
                         ? 'bg-[#5E5044] text-white' 
                         : isSameAsDay1
@@ -341,9 +344,10 @@ export default function BookingForm({ coachId, availability, existingBookings, c
                       }
                     `}
                   >
-                    {day.slice(0, 3)}
-                    {isSameAsDay1 && <span className="block text-xs">Used</span>}
-                    {isFullyBooked && <span className="block text-xs">Full</span>}
+                    <span className="block sm:hidden">{day.slice(0, 1)}</span>
+                    <span className="hidden sm:block">{day.slice(0, 3)}</span>
+                    {isSameAsDay1 && <span className="block text-[10px] sm:text-xs mt-1">Used</span>}
+                    {isFullyBooked && <span className="block text-[10px] sm:text-xs mt-1">Full</span>}
                   </button>
                 )
               })}
