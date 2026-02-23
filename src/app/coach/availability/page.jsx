@@ -143,65 +143,42 @@ export default function CoachAvailabilityPage() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-8">
-            {/* Meeting Link */}
-            <Card className="bg-white">
-              <CardHeader>
-                <CardTitle className="text-black flex items-center gap-2">
-                  <Video className="h-5 w-5" />
-                  My Meeting Link
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-gray-600">
-                  Set your Zoom or Google Meet link. This will be automatically sent to students when their payment is confirmed.
-                </p>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Meeting URL</label>
-                  <input
-                    type="url"
-                    value={meetingLink}
-                    onChange={(e) => setMeetingLink(e.target.value)}
-                    placeholder="https://zoom.us/j/123456789"
-                    className="w-full px-3 py-2 border rounded-lg bg-white"
-                  />
-                </div>
-                <Button 
-                  onClick={handleSaveMeetingLink}
-                  disabled={savingLink}
-                  className="bg-[#5E5044] hover:bg-[#4a3f35]"
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  {savingLink ? 'Saving...' : 'Save Meeting Link'}
-                </Button>
-              </CardContent>
-            </Card>
+            {/* Left Column: Meeting Link + Upcoming Bookings */}
+            <div className="space-y-8">
+              {/* Meeting Link */}
+              <Card className="bg-white">
+                <CardHeader>
+                  <CardTitle className="text-black flex items-center gap-2">
+                    <Video className="h-5 w-5" />
+                    My Meeting Link
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Set your Zoom or Google Meet link. This will be automatically sent to students when their payment is confirmed.
+                  </p>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Meeting URL</label>
+                    <input
+                      type="url"
+                      value={meetingLink}
+                      onChange={(e) => setMeetingLink(e.target.value)}
+                      placeholder="https://zoom.us/j/123456789"
+                      className="w-full px-3 py-2 border rounded-lg bg-white"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleSaveMeetingLink}
+                    disabled={savingLink}
+                    className="bg-[#5E5044] hover:bg-[#4a3f35]"
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    {savingLink ? 'Saving...' : 'Save Meeting Link'}
+                  </Button>
+                </CardContent>
+              </Card>
 
-            {/* Manage Availability */}
-            <Card className="bg-white">
-              <CardHeader>
-                <CardTitle className="text-black flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  My Availability
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <AddAvailabilityForm
-                  onAdd={handleAddAvailability}
-                  isLoading={createAvailability.isPending}
-                />
-                {loadingAvailability ? (
-                  <div className="animate-pulse h-32 bg-gray-200 rounded" />
-                ) : (
-                  <AvailabilityList
-                    slots={availability}
-                    onDelete={handleDeleteAvailability}
-                    isDeleting={deleteAvailability.isPending}
-                  />
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Upcoming Bookings */}
+              {/* Upcoming Bookings */}
             <Card className="bg-white">
               <CardHeader>
                 <CardTitle className="text-black flex items-center gap-2">
@@ -249,6 +226,34 @@ export default function CoachAvailabilityPage() {
                 )}
               </CardContent>
             </Card>
+            </div> {/* End Left Column */}
+
+            {/* Right Column: Manage Availability */}
+            <div>
+              <Card className="bg-white h-full">
+                <CardHeader>
+                  <CardTitle className="text-black flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    My Availability
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <AddAvailabilityForm
+                    onAdd={handleAddAvailability}
+                    isLoading={createAvailability.isPending}
+                  />
+                  {loadingAvailability ? (
+                    <div className="animate-pulse h-32 bg-gray-200 rounded" />
+                  ) : (
+                    <AvailabilityList
+                      slots={availability}
+                      onDelete={handleDeleteAvailability}
+                      isDeleting={deleteAvailability.isPending}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </main>
       </div>

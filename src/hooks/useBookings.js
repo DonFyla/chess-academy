@@ -265,8 +265,13 @@ export function useConfirmPayment() {
           }
         }
         
-        const bookingWithCoach = { ...data, coach_name: coach?.name || 'Your Coach' }
+        const bookingWithCoach = { 
+          ...data, 
+          coach_name: coach?.name || 'Your Coach',
+          meeting_link: coach?.meeting_link || null
+        }
         console.log('Booking with coach name:', bookingWithCoach.coach_name)
+        console.log('Meeting link included:', bookingWithCoach.meeting_link)
         
         // Email to student - payment confirmed
         try {
