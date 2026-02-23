@@ -15,7 +15,8 @@ const supabaseAdmin = createClient(
 )
 
 export async function generateMetadata({ params }) {
-  const { coachId } = params
+  // In Next.js 15, params is a Promise that needs to be awaited
+  const { coachId } = await params
   
   try {
     const { data: coach, error } = await supabaseAdmin
@@ -35,5 +36,6 @@ export async function generateMetadata({ params }) {
 }
 
 export default function BookCoachPage({ params }) {
+  // Page component receives params synchronously
   return <BookCoachClient coachId={params.coachId} />
 }
