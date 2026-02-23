@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
-import { Clock, Calendar, ArrowLeft } from 'lucide-react'
+import { Clock, Calendar, ArrowLeft, Video, Save } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase, getCurrentCoach } from '@/lib/supabase'
 
@@ -30,6 +30,8 @@ export default function CoachAvailabilityPage() {
   const router = useRouter()
   const [coach, setCoach] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [meetingLink, setMeetingLink] = useState('')
+  const [savingLink, setSavingLink] = useState(false)
 
   useEffect(() => {
     async function loadCoach() {
@@ -41,6 +43,7 @@ export default function CoachAvailabilityPage() {
           return
         }
         setCoach(currentCoach)
+        setMeetingLink(currentCoach.meeting_link || '')
       } catch (error) {
         toast.error('Failed to load coach data')
       } finally {
@@ -71,6 +74,29 @@ export default function CoachAvailabilityPage() {
       toast.success('Availability removed')
     } catch (error) {
       toast.error('Failed to remove availability')
+    }
+  }
+
+  const handleSaveMeetingLink = async () => {
+    if (!coach) return
+    
+    setSavingLink(true)
+    try {
+      const { error } = await supabase
+        .from('coaches')
+        .update({ meeting_link: meetingLink.trim() || null })
+        .eq('id', coach.id)
+      
+      if (error) throw error
+      
+      toast.success('Meeting link saved successfully!')
+      // Update local coach data
+      setCoach({ ...coach, meeting_link: meetingLink.trim() || null })
+    } catch (error) {
+      console.error('Error saving meeting link:', error)
+      toast.error('Failed to save meeting link')
+    } finally {
+      setSavingLink(false)
     }
   }
 
@@ -117,6 +143,39 @@ export default function CoachAvailabilityPage() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-8">
+            {/* Meeting Link */}
+            <Card className="bg-white">
+              <CardHeader>
+                <CardTitle className="text-black flex items-center gap-2">
+                  <Video className="h-5 w-5" />
+                  My Meeting Link
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Set your Zoom or Google Meet link. This will be automatically sent to students when their payment is confirmed.
+                </p>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Meeting URL</label>
+                  <input
+                    type="url"
+                    value={meetingLink}
+                    onChange={(e) => setMeetingLink(e.target.value)}
+                    placeholder="https://zoom.us/j/123456789"
+                    className="w-full px-3 py-2 border rounded-lg bg-white"
+                  />
+                </div>
+                <Button 
+                  onClick={handleSaveMeetingLink}
+                  disabled={savingLink}
+                  className="bg-[#5E5044] hover:bg-[#4a3f35]"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {savingLink ? 'Saving...' : 'Save Meeting Link'}
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Manage Availability */}
             <Card className="bg-white">
               <CardHeader>

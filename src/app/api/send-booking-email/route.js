@@ -205,13 +205,36 @@ const emailTemplates = {
             <p><strong>First Lesson:</strong> ${booking.booking_date ? new Date(booking.booking_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'To be confirmed'}</p>
           </div>
           
+          ${booking.meeting_link ? `
+          <div style="background: #E8F5E9; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #4CAF50;">
+            <h3 style="margin-top: 0; color: #2E7D32;">🔗 Your Meeting Link</h3>
+            <p>Join your lessons using this link:</p>
+            <div style="background: white; padding: 15px; border-radius: 5px; margin: 10px 0; word-break: break-all;">
+              <a href="${booking.meeting_link}" style="color: #2E7D32; font-weight: bold;">${booking.meeting_link}</a>
+            </div>
+            <p style="font-size: 14px; color: #666; margin-top: 10px;">
+              Please save this link and join on time for each lesson.
+            </p>
+          </div>
+          ` : ''}
+          
           <div style="background: #E3F2FD; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3 style="margin-top: 0; color: #1565C0;">What's Next?</h3>
             <ul style="margin: 10px 0; padding-left: 20px;">
-              <li>Your coach will contact you with Zoom/meeting details</li>
+              <li>Ensure you have a <strong>stable internet connection</strong> for video calls</li>
               <li>Prepare a quiet space for the lessons</li>
-              <li>Have your chess board ready (physical or digital)</li>
+              <li>Test your camera and microphone before the first lesson</li>
               <li>Be ready to learn and have fun!</li>
+            </ul>
+          </div>
+          
+          <div style="background: #FFF3E0; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #FF9800;">
+            <h3 style="margin-top: 0; color: #E65100; font-size: 16px;">⚠️ Rescheduling Policy</h3>
+            <ul style="margin: 10px 0; padding-left: 20px; color: #333;">
+              <li>Our coaches work <strong>strictly with time</strong></li>
+              <li>Only <strong>one rescheduling per month</strong> is allowed</li>
+              <li>Rescheduling requests must be made <strong>at least 12 hours</strong> before the lesson</li>
+              <li>Late requests may not be accommodated</li>
             </ul>
           </div>
           
@@ -222,7 +245,7 @@ const emailTemplates = {
           </div>
           
           <p style="color: #666; font-size: 14px;">
-            <strong>Need to reschedule?</strong> Contact us at least 24 hours before your lesson via WhatsApp or reply to this email.
+            <strong>Questions or need to reschedule?</strong> Contact us via WhatsApp or reply to this email.
           </p>
           
           <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">

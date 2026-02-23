@@ -77,7 +77,7 @@ export default function BookingForm({ coachId, availability, existingBookings, c
 
   // Calculate total price
   const calculatePrice = () => {
-    const pricePerSession = 15000 // ₦15,000 per session
+    const pricePerSession = 10000 // ₦10,000 per session
     const sessionsCount = bookingMode === 'single' ? 4 : 8
     
     if (bookingMode === 'single') {
@@ -222,9 +222,9 @@ export default function BookingForm({ coachId, availability, existingBookings, c
           <div className="text-sm text-gray-600 mt-3 space-y-1">
             <p><strong>₦15,000</strong> per session</p>
             {bookingMode === 'single' ? (
-              <p>Total: <strong>₦60,000</strong> for 4 sessions</p>
+              <p>Total: <strong>₦40,000</strong> for 4 sessions</p>
             ) : (
-              <p>Total: <strong>₦114,000</strong> for 8 sessions (5% discount applied)</p>
+              <p>Total: <strong>₦76,000</strong> for 8 sessions (5% discount applied)</p>
             )}
           </div>
         </CardContent>
