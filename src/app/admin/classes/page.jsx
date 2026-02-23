@@ -10,6 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
 import { format, startOfWeek, addDays, isSameDay, parseISO, startOfDay, isWithinInterval } from 'date-fns'
+
+// Helper to parse date string (YYYY-MM-DD) without timezone issues
+function parseDateString(dateStr) {
+  if (!dateStr) return null
+  // Split the date string and create date in local timezone
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return new Date(year, month - 1, day) // month is 0-indexed
+}
 import { Calendar, Clock, User, MapPin, Filter } from 'lucide-react'
 
 const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -112,8 +120,8 @@ export default function AdminClassesPage() {
           booking.recurring_dates.forEach((session, idx) => {
             console.log(`  Session ${idx}:`, session)
             if (session.date) {
-              // Normalize session date to start of day for accurate comparison
-              const sessionDate = startOfDay(parseISO(session.date))
+              // Parse date without timezone issues
+              const sessionDate = startOfDay(parseDateString(session.date))
               console.log(`  Parsed date: ${session.date} ->`, sessionDate, 'weekStart:', weekStart, 'weekEnd:', weekEnd)
               
               // Use isWithinInterval for more reliable date comparison
@@ -136,7 +144,7 @@ export default function AdminClassesPage() {
           })
         } else {
           // Fallback: use booking_date for single bookings
-          const bookingDate = startOfDay(parseISO(booking.booking_date))
+          const bookingDate = startOfDay(parseDateString(booking.booking_date))
           if (isWithinInterval(bookingDate, { start: weekStart, end: weekEnd })) {
             expandedClasses.push({
               ...booking,
@@ -153,8 +161,8 @@ export default function AdminClassesPage() {
 
       // Sort by date and time
       expandedClasses.sort((a, b) => {
-        const dateA = parseISO(a.session_date)
-        const dateB = parseISO(b.session_date)
+        const dateA = parseDateString(a.session_date)
+        const dateB = parseDateString(b.session_date)
         if (dateA.getTime() !== dateB.getTime()) {
           return dateA - dateB
         }
@@ -165,7 +173,7 @@ export default function AdminClassesPage() {
       const groupedByDay = daysOfWeek.map((dayName, index) => {
         const dayDate = startOfDay(addDays(weekStart, index))
         const dayClasses = expandedClasses.filter(cls => {
-          const classDate = startOfDay(parseISO(cls.session_date))
+          const classDate = startOfDay(parseDateString(cls.session_date))
           return isSameDay(classDate, dayDate)
         })
 
