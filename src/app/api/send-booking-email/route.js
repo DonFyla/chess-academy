@@ -290,11 +290,19 @@ const emailTemplates = {
             <p><strong>First Lesson:</strong> ${booking.booking_date ? new Date(booking.booking_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'To be confirmed'}</p>
           </div>
           
+          ${booking.meeting_link ? `
           <div style="background: #E3F2FD; padding: 15px; border-radius: 8px; margin: 20px 0;">
             <p style="margin: 0; color: #1565C0;">
-              <strong>🎯 Action Required:</strong> Please contact the student with your Zoom/meeting details before the first lesson.
+              <strong>🎯 Meeting Link Sent:</strong> Your meeting link has been automatically sent to the student. No further action needed.
             </p>
           </div>
+          ` : `
+          <div style="background: #FFF3E0; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #FF9800;">
+            <p style="margin: 0; color: #E65100;">
+              <strong>⚠️ No Meeting Link Set:</strong> Please set your meeting link in your coach dashboard so students can join your lessons automatically.
+            </p>
+          </div>
+          `}
           
           <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
           <p style="color: #999; font-size: 12px; text-align: center;">
