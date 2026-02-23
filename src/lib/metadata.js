@@ -115,6 +115,45 @@ export function getCoachBookingMetadata(coachName = 'Coach', specialization = ''
   }
 }
 
+export function getSpecialCoachBookingMetadata(coachName = 'Elite Coach', rankTitle = '', hourlyRate = 15000) {
+  const title = `Book ${coachName} | ${rankTitle || 'Elite Chess Coach'}`
+  const description = `Book one-on-one sessions with ${coachName}${rankTitle ? `, ${rankTitle}` : ''}. Premium chess coaching at ₦${hourlyRate.toLocaleString()} per session.`
+  
+  return {
+    title,
+    description,
+    keywords: [
+      'elite chess coach',
+      'FIDE master Nigeria',
+      'chess grandmaster lessons',
+      'premium chess coaching',
+      `${coachName} chess`,
+      'best chess coach Nigeria',
+    ],
+    openGraph: {
+      type: 'website',
+      locale: 'en_NG',
+      title,
+      description,
+      siteName: siteConfig.name,
+      images: [
+        {
+          url: siteConfig.ogImage,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [siteConfig.ogImage],
+    },
+  }
+}
+
 // Page-specific metadata
 export const pageMetadata = {
   home: {
@@ -164,6 +203,10 @@ export const pageMetadata = {
       index: false,
       follow: false,
     },
+  },
+  specialCoaches: {
+    title: 'Elite Chess Coaches | FIDE Masters & National Champions',
+    description: "Learn from Nigeria's top-ranked chess masters. Book one-on-one sessions with FIDE Masters and National Champions.",
   },
 }
 
@@ -216,3 +259,6 @@ export const adminMetadata = buildPageMetadata('admin')
 
 // Gallery uses the same metadata as courses
 export const galleryMetadata = buildPageMetadata('courses')
+
+// Special coaches metadata
+export const specialCoachesMetadata = buildPageMetadata('specialCoaches')
