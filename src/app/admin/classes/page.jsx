@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
-import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns'
+import { format, startOfWeek, addDays, isSameDay, parseISO, startOfDay, isWithinInterval } from 'date-fns'
 import { Calendar, Clock, User, MapPin, Filter } from 'lucide-react'
 
 const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -74,9 +74,11 @@ export default function AdminClassesPage() {
 
   const fetchClasses = async () => {
     try {
-      // Calculate week range
-      const weekStart = startOfWeek(parseISO(selectedWeek), { weekStartsOn: 0 })
-      const weekEnd = addDays(weekStart, 6)
+      // Calculate week range - normalize to start of day for accurate comparison
+      const weekStart = startOfDay(startOfWeek(parseISO(selectedWeek), { weekStartsOn: 0 }))
+      const weekEnd = startOfDay(addDays(weekStart, 6))
+      
+      console.log('Fetching classes for week:', format(weekStart, 'yyyy-MM-dd'), 'to', format(weekEnd, 'yyyy-MM-dd'))
 
       // Fetch all confirmed bookings (we'll filter by recurring dates in JS)
       let query = supabase
@@ -95,19 +97,31 @@ export default function AdminClassesPage() {
       const { data, error } = await query
 
       if (error) throw error
+      
+      console.log('Fetched bookings:', data?.length, data)
 
       // Expand bookings to include all recurring dates
       const expandedClasses = []
       
       ;(data || []).forEach(booking => {
+        console.log('Processing booking:', booking.id, 'recurring_dates:', booking.recurring_dates)
+        
         // Check if booking has recurring_dates
         if (booking.recurring_dates && Array.isArray(booking.recurring_dates) && booking.recurring_dates.length > 0) {
           // Add each recurring date as a separate class entry
-          booking.recurring_dates.forEach(session => {
+          booking.recurring_dates.forEach((session, idx) => {
+            console.log(`  Session ${idx}:`, session)
             if (session.date) {
-              const sessionDate = parseISO(session.date)
-              // Only include if within selected week
-              if (sessionDate >= weekStart && sessionDate <= weekEnd) {
+              // Normalize session date to start of day for accurate comparison
+              const sessionDate = startOfDay(parseISO(session.date))
+              console.log(`  Parsed date: ${session.date} ->`, sessionDate, 'weekStart:', weekStart, 'weekEnd:', weekEnd)
+              
+              // Use isWithinInterval for more reliable date comparison
+              const isInWeek = isWithinInterval(sessionDate, { start: weekStart, end: weekEnd })
+              console.log(`  isInWeek: ${isInWeek}`)
+              
+              if (isInWeek) {
+                console.log('  -> ADDED to expandedClasses')
                 expandedClasses.push({
                   ...booking,
                   session_date: session.date,
@@ -115,13 +129,15 @@ export default function AdminClassesPage() {
                   session_end_time: session.end_time || booking.end_time,
                   _isRecurring: true
                 })
+              } else {
+                console.log('  -> NOT in week range')
               }
             }
           })
         } else {
           // Fallback: use booking_date for single bookings
-          const bookingDate = parseISO(booking.booking_date)
-          if (bookingDate >= weekStart && bookingDate <= weekEnd) {
+          const bookingDate = startOfDay(parseISO(booking.booking_date))
+          if (isWithinInterval(bookingDate, { start: weekStart, end: weekEnd })) {
             expandedClasses.push({
               ...booking,
               session_date: booking.booking_date,
@@ -132,6 +148,8 @@ export default function AdminClassesPage() {
           }
         }
       })
+      
+      console.log('Total expanded classes:', expandedClasses.length)
 
       // Sort by date and time
       expandedClasses.sort((a, b) => {
@@ -145,9 +163,9 @@ export default function AdminClassesPage() {
 
       // Transform data to group by day
       const groupedByDay = daysOfWeek.map((dayName, index) => {
-        const dayDate = addDays(weekStart, index)
+        const dayDate = startOfDay(addDays(weekStart, index))
         const dayClasses = expandedClasses.filter(cls => {
-          const classDate = parseISO(cls.session_date)
+          const classDate = startOfDay(parseISO(cls.session_date))
           return isSameDay(classDate, dayDate)
         })
 
