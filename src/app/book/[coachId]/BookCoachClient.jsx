@@ -12,9 +12,15 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, Clock } from 'lucide-react'
 
 export default function BookCoachClient({ coachId }) {
-  const { data: coach, isLoading: loadingCoach } = useCoach(coachId)
+  // Debug logging
+  console.log('BookCoachClient received coachId:', coachId)
+  
+  const { data: coach, isLoading: loadingCoach, error } = useCoach(coachId)
   const { data: availability = [], isLoading: loadingAvailability } = useCoachAvailability(coachId)
   const { data: bookings = [] } = useCoachBookings(coachId)
+
+  // Debug logging
+  console.log('useCoach result:', { coach, loadingCoach, error })
 
   if (loadingCoach) {
     return (
@@ -35,6 +41,8 @@ export default function BookCoachClient({ coachId }) {
         <div className="min-h-screen bg-[#F5EFE7] flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2 text-black">Coach not found</h2>
+            <p className="text-gray-500 mb-4">ID: {coachId || 'undefined'}</p>
+            {error && <p className="text-red-500 text-sm mb-4">Error: {error.message}</p>}
             <Button asChild className="bg-[#5E5044]">
               <Link href="/book">Go Back</Link>
             </Button>
