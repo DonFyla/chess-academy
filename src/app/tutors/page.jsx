@@ -1,19 +1,8 @@
-"use client";
-import Footer from "@/components/Footer";
-import Tutors from "@/components/home/Tutors";
-import Navbar from "@/components/Navbar";
-import React from "react";
+import { tutorsMetadata } from "@/lib/metadata";
+import TutorsClient from "./TutorsClient";
 
-function TutorsPage() {
-  return (
-    <div>
-      <Navbar />
-      <div className="mb-6">
-        <Tutors />
-      </div>
-      <Footer />
-    </div>
-  );
+export const metadata = tutorsMetadata;
+
+export default function TutorsPage() {
+  return <TutorsClient />;
 }
-
-export default TutorsPage;

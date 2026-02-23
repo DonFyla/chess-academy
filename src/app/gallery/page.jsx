@@ -1,19 +1,8 @@
-"use client";
-import Footer from "@/components/Footer";
-import Academy from "@/components/home/Academy";
-import Events from "@/components/home/Events";
-import Navbar from "@/components/Navbar";
-import React from "react";
+import { galleryMetadata } from "@/lib/metadata";
+import GalleryClient from "./GalleryClient";
 
-function Gallery() {
-  return (
-    <>
-      <Navbar />
-      <Events />
-      <Academy />
-      <Footer />
-    </>
-  );
+export const metadata = galleryMetadata;
+
+export default function Gallery() {
+  return <GalleryClient />;
 }
-
-export default Gallery;

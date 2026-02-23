@@ -1,15 +1,8 @@
-"use client";
-import IntermediateCourseDetailPage from '@/components/home/IntermediateCourseDetail';
-import Footer from "@/components/Footer";
-import Navbar from "@/components/Navbar";
-import React from "react";
-import QuizApp from '@/components/home/BeginnerCourseDetail';
+import { intermediateCourseMetadata } from "@/lib/metadata";
+import IntermediateClient from "./IntermediateClient";
+
+export const metadata = intermediateCourseMetadata;
 
 export default function CourseDetail() {
-    return(
-    <>
-        <Navbar />
-        <IntermediateCourseDetailPage />
-        <Footer />
-    </>)
+  return <IntermediateClient />;
 }

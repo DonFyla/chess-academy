@@ -1,17 +1,8 @@
-"use client";
-import Footer from "@/components/Footer";
-import Courses from "@/components/home/Courses";
-import Navbar from "@/components/Navbar";
-import React from "react";
+import CoursesClient from "./CoursesClient";
+import { coursesMetadata } from "@/lib/metadata";
 
-function CoursesPage() {
-  return (
-    <>
-      <Navbar />
-      <Courses />
-      <Footer />
-    </>
-  );
+export const metadata = coursesMetadata;
+
+export default function CoursesPage() {
+  return <CoursesClient />;
 }
-
-export default CoursesPage;
