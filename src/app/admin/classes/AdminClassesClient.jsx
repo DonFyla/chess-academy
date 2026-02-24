@@ -116,13 +116,22 @@ export default function AdminClassesClient() {
       }
 
       // Execute both queries in parallel
-      const [{ data: bookingsData, error: bookingsError }, { data: flexibleData, error: flexibleError }] = await Promise.all([
+      const [bookingsResult, flexibleResult] = await Promise.all([
         bookingsQuery,
         flexibleQuery
       ])
+      
+      const { data: bookingsData, error: bookingsError } = bookingsResult
+      const { data: flexibleData, error: flexibleError } = flexibleResult
 
-      if (bookingsError) throw bookingsError
-      if (flexibleError) throw flexibleError
+      if (bookingsError) {
+        console.error('Bookings error:', bookingsError)
+        throw bookingsError
+      }
+      if (flexibleError) {
+        console.error('Flexible bookings error:', flexibleError)
+        throw flexibleError
+      }
       
       console.log('Fetched bookings:', bookingsData?.length, 'Flexible:', flexibleData?.length)
 
@@ -219,6 +228,11 @@ export default function AdminClassesClient() {
       setClasses(groupedByDay)
     } catch (error) {
       console.error('Error fetching classes:', error)
+      console.error('Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name
+      })
     }
   }
 
