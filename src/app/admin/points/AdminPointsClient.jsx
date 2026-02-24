@@ -172,8 +172,8 @@ function ManualPointsForm({ users, onSubmit, isProcessing }) {
   const [description, setDescription] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   
-  const filteredUsers = users.filter(u => 
-    u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredUsers = (users || []).filter(u => 
+    u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (u.user_metadata?.full_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   )
   
@@ -416,7 +416,7 @@ export default function AdminPointsClient() {
                     <div className="flex justify-center py-12">
                       <Loader2 className="w-8 h-8 animate-spin text-[#5E5044]" />
                     </div>
-                  ) : pendingPurchases?.length === 0 ? (
+                  ) : !pendingPurchases || pendingPurchases.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
                       <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-500" />
                       <p>No pending purchases</p>
@@ -446,7 +446,7 @@ export default function AdminPointsClient() {
                     <div className="flex justify-center py-12">
                       <Loader2 className="w-8 h-8 animate-spin text-[#5E5044]" />
                     </div>
-                  ) : allTransactions?.length === 0 ? (
+                  ) : !allTransactions || allTransactions.length === 0 ? (
                     <p className="text-center text-gray-500 py-8">No transactions yet</p>
                   ) : (
                     <div className="space-y-2">
