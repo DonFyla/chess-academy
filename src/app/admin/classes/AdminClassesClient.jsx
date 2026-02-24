@@ -173,9 +173,11 @@ export default function AdminClassesClient() {
         console.error('Bookings error:', bookingsError)
         throw new Error(bookingsError.message || 'Bookings query failed')
       }
+      
+      // Log flexible error but don't throw - use empty array as fallback
       if (flexibleError && (flexibleError.message || flexibleError.code)) {
-        console.error('Flexible bookings error:', flexibleError)
-        throw new Error(flexibleError.message || 'Flexible bookings query failed')
+        console.error('Flexible bookings error (non-fatal):', flexibleError)
+        console.log('Continuing with empty flexible bookings')
       }
       
       console.log('Fetched bookings:', bookingsData?.length, 'Flexible:', flexibleData?.length)
