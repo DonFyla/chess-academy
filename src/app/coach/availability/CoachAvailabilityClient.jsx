@@ -10,11 +10,12 @@ import AvailabilityList from '@/components/scheduling/AvailabilityList'
 import { useCoachAvailability, useCreateAvailability, useDeleteAvailability } from '@/hooks/useAvailability'
 import { useCoachBookings } from '@/hooks/useBookings'
 import { useCoachFlexibleBookings } from '@/hooks/usePoints'
+import { useCoachBlockedDates, useBlockCoachDate, useUnblockCoachDate } from '@/hooks/useCoachBlocks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { format } from 'date-fns'
-import { Clock, Calendar, ArrowLeft, Video, Save, Coins } from 'lucide-react'
+import { format, addDays } from 'date-fns'
+import { Clock, Calendar, ArrowLeft, Video, Save, Coins, Ban, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase, getCurrentCoach } from '@/lib/supabase'
 
@@ -56,9 +57,21 @@ export default function CoachAvailabilityClient() {
   const { data: availability = [], isLoading: loadingAvailability } = useCoachAvailability(coach?.id)
   const { data: bookings = [], isLoading: loadingBookings } = useCoachBookings(coach?.id)
   const { data: flexibleBookings = [], isLoading: loadingFlexibleBookings } = useCoachFlexibleBookings(coach?.id)
+  const { data: blockedDates = [], isLoading: loadingBlockedDates } = useCoachBlockedDates(coach?.id)
 
   const createAvailability = useCreateAvailability()
   const deleteAvailability = useDeleteAvailability()
+  const blockDate = useBlockCoachDate()
+  const unblockDate = useUnblockCoachDate()
+  
+  // Block date form state
+  const [blockForm, setBlockForm] = useState({
+    date: '',
+    startTime: '',
+    endTime: '',
+    reason: '',
+    isFullDay: false
+  })
 
   const handleAddAvailability = async (slot) => {
     try {
@@ -75,6 +88,37 @@ export default function CoachAvailabilityClient() {
       toast.success('Availability removed')
     } catch (error) {
       toast.error('Failed to remove availability')
+    }
+  }
+  
+  const handleBlockDate = async (e) => {
+    e.preventDefault()
+    if (!blockForm.date) {
+      toast.error('Please select a date')
+      return
+    }
+    
+    try {
+      await blockDate.mutateAsync({
+        coachId: coach.id,
+        blockedDate: blockForm.date,
+        startTime: blockForm.isFullDay ? null : blockForm.startTime,
+        endTime: blockForm.isFullDay ? null : blockForm.endTime,
+        reason: blockForm.reason
+      })
+      toast.success('Date blocked successfully')
+      setBlockForm({ date: '', startTime: '', endTime: '', reason: '', isFullDay: false })
+    } catch (error) {
+      toast.error('Failed to block date')
+    }
+  }
+  
+  const handleUnblockDate = async (blockId) => {
+    try {
+      await unblockDate.mutateAsync({ blockId, coachId: coach.id })
+      toast.success('Date unblocked')
+    } catch (error) {
+      toast.error('Failed to unblock date')
     }
   }
 
@@ -279,13 +323,14 @@ export default function CoachAvailabilityClient() {
             </Card>
             </div> {/* End Left Column */}
 
-            {/* Right Column: Manage Availability */}
-            <div>
-              <Card className="bg-white h-full">
+            {/* Right Column: Manage Availability + Block Dates */}
+            <div className="space-y-6">
+              {/* Weekly Availability */}
+              <Card className="bg-white">
                 <CardHeader>
                   <CardTitle className="text-black flex items-center gap-2">
                     <Clock className="h-5 w-5" />
-                    My Availability
+                    My Weekly Availability
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -302,6 +347,136 @@ export default function CoachAvailabilityClient() {
                       isDeleting={deleteAvailability.isPending}
                     />
                   )}
+                </CardContent>
+              </Card>
+              
+              {/* Block Specific Dates */}
+              <Card className="bg-white">
+                <CardHeader>
+                  <CardTitle className="text-black flex items-center gap-2">
+                    <Ban className="h-5 w-5" />
+                    Block Dates
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Block specific dates or time slots when you&apos;re not available.
+                  </p>
+                  
+                  {/* Block Form */}
+                  <form onSubmit={handleBlockDate} className="space-y-3 border rounded-lg p-4 bg-gray-50">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Date *</label>
+                      <input
+                        type="date"
+                        value={blockForm.date}
+                        onChange={(e) => setBlockForm({ ...blockForm, date: e.target.value })}
+                        min={format(addDays(new Date(), 1), 'yyyy-MM-dd')}
+                        required
+                        className="w-full px-3 py-2 border rounded-lg bg-white mt-1"
+                      />
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="fullDay"
+                        checked={blockForm.isFullDay}
+                        onChange={(e) => setBlockForm({ ...blockForm, isFullDay: e.target.checked })}
+                        className="rounded"
+                      />
+                      <label htmlFor="fullDay" className="text-sm text-gray-700">Block entire day</label>
+                    </div>
+                    
+                    {!blockForm.isFullDay && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">From</label>
+                          <input
+                            type="time"
+                            value={blockForm.startTime}
+                            onChange={(e) => setBlockForm({ ...blockForm, startTime: e.target.value })}
+                            required={!blockForm.isFullDay}
+                            className="w-full px-3 py-2 border rounded-lg bg-white mt-1"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">To</label>
+                          <input
+                            type="time"
+                            value={blockForm.endTime}
+                            onChange={(e) => setBlockForm({ ...blockForm, endTime: e.target.value })}
+                            required={!blockForm.isFullDay}
+                            className="w-full px-3 py-2 border rounded-lg bg-white mt-1"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Reason (optional)</label>
+                      <input
+                        type="text"
+                        value={blockForm.reason}
+                        onChange={(e) => setBlockForm({ ...blockForm, reason: e.target.value })}
+                        placeholder="e.g., Vacation, Personal appointment"
+                        className="w-full px-3 py-2 border rounded-lg bg-white mt-1"
+                      />
+                    </div>
+                    
+                    <Button 
+                      type="submit"
+                      disabled={blockDate.isPending}
+                      className="w-full bg-red-600 hover:bg-red-700"
+                    >
+                      <Ban className="w-4 h-4 mr-2" />
+                      {blockDate.isPending ? 'Blocking...' : 'Block Date'}
+                    </Button>
+                  </form>
+                  
+                  {/* Blocked Dates List */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Blocked Dates</h4>
+                    {loadingBlockedDates ? (
+                      <div className="animate-pulse h-20 bg-gray-200 rounded" />
+                    ) : blockedDates.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-4">No blocked dates.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {blockedDates.map((block) => (
+                          <div
+                            key={block.id}
+                            className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-lg"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm text-black">
+                                {format(new Date(block.blocked_date), 'MMM d, yyyy')}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                {block.start_time ? (
+                                  `${formatTime(block.start_time)} - ${formatTime(block.end_time)}`
+                                ) : (
+                                  'Full day'
+                                )}
+                              </div>
+                              {block.reason && (
+                                <div className="text-xs text-gray-500 truncate">{block.reason}</div>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleUnblockDate(block.id)}
+                              disabled={unblockDate.isPending}
+                              className="text-red-600 hover:text-red-800 hover:bg-red-100"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>
