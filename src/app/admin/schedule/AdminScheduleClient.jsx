@@ -8,6 +8,7 @@ import Footer from '@/components/Footer'
 import { useCoaches, useCreateCoach, useDeleteCoach } from '@/hooks/useCoaches'
 import { useCoachAvailability, useCreateAvailability, useDeleteAvailability } from '@/hooks/useAvailability'
 import { useAllBookings, useConfirmPayment, useRejectBooking } from '@/hooks/useBookings'
+import { useAllFlexibleBookings } from '@/hooks/usePoints'
 import AddAvailabilityForm from '@/components/scheduling/AddAvailabilityForm'
 import AvailabilityList from '@/components/scheduling/AvailabilityList'
 import { Button } from '@/components/ui/button'
@@ -19,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { format } from 'date-fns'
-import { Plus, Trash2, CheckCircle, XCircle, Calendar, Users, Clock } from 'lucide-react'
+import { Plus, Trash2, CheckCircle, XCircle, Calendar, Users, Clock, Coins } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 
@@ -115,6 +116,7 @@ export default function AdminScheduleClient() {
 
   const { data: coaches, isLoading: loadingCoaches } = useCoaches()
   const { data: allBookings, isLoading: loadingBookings } = useAllBookings()
+  const { data: flexibleBookings = [], isLoading: loadingFlexibleBookings } = useAllFlexibleBookings()
   const { data: availability = [], isLoading: loadingAvailability } = useCoachAvailability(selectedCoach?.id)
 
   const createCoach = useCreateCoach()
@@ -256,6 +258,10 @@ export default function AdminScheduleClient() {
               <TabsTrigger value="bookings" className="data-[state=active]:bg-[#5E5044] data-[state=active]:text-white">
                 <Calendar className="mr-2 h-4 w-4" />
                 Bookings
+              </TabsTrigger>
+              <TabsTrigger value="flexible" className="data-[state=active]:bg-[#5E5044] data-[state=active]:text-white">
+                <Coins className="mr-2 h-4 w-4" />
+                Flexible Bookings
               </TabsTrigger>
               <TabsTrigger value="coaches" className="data-[state=active]:bg-[#5E5044] data-[state=active]:text-white">
                 <Users className="mr-2 h-4 w-4" />
@@ -421,6 +427,70 @@ export default function AdminScheduleClient() {
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            {/* Flexible Bookings Tab */}
+            <TabsContent value="flexible">
+              <Card className="bg-white">
+                <CardHeader>
+                  <CardTitle className="text-black flex items-center gap-2">
+                    <Coins className="h-5 w-5" />
+                    Flexible Point Bookings
+                    <Badge variant="secondary" className="bg-blue-500 text-white">
+                      {flexibleBookings.length}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loadingFlexibleBookings ? (
+                    <div className="animate-pulse h-32 bg-gray-200 rounded" />
+                  ) : flexibleBookings.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No flexible bookings yet.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Student</TableHead>
+                          <TableHead>Coach</TableHead>
+                          <TableHead>Date & Time</TableHead>
+                          <TableHead>Points</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {flexibleBookings.map((booking) => (
+                          <TableRow key={booking.id}>
+                            <TableCell>
+                              <div className="font-medium text-black">
+                                {booking.users?.raw_user_meta_data?.full_name || booking.users?.email}
+                              </div>
+                              <div className="text-sm text-gray-500">{booking.users?.email}</div>
+                            </TableCell>
+                            <TableCell>{booking.coaches?.name}</TableCell>
+                            <TableCell>
+                              <div className="text-sm">{format(new Date(booking.session_date), 'MMM d, yyyy')}</div>
+                              <div className="text-xs text-gray-500">
+                                {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className="bg-[#5E5044]">
+                                <Coins className="w-3 h-3 mr-1" />
+                                {booking.points_used} pts
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={booking.status === 'confirmed' ? 'bg-green-600' : 'bg-gray-500'}>
+                                {booking.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Coaches Tab */}
