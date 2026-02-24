@@ -318,51 +318,99 @@ export async function POST(request) {
       )
     }
 
-    const { subject, html } = template(data)
-
-    // Determine recipients - some emails go to both student and coach
-    const isBookingEmail = type === 'flexibleBookingConfirmed' || type === 'coachFlexibleBookingNotification'
-    const recipients = []
-    
-    if (data.student_email) recipients.push(data.student_email)
-    if (data.coach_email && (isBookingEmail || type === 'coachFlexibleBookingNotification')) {
-      recipients.push(data.coach_email)
+    // For booking confirmations, send separate emails to student and coach
+    if (type === 'flexibleBookingConfirmed') {
+      const results = []
+      
+      // 1. Send student confirmation email
+      if (data.student_email) {
+        const studentTemplate = emailTemplates['flexibleBookingConfirmed']
+        const { subject, html } = studentTemplate(data)
+        
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+          },
+          body: JSON.stringify({
+            from: 'Moving Train Chess Academy <bookings@themovingtrain.org>',
+            to: data.student_email,
+            subject,
+            html,
+          }),
+        })
+        
+        if (res.ok) {
+          const result = await res.json()
+          results.push(result)
+        }
+      }
+      
+      // 2. Send coach notification email
+      if (data.coach_email) {
+        const coachTemplate = emailTemplates['coachFlexibleBookingNotification']
+        const { subject, html } = coachTemplate(data)
+        
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+          },
+          body: JSON.stringify({
+            from: 'Moving Train Chess Academy <bookings@themovingtrain.org>',
+            to: data.coach_email,
+            subject,
+            html,
+          }),
+        })
+        
+        if (res.ok) {
+          const result = await res.json()
+          results.push(result)
+        }
+      }
+      
+      return NextResponse.json({ success: true, data: results })
     }
     
-    if (recipients.length === 0) {
+    // For other email types, use single recipient
+    const { subject, html } = template(data)
+    const to = data.student_email || data.coach_email
+    
+    if (!to) {
       return NextResponse.json(
         { error: 'No recipient email address' },
         { status: 400 }
       )
     }
 
-    // Send emails to all recipients
-    const results = []
-    for (const to of recipients) {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${RESEND_API_KEY}`,
-        },
-        body: JSON.stringify({
-          from: 'Moving Train Chess Academy <bookings@themovingtrain.org>',
-          to,
-          subject,
-          html,
-        }),
-      })
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: 'Moving Train Chess Academy <bookings@themovingtrain.org>',
+        to,
+        subject,
+        html,
+      }),
+    })
 
-      if (!res.ok) {
-        const error = await res.text()
-        console.error('Resend API error for', to, ':', error)
-      } else {
-        const result = await res.json()
-        results.push(result)
-      }
+    if (!res.ok) {
+      const error = await res.text()
+      console.error('Resend API error:', error)
+      return NextResponse.json(
+        { error: 'Failed to send email' },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({ success: true, data: results })
+    const result = await res.json()
+    return NextResponse.json({ success: true, data: result })
   } catch (error) {
     console.error('Error sending email:', error)
     return NextResponse.json(
