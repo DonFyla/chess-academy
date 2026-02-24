@@ -17,5 +17,5 @@ CREATE INDEX IF NOT EXISTS idx_coaches_featured_order ON coaches(featured_order)
 
 -- Add comment
 COMMENT ON COLUMN coaches.is_special IS 'High-ranked coaches with per-session booking';
-COMMENT ON COLUMN coaches.rank_title IS 'Display title like "Nigeria\'s #1" or "FIDE Master"';
+COMMENT ON COLUMN coaches.rank_title IS 'Display title like Nigeria''s #1 or FIDE Master';
 COMMENT ON COLUMN coaches.hourly_rate IS 'Per session rate in Naira (e.g., 15000 for ₦15,000)';

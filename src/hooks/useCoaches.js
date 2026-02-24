@@ -3,10 +3,27 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
-// Fetch all coaches
+// Fetch all REGULAR coaches (excluding special coaches for monthly bookings)
 export function useCoaches() {
   return useQuery({
-    queryKey: ['coaches'],
+    queryKey: ['coaches', 'regular'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('coaches')
+        .select('*')
+        .eq('is_special', false)  // Exclude special coaches
+        .order('created_at')
+      
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+// Fetch ALL coaches (for admin use)
+export function useAllCoaches() {
+  return useQuery({
+    queryKey: ['coaches', 'all'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('coaches')
