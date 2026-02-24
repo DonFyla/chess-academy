@@ -168,13 +168,14 @@ export default function AdminClassesClient() {
         flexibleErrorFull: JSON.stringify(flexibleError)
       })
 
-      if (bookingsError) {
+      // Only throw if there's an actual error (with message or code)
+      if (bookingsError && (bookingsError.message || bookingsError.code)) {
         console.error('Bookings error:', bookingsError)
-        throw bookingsError
+        throw new Error(bookingsError.message || 'Bookings query failed')
       }
-      if (flexibleError) {
+      if (flexibleError && (flexibleError.message || flexibleError.code)) {
         console.error('Flexible bookings error:', flexibleError)
-        throw flexibleError
+        throw new Error(flexibleError.message || 'Flexible bookings query failed')
       }
       
       console.log('Fetched bookings:', bookingsData?.length, 'Flexible:', flexibleData?.length)
