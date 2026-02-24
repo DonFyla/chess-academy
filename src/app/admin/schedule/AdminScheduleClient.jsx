@@ -240,6 +240,12 @@ export default function AdminScheduleClient() {
               >
                 Manage Coaches
               </a>
+              <a 
+                href="/admin/points" 
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Points Management
+              </a>
             </div>
           </div>
         </header>

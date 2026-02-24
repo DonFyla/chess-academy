@@ -88,12 +88,28 @@ export default function BuyPointsClient() {
   }
   
   const handleBuyPackage = async (pkg) => {
+    const ref = `PTS-${Date.now().toString(36).toUpperCase()}`
     setSelectedPackage(pkg)
-    setPaymentReference(`PTS-${Date.now().toString(36).toUpperCase()}`)
-    setShowPaymentInfo(true)
+    setPaymentReference(ref)
     
-    // Send pending email
+    // Create pending transaction
     try {
+      const { error } = await supabase
+        .from('point_transactions')
+        .insert({
+          user_id: user.id,
+          type: 'purchase',
+          amount: pkg.points,
+          balance_after: 0,
+          payment_reference: ref,
+          description: `Purchase of ${pkg.points} points - ${pkg.label}`,
+          status: 'pending',
+          expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        })
+      
+      if (error) throw error
+      
+      // Send pending email
       await fetch('/api/points-purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,12 +120,16 @@ export default function BuyPointsClient() {
             student_email: user.email,
             points_amount: pkg.points,
             total_amount: pkg.price,
-            reference: paymentReference || `PTS-${Date.now().toString(36).toUpperCase()}`,
+            reference: ref,
           }
         })
       })
-    } catch (e) {
-      console.error('Failed to send email:', e)
+      
+      setShowPaymentInfo(true)
+      toast.success('Payment instructions sent to your email!')
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Something went wrong. Please try again.')
     }
     
     // Scroll to payment info
@@ -130,10 +150,25 @@ export default function BuyPointsClient() {
     
     setSelectedPackage({ points: amount, price, label: 'Custom' })
     setPaymentReference(ref)
-    setShowPaymentInfo(true)
     
-    // Send pending email
+    // Create pending transaction
     try {
+      const { error } = await supabase
+        .from('point_transactions')
+        .insert({
+          user_id: user.id,
+          type: 'purchase',
+          amount: amount,
+          balance_after: 0,
+          payment_reference: ref,
+          description: `Purchase of ${amount} points - Custom`,
+          status: 'pending',
+          expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        })
+      
+      if (error) throw error
+      
+      // Send pending email
       await fetch('/api/points-purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -148,8 +183,12 @@ export default function BuyPointsClient() {
           }
         })
       })
-    } catch (e) {
-      console.error('Failed to send email:', e)
+      
+      setShowPaymentInfo(true)
+      toast.success('Payment instructions sent to your email!')
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Something went wrong. Please try again.')
     }
     
     setTimeout(() => {
