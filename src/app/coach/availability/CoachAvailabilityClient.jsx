@@ -361,6 +361,9 @@ export default function CoachAvailabilityClient() {
                 <CardContent className="space-y-4">
                   <p className="text-sm text-gray-600">
                     Block specific dates or time slots when you&apos;re not available.
+                    <span className="block mt-1 text-xs text-gray-500">
+                      Tip: To block multiple hours (e.g., 10am-12pm), set From/To times and it will block all overlapping slots.
+                    </span>
                   </p>
                   
                   {/* Block Form */}

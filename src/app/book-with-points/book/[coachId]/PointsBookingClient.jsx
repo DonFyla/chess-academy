@@ -134,6 +134,8 @@ export default function PointsBookingClient({ coachId }) {
   }
   
   // Check if a slot is blocked by coach
+  // This handles both full-day blocks and partial time ranges
+  // Example: Blocking 10:00-12:00 will block slots 10:00-11:00 and 11:00-12:00
   const isSlotBlocked = (dateStr, startTime, endTime) => {
     if (!blockedDates || blockedDates.length === 0) return false
     
@@ -151,15 +153,13 @@ export default function PointsBookingClient({ coachId }) {
       const slotStart = formatTime(startTime)
       const slotEnd = formatTime(endTime)
       
-      // Debug logging (remove in production)
-      console.log('Checking block:', { 
-        date: dateStr, 
-        blockStart, blockEnd, 
-        slotStart, slotEnd,
-        overlap: slotStart < blockEnd && slotEnd > blockStart 
-      })
-      
-      // Overlap exists if slot starts before block ends AND slot ends after block starts
+      // Overlap exists if:
+      // - Slot starts before block ends AND slot ends after block starts
+      // Examples:
+      // Block 10:00-12:00, Slot 10:00-11:00 -> 10:00 < 12:00 && 11:00 > 10:00 = BLOCKED
+      // Block 10:00-12:00, Slot 11:00-12:00 -> 11:00 < 12:00 && 12:00 > 10:00 = BLOCKED
+      // Block 10:00-12:00, Slot 09:00-10:00 -> 09:00 < 12:00 && 10:00 > 10:00 = NOT BLOCKED (edge case, exactly at end)
+      // Block 10:00-12:00, Slot 12:00-13:00 -> 12:00 < 12:00 = false = NOT BLOCKED
       return slotStart < blockEnd && slotEnd > blockStart
     })
   }
