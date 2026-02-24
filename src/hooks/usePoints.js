@@ -253,13 +253,15 @@ export function useAllFlexibleBookings() {
         .from('flexible_bookings')
         .select(`
           *,
-          coaches(name, email),
-          users:student_id(email)
+          coaches(name, email)
         `)
         .order('created_at', { ascending: false })
       
-      if (error) throw error
-      return data
+      if (error) {
+        console.error('useAllFlexibleBookings error:', error)
+        throw error
+      }
+      return data || []
     },
   })
 }

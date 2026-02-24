@@ -126,6 +126,37 @@ export default function AdminScheduleClient() {
   const confirmPayment = useConfirmPayment()
   const rejectBooking = useRejectBooking()
   const [rejectNotes, setRejectNotes] = useState('')
+  const [flexibleUserMap, setFlexibleUserMap] = useState({})
+
+  // Fetch user details for flexible bookings
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      if (!flexibleBookings || flexibleBookings.length === 0) return
+      
+      const userIds = [...new Set(flexibleBookings.map(b => b.user_id).filter(Boolean))]
+      if (userIds.length === 0) return
+      
+      try {
+        const { data: userData, error } = await supabase
+          .rpc('get_user_info', { user_ids: userIds })
+        
+        if (error) {
+          console.error('Error fetching user info:', error)
+          return
+        }
+        
+        const userMap = {}
+        userData?.forEach(user => {
+          userMap[user.id] = user
+        })
+        setFlexibleUserMap(userMap)
+      } catch (err) {
+        console.error('Failed to fetch user details:', err)
+      }
+    }
+    
+    fetchUserDetails()
+  }, [flexibleBookings])
 
   const handleAddCoach = async (e) => {
     e.preventDefault()
@@ -458,13 +489,15 @@ export default function AdminScheduleClient() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {flexibleBookings.map((booking) => (
+                        {flexibleBookings.map((booking) => {
+                          const userInfo = flexibleUserMap[booking.user_id]
+                          return (
                           <TableRow key={booking.id}>
                             <TableCell>
                               <div className="font-medium text-black">
-                                {booking.users?.raw_user_meta_data?.full_name || booking.users?.email}
+                                {userInfo?.full_name || userInfo?.email || 'Unknown'}
                               </div>
-                              <div className="text-sm text-gray-500">{booking.users?.email}</div>
+                              <div className="text-sm text-gray-500">{userInfo?.email || booking.user_id?.slice(0, 8)}</div>
                             </TableCell>
                             <TableCell>{booking.coaches?.name}</TableCell>
                             <TableCell>
@@ -485,7 +518,7 @@ export default function AdminScheduleClient() {
                               </Badge>
                             </TableCell>
                           </TableRow>
-                        ))}
+                        )})}
                       </TableBody>
                     </Table>
                   )}
