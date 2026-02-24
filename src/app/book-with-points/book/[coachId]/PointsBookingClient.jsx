@@ -202,8 +202,16 @@ export default function PointsBookingClient({ coachId }) {
       // Send emails for each booking (single API call sends to both student and coach)
       const newBalance = userBalance - totalCost
       
+      // Helper to delay between requests
+      const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+      
       for (let i = 0; i < bookings.length; i++) {
         const slot = selectedSlots[i]
+        
+        // Add delay between email requests to respect rate limit (600ms = ~1.6 req/sec)
+        if (i > 0) {
+          await delay(600)
+        }
         
         try {
           await fetch('/api/points-purchase', {

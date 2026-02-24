@@ -318,6 +318,9 @@ export async function POST(request) {
       )
     }
 
+    // Helper function to delay between requests (Resend rate limit: 2 req/sec)
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+    
     // For booking confirmations, send separate emails to student and coach
     if (type === 'flexibleBookingConfirmed') {
       const results = []
@@ -346,6 +349,9 @@ export async function POST(request) {
           results.push(result)
         }
       }
+      
+      // Wait 600ms before sending second email (respects 2 req/sec limit)
+      await delay(600)
       
       // 2. Send coach notification email
       if (data.coach_email) {
