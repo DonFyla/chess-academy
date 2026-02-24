@@ -119,10 +119,10 @@ export function useCreateFlexibleBooking() {
   
   return useMutation({
     mutationFn: async ({ userId, coachId, sessionDate, startTime, endTime, dayOfWeek, pointsUsed, meetingLink }) => {
-      // Get current balance
+      // Get current balance and total_used
       const { data: currentPoints, error: balanceError } = await supabase
         .from('user_points')
-        .select('balance')
+        .select('balance, total_used')
         .eq('user_id', userId)
         .single()
       
@@ -132,6 +132,7 @@ export function useCreateFlexibleBooking() {
       }
       
       const newBalance = currentPoints.balance - pointsUsed
+      const newTotalUsed = (currentPoints.total_used || 0) + pointsUsed
       
       // Start a transaction
       // 1. Deduct points
@@ -139,7 +140,7 @@ export function useCreateFlexibleBooking() {
         .from('user_points')
         .update({ 
           balance: newBalance,
-          total_used: supabase.sql`total_used + ${pointsUsed}`,
+          total_used: newTotalUsed,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', userId)
