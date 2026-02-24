@@ -253,10 +253,38 @@ export default function AdminClassesClient() {
       
       // Add flexible point bookings
       console.log('Processing flexible bookings:', flexibleData?.length)
+      
+      // Get unique user IDs from flexible bookings
+      const userIds = [...new Set((flexibleData || []).map(b => b.user_id).filter(Boolean))]
+      console.log('User IDs to fetch:', userIds)
+      
+      // Fetch user details if we have user IDs
+      let userMap = {}
+      if (userIds.length > 0) {
+        try {
+          const { data: userData, error: userError } = await supabase
+            .rpc('get_user_info', { user_ids: userIds })
+          
+          if (userError) {
+            console.error('Error fetching user info:', userError)
+          } else {
+            console.log('Fetched user data:', userData)
+            // Create a map of user_id -> user info
+            userData?.forEach(user => {
+              userMap[user.id] = user
+            })
+          }
+        } catch (userFetchError) {
+          console.error('Failed to fetch user info:', userFetchError)
+        }
+      }
+      
       ;(flexibleData || []).forEach(booking => {
+        const userInfo = userMap[booking.user_id]
         console.log('Flexible booking:', booking.id, {
           coach: booking.coaches,
-          user_id: booking.user_id
+          user_id: booking.user_id,
+          userInfo
         })
         expandedClasses.push({
           ...booking,
@@ -264,8 +292,8 @@ export default function AdminClassesClient() {
           session_start_time: booking.start_time,
           session_end_time: booking.end_time,
           _isFlexible: true,
-          student_name: 'Student ID: ' + (booking.user_id?.slice(0, 8) || 'Unknown'),
-          student_email: '',
+          student_name: userInfo?.full_name || userInfo?.email || 'Student ID: ' + (booking.user_id?.slice(0, 8) || 'Unknown'),
+          student_email: userInfo?.email || '',
           coaches: booking.coaches // Coach data from join
         })
       })
