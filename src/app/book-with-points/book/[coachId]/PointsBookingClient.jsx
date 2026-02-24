@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useCoach } from '@/hooks/useCoaches'
 import { useCoachAvailability } from '@/hooks/useAvailability'
 import { useCoachBlockedDates } from '@/hooks/useCoachBlocks'
-import { useUserPoints, useCreateFlexibleBooking } from '@/hooks/usePoints'
+import { useUserPoints, useCreateFlexibleBooking, useCoachBookingsForPoints } from '@/hooks/usePoints'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -55,6 +55,7 @@ export default function PointsBookingClient({ coachId }) {
   const { data: coach, isLoading: coachLoading } = useCoach(coachId)
   const { data: availability, isLoading: availLoading } = useCoachAvailability(coachId)
   const { data: blockedDates, isLoading: blocksLoading } = useCoachBlockedDates(coachId)
+  const { data: existingBookings, isLoading: bookingsLoading } = useCoachBookingsForPoints(coachId)
   const { data: points, isLoading: pointsLoading } = useUserPoints(user?.id)
   const createBooking = useCreateFlexibleBooking()
   
@@ -84,7 +85,7 @@ export default function PointsBookingClient({ coachId }) {
     }
   }, [user, authLoading, router])
   
-  if (authLoading || coachLoading) {
+  if (authLoading || coachLoading || bookingsLoading) {
     return (
       <>
         <Navbar />
@@ -121,9 +122,23 @@ export default function PointsBookingClient({ coachId }) {
   // Generate next 4 weeks
   const weeks = Array.from({ length: 4 }, (_, i) => addDays(currentWeek, i * 7))
   
+  // Check if a slot is already booked
+  const isSlotBooked = (dateStr, startTime) => {
+    if (!existingBookings || existingBookings.length === 0) return false
+    return existingBookings.some(booking => 
+      booking.session_date === dateStr && 
+      booking.start_time === startTime &&
+      ['confirmed', 'completed'].includes(booking.status)
+    )
+  }
+  
   const getSlotsForDay = (date) => {
     const dayOfWeek = date.getDay()
-    return availability?.filter(slot => slot.day_of_week === dayOfWeek) || []
+    const dateStr = format(date, 'yyyy-MM-dd')
+    const slots = availability?.filter(slot => slot.day_of_week === dayOfWeek) || []
+    
+    // Filter out already booked slots
+    return slots.filter(slot => !isSlotBooked(dateStr, slot.start_time))
   }
   
   const isSlotSelected = (date, slot) => {
@@ -305,7 +320,7 @@ export default function PointsBookingClient({ coachId }) {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {availLoading || blocksLoading ? (
+                    {availLoading || blocksLoading || bookingsLoading ? (
                       <div className="flex justify-center py-12">
                         <Loader2 className="w-8 h-8 animate-spin text-[#5E5044]" />
                       </div>

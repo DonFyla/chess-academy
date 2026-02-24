@@ -263,3 +263,23 @@ export function useAllFlexibleBookings() {
     },
   })
 }
+
+// Fetch existing confirmed bookings for a coach (to prevent double-booking)
+export function useCoachBookingsForPoints(coachId) {
+  return useQuery({
+    queryKey: ['coach-bookings-points', coachId],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0]
+      const { data, error } = await supabase
+        .from('flexible_bookings')
+        .select('session_date, start_time, end_time, status')
+        .eq('coach_id', coachId)
+        .in('status', ['confirmed', 'completed'])
+        .gte('session_date', today)
+      
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!coachId,
+  })
+}
