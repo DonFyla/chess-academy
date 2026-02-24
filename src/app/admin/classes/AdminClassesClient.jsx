@@ -18,7 +18,7 @@ function parseDateString(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number)
   return new Date(year, month - 1, day) // month is 0-indexed
 }
-import { Calendar, Clock, User, MapPin, Filter } from 'lucide-react'
+import { Calendar, Clock, User, MapPin, Filter, Coins } from 'lucide-react'
 
 const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -88,8 +88,8 @@ export default function AdminClassesClient() {
       
       console.log('Fetching classes for week:', format(weekStart, 'yyyy-MM-dd'), 'to', format(weekEnd, 'yyyy-MM-dd'))
 
-      // Fetch all confirmed bookings (we'll filter by recurring dates in JS)
-      let query = supabase
+      // Fetch regular confirmed bookings
+      let bookingsQuery = supabase
         .from('bookings')
         .select(`
           *,
@@ -97,21 +97,40 @@ export default function AdminClassesClient() {
         `)
         .eq('status', 'confirmed')
 
+      // Fetch flexible point bookings
+      let flexibleQuery = supabase
+        .from('flexible_bookings')
+        .select(`
+          *,
+          coaches(name, email),
+          users:user_id(email, raw_user_meta_data)
+        `)
+        .in('status', ['confirmed', 'completed'])
+        .gte('session_date', format(weekStart, 'yyyy-MM-dd'))
+        .lte('session_date', format(weekEnd, 'yyyy-MM-dd'))
+
       // Filter by coach if selected
       if (selectedCoach && selectedCoach !== 'all') {
-        query = query.eq('coach_id', selectedCoach)
+        bookingsQuery = bookingsQuery.eq('coach_id', selectedCoach)
+        flexibleQuery = flexibleQuery.eq('coach_id', selectedCoach)
       }
 
-      const { data, error } = await query
+      // Execute both queries in parallel
+      const [{ data: bookingsData, error: bookingsError }, { data: flexibleData, error: flexibleError }] = await Promise.all([
+        bookingsQuery,
+        flexibleQuery
+      ])
 
-      if (error) throw error
+      if (bookingsError) throw bookingsError
+      if (flexibleError) throw flexibleError
       
-      console.log('Fetched bookings:', data?.length, data)
+      console.log('Fetched bookings:', bookingsData?.length, 'Flexible:', flexibleData?.length)
 
       // Expand bookings to include all recurring dates
       const expandedClasses = []
       
-      ;(data || []).forEach(booking => {
+      // Process regular bookings
+      ;(bookingsData || []).forEach(booking => {
         console.log('Processing booking:', booking.id, 'recurring_dates:', booking.recurring_dates)
         
         // Check if booking has recurring_dates
@@ -155,6 +174,19 @@ export default function AdminClassesClient() {
             })
           }
         }
+      })
+      
+      // Add flexible point bookings
+      ;(flexibleData || []).forEach(booking => {
+        expandedClasses.push({
+          ...booking,
+          session_date: booking.session_date,
+          session_start_time: booking.start_time,
+          session_end_time: booking.end_time,
+          _isFlexible: true,
+          student_name: booking.users?.raw_user_meta_data?.full_name || booking.users?.email,
+          student_email: booking.users?.email
+        })
       })
       
       console.log('Total expanded classes:', expandedClasses.length)
@@ -327,6 +359,12 @@ export default function AdminClassesClient() {
                           </div>
                           
                           <div className="flex items-center gap-2">
+                            {booking._isFlexible && (
+                              <Badge className="text-xs bg-[#5E5044] text-white">
+                                <Coins className="w-3 h-3 mr-1" />
+                                {booking.points_used} pts
+                              </Badge>
+                            )}
                             {booking.booking_mode === 'double' && (
                               <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
                                 2x/week
