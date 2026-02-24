@@ -108,20 +108,20 @@ export default function AdminClassesClient() {
         `)
         .eq('status', 'confirmed')
 
-      // Fetch flexible point bookings with joins
+      // Fetch flexible point bookings - separate queries to avoid RLS issues
       console.log('Building flexible query with dates:', startDateStr, endDateStr)
       
+      // First get the bookings
       let flexibleQuery = supabase
         .from('flexible_bookings')
         .select(`
           *,
-          coaches:coach_id (name, email),
-          users:user_id (email, raw_user_meta_data)
+          coaches (name, email)
         `)
         .gte('session_date', startDateStr)
         .lte('session_date', endDateStr)
       
-      console.log('Flexible query built')
+      console.log('Flexible query built (without users join)')
 
       // Filter by coach if selected
       if (selectedCoach && selectedCoach !== 'all') {
@@ -256,7 +256,7 @@ export default function AdminClassesClient() {
       ;(flexibleData || []).forEach(booking => {
         console.log('Flexible booking:', booking.id, {
           coach: booking.coaches,
-          user: booking.users
+          user_id: booking.user_id
         })
         expandedClasses.push({
           ...booking,
@@ -264,9 +264,9 @@ export default function AdminClassesClient() {
           session_start_time: booking.start_time,
           session_end_time: booking.end_time,
           _isFlexible: true,
-          student_name: booking.users?.raw_user_meta_data?.full_name || booking.users?.email || 'Unknown',
-          student_email: booking.users?.email || '',
-          coaches: booking.coaches // Ensure coach data is passed through
+          student_name: 'Student ID: ' + (booking.user_id?.slice(0, 8) || 'Unknown'),
+          student_email: '',
+          coaches: booking.coaches // Coach data from join
         })
       })
       
