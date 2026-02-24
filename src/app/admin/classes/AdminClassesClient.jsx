@@ -114,7 +114,8 @@ export default function AdminClassesClient() {
         .from('flexible_bookings')
         .select(`
           *,
-          coaches(name, email)
+          coaches(name, email),
+          users:user_id(email, raw_user_meta_data)
         `)
         .in('status', ['confirmed', 'completed'])
         .gte('session_date', startDateStr)
