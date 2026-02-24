@@ -9,17 +9,30 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [coach, setCoach] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [authError, setAuthError] = useState(null)
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchCoach(session.user.id)
-      } else {
+    // Get initial session with error handling
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('Auth session error:', error.message)
+          setAuthError(error.message)
+          setLoading(false)
+          return
+        }
+        setUser(session?.user ?? null)
+        if (session?.user) {
+          fetchCoach(session.user.id)
+        } else {
+          setLoading(false)
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to get session:', err.message)
+        setAuthError(err.message)
         setLoading(false)
-      }
-    })
+      })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -49,9 +62,23 @@ export function AuthProvider({ children }) {
       
       setCoach(data || null)
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Error fetching coach:', error.message)
     } finally {
       setLoading(false)
+    }
+  }
+  
+  const refreshSession = async () => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession()
+      if (error) {
+        console.error('Session refresh failed:', error.message)
+        return null
+      }
+      return data.session
+    } catch (err) {
+      console.error('Session refresh error:', err.message)
+      return null
     }
   }
 
@@ -90,9 +117,11 @@ export function AuthProvider({ children }) {
     user,
     coach,
     loading,
+    authError,
     signUp,
     signIn,
     signOut,
+    refreshSession,
     isAdmin,
     isCoach
   }

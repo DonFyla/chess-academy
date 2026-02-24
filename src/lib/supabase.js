@@ -3,8 +3,18 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+// Validate URL format
 if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing Supabase environment variables')
   throw new Error('Missing Supabase environment variables')
+}
+
+// Ensure URL is properly formatted
+try {
+  new URL(supabaseUrl)
+} catch (e) {
+  console.error('Invalid Supabase URL:', supabaseUrl)
+  throw new Error('Invalid Supabase URL format')
 }
 
 // Create client with cookie persistence for auth
