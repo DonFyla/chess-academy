@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { usePendingPointsPurchases, useAllPointsTransactions, useConfirmPointsPurchase, useRejectPointsPurchase, useAddPointsManual } from '@/hooks/useAdminPoints'
-import { useUsers } from '@/hooks/useAdmin'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -29,7 +28,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 
 // Hook to fetch users (for manual points addition)
-function useUsers() {
+function useAdminUsers() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   
@@ -279,7 +278,7 @@ export default function AdminPointsClient() {
   const confirmPurchase = useConfirmPointsPurchase()
   const rejectPurchase = useRejectPointsPurchase()
   const addPointsManual = useAddPointsManual()
-  const { users, loading: usersLoading } = useUsers()
+  const { users, loading: usersLoading } = useAdminUsers()
   
   // Check admin auth
   useEffect(() => {
