@@ -8,6 +8,7 @@ import Link from 'next/link'
 export default function SignupClient() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
@@ -34,7 +35,8 @@ export default function SignupClient() {
     setLoading(true)
 
     const { data, error } = await signUp(email, password, { 
-      full_name: name 
+      full_name: name,
+      phone: phone
     })
 
     if (error) {
@@ -105,6 +107,22 @@ export default function SignupClient() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5E5044] focus:border-[#5E5044] outline-none transition-colors"
                 placeholder="you@example.com"
               />
+            </div>
+
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                Phone Number
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5E5044] focus:border-[#5E5044] outline-none transition-colors"
+                placeholder="+234 800 000 0000"
+              />
+              <p className="text-xs text-gray-500 mt-1">Used for booking confirmations</p>
             </div>
 
             <div>
