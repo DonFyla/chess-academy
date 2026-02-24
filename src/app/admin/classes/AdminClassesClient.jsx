@@ -108,18 +108,17 @@ export default function AdminClassesClient() {
         `)
         .eq('status', 'confirmed')
 
-      // Fetch flexible point bookings
+      // Fetch flexible point bookings - simplified query first
       console.log('Building flexible query with dates:', startDateStr, endDateStr)
+      
+      // Test with basic query first
       let flexibleQuery = supabase
         .from('flexible_bookings')
-        .select(`
-          *,
-          coaches(name, email),
-          users:user_id(email, raw_user_meta_data)
-        `)
-        .in('status', ['confirmed', 'completed'])
+        .select('*')
         .gte('session_date', startDateStr)
         .lte('session_date', endDateStr)
+      
+      console.log('Flexible query built:', flexibleQuery)
 
       // Filter by coach if selected
       if (selectedCoach && selectedCoach !== 'all') {
@@ -131,10 +130,23 @@ export default function AdminClassesClient() {
       console.log('Executing queries...')
       let bookingsResult, flexibleResult
       try {
-        [bookingsResult, flexibleResult] = await Promise.all([
+        const [bookingsRes, flexibleRes] = await Promise.all([
           bookingsQuery,
           flexibleQuery
         ])
+        
+        // Supabase returns { data, error } object
+        bookingsResult = bookingsRes
+        flexibleResult = flexibleRes
+        
+        console.log('Query results received:', {
+          bookingsResType: typeof bookingsRes,
+          bookingsResHasData: 'data' in bookingsRes,
+          bookingsResHasError: 'error' in bookingsRes,
+          flexibleResType: typeof flexibleRes,
+          flexibleResHasData: 'data' in flexibleRes,
+          flexibleResHasError: 'error' in flexibleRes
+        })
       } catch (promiseError) {
         console.error('Promise.all error:', promiseError)
         throw promiseError
