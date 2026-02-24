@@ -159,7 +159,7 @@ export default function BookWithPointsClient() {
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-12 h-12 animate-spin text-[#5E5044]" />
             </div>
-          ) : coaches?.length === 0 ? (
+          ) : !coaches || coaches.length === 0 ? (
             <div className="text-center py-20">
               <AlertCircle className="w-16 h-16 mx-auto text-gray-400 mb-4" />
               <h3 className="text-xl font-bold text-black mb-2">No Coaches Available</h3>
