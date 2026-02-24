@@ -9,11 +9,12 @@ import AddAvailabilityForm from '@/components/scheduling/AddAvailabilityForm'
 import AvailabilityList from '@/components/scheduling/AvailabilityList'
 import { useCoachAvailability, useCreateAvailability, useDeleteAvailability } from '@/hooks/useAvailability'
 import { useCoachBookings } from '@/hooks/useBookings'
+import { useCoachFlexibleBookings } from '@/hooks/usePoints'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
-import { Clock, Calendar, ArrowLeft, Video, Save } from 'lucide-react'
+import { Clock, Calendar, ArrowLeft, Video, Save, Coins } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase, getCurrentCoach } from '@/lib/supabase'
 
@@ -54,6 +55,7 @@ export default function CoachAvailabilityClient() {
 
   const { data: availability = [], isLoading: loadingAvailability } = useCoachAvailability(coach?.id)
   const { data: bookings = [], isLoading: loadingBookings } = useCoachBookings(coach?.id)
+  const { data: flexibleBookings = [], isLoading: loadingFlexibleBookings } = useCoachFlexibleBookings(coach?.id)
 
   const createAvailability = useCreateAvailability()
   const deleteAvailability = useDeleteAvailability()
@@ -177,19 +179,19 @@ export default function CoachAvailabilityClient() {
                 </CardContent>
               </Card>
 
-              {/* Upcoming Bookings */}
+              {/* Upcoming Bookings - Monthly Recurring */}
             <Card className="bg-white">
               <CardHeader>
                 <CardTitle className="text-black flex items-center gap-2">
                   <Calendar className="h-5 w-5" />
-                  Upcoming Bookings
+                  Monthly Recurring Bookings
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingBookings ? (
                   <div className="animate-pulse h-32 bg-gray-200 rounded" />
                 ) : upcomingBookings.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No upcoming bookings.</p>
+                  <p className="text-gray-500 text-center py-8">No monthly bookings.</p>
                 ) : (
                   <div className="space-y-3">
                     {upcomingBookings.map((booking) => (
@@ -217,6 +219,56 @@ export default function CoachAvailabilityClient() {
                           <div>{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</div>
                           {booking.student_email && (
                             <div className="mt-1">{booking.student_email}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Flexible Point Bookings */}
+            <Card className="bg-white">
+              <CardHeader>
+                <CardTitle className="text-black flex items-center gap-2">
+                  <Coins className="h-5 w-5" />
+                  Flexible Point Bookings
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingFlexibleBookings ? (
+                  <div className="animate-pulse h-32 bg-gray-200 rounded" />
+                ) : flexibleBookings.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No point-based bookings.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {flexibleBookings.map((booking) => (
+                      <div
+                        key={booking.id}
+                        className="p-4 border rounded-lg hover:bg-gray-50"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-black">
+                            {booking.users?.raw_user_meta_data?.full_name || booking.users?.email}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-[#5E5044]">
+                              <Coins className="w-3 h-3 mr-1" />
+                              {booking.points_used} pts
+                            </Badge>
+                            <Badge
+                              className={booking.status === 'confirmed' ? 'bg-green-600' : ''}
+                            >
+                              {booking.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          <div>{format(new Date(booking.session_date), 'MMM d, yyyy')}</div>
+                          <div>{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</div>
+                          {booking.users?.email && (
+                            <div className="mt-1">{booking.users.email}</div>
                           )}
                         </div>
                       </div>

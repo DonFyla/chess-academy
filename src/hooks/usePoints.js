@@ -283,3 +283,28 @@ export function useCoachBookingsForPoints(coachId) {
     enabled: !!coachId,
   })
 }
+
+// Fetch coach's flexible bookings with student details
+export function useCoachFlexibleBookings(coachId) {
+  return useQuery({
+    queryKey: ['coach-flexible-bookings', coachId],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0]
+      const { data, error } = await supabase
+        .from('flexible_bookings')
+        .select(`
+          *,
+          users:user_id(email, raw_user_meta_data)
+        `)
+        .eq('coach_id', coachId)
+        .in('status', ['confirmed', 'completed'])
+        .gte('session_date', today)
+        .order('session_date', { ascending: true })
+        .order('start_time', { ascending: true })
+      
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!coachId,
+  })
+}
