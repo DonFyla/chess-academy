@@ -110,21 +110,26 @@ export default function BuyPointsClient() {
       
       if (error) throw error
       
-      // Send pending email
-      await fetch('/api/points-purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'pointsPurchasePending',
-          data: {
-            student_name: user.user_metadata?.full_name || user.email,
-            student_email: user.email,
-            points_amount: pkg.points,
-            total_amount: pkg.price,
-            reference: ref,
-          }
+      // Send pending email (don't block on email failure)
+      try {
+        await fetch('/api/points-purchase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'pointsPurchasePending',
+            data: {
+              student_name: user.user_metadata?.full_name || user.email,
+              student_email: user.email,
+              points_amount: pkg.points,
+              total_amount: pkg.price,
+              reference: ref,
+            }
+          })
         })
-      })
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError)
+        // Continue anyway - payment info is shown on screen
+      }
       
       setShowPaymentInfo(true)
       toast.success('Payment instructions sent to your email!')
