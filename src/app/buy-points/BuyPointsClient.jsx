@@ -129,8 +129,8 @@ export default function BuyPointsClient() {
       setShowPaymentInfo(true)
       toast.success('Payment instructions sent to your email!')
     } catch (error) {
-      console.error('Error:', error)
-      toast.error('Something went wrong. Please try again.')
+      console.error('Error creating purchase:', error)
+      toast.error(error?.message || 'Failed to create purchase. Please try again.')
     }
     
     // Scroll to payment info
