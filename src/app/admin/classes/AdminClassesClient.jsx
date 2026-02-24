@@ -142,17 +142,30 @@ export default function AdminClassesClient() {
       
       console.log('Raw results:', { 
         bookingsResult: bookingsResult ? 'OK' : 'NULL', 
-        flexibleResult: flexibleResult ? 'OK' : 'NULL' 
+        flexibleResult: flexibleResult ? 'OK' : 'NULL',
+        bookingsType: typeof bookingsResult,
+        flexibleType: typeof flexibleResult
       })
+      
+      // Log full results for debugging
+      console.log('Full bookings result:', JSON.stringify(bookingsResult, null, 2))
+      console.log('Full flexible result:', JSON.stringify(flexibleResult, null, 2))
       
       const { data: bookingsData, error: bookingsError } = bookingsResult || {}
       const { data: flexibleData, error: flexibleError } = flexibleResult || {}
 
       console.log('Destructured:', {
-        bookingsData: bookingsData?.length,
-        bookingsError: bookingsError?.message,
-        flexibleData: flexibleData?.length,
-        flexibleError: flexibleError?.message
+        bookingsDataExists: !!bookingsData,
+        bookingsDataLength: bookingsData?.length,
+        bookingsErrorExists: !!bookingsError,
+        bookingsErrorMessage: bookingsError?.message,
+        bookingsErrorCode: bookingsError?.code,
+        flexibleDataExists: !!flexibleData,
+        flexibleDataLength: flexibleData?.length,
+        flexibleErrorExists: !!flexibleError,
+        flexibleErrorMessage: flexibleError?.message,
+        flexibleErrorCode: flexibleError?.code,
+        flexibleErrorFull: JSON.stringify(flexibleError)
       })
 
       if (bookingsError) {
