@@ -194,11 +194,14 @@ export function useCancelFlexibleBooking() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async ({ bookingId, userId }) => {
-      // Get booking details
+    mutationFn: async ({ bookingId, userId, userEmail, userName, coachName }) => {
+      // Get booking details with coach info
       const { data: booking, error: bookingError } = await supabase
         .from('flexible_bookings')
-        .select('*')
+        .select(`
+          *,
+          coaches(name)
+        `)
         .eq('id', bookingId)
         .eq('user_id', userId)
         .single()
@@ -264,7 +267,30 @@ export function useCancelFlexibleBooking() {
       
       if (txError) throw txError
       
-      return { success: true, refunded: refundAmount }
+      // 4. Send refund email
+      try {
+        await fetch('/api/points-purchase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'pointsRefundNotification',
+            data: {
+              student_name: userName || 'Student',
+              student_email: userEmail,
+              coach_name: coachName || booking.coaches?.name || 'Coach',
+              session_date: booking.session_date,
+              start_time: booking.start_time,
+              end_time: booking.end_time,
+              refund_amount: refundAmount,
+              new_balance: newBalance,
+            }
+          })
+        })
+      } catch (e) {
+        console.error('Failed to send refund email:', e)
+      }
+      
+      return { success: true, refunded: refundAmount, newBalance }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['user-points', variables.userId] })

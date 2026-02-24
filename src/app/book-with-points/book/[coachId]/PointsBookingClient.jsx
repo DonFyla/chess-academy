@@ -158,8 +158,9 @@ export default function PointsBookingClient({ coachId }) {
     
     try {
       // Create bookings for all selected slots
+      const bookings = []
       for (const slot of selectedSlots) {
-        await createBooking.mutateAsync({
+        const booking = await createBooking.mutateAsync({
           userId: user.id,
           coachId: coachId,
           sessionDate: slot.date,
@@ -169,6 +170,63 @@ export default function PointsBookingClient({ coachId }) {
           pointsUsed: pointsCost,
           meetingLink: coach.meeting_link,
         })
+        bookings.push(booking)
+      }
+      
+      // Send emails for each booking
+      const newBalance = userBalance - totalCost
+      
+      for (let i = 0; i < bookings.length; i++) {
+        const slot = selectedSlots[i]
+        
+        // Send confirmation to student
+        try {
+          await fetch('/api/points-purchase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'flexibleBookingConfirmed',
+              data: {
+                student_name: formData.studentName,
+                student_email: formData.studentEmail,
+                coach_name: coach.name,
+                session_date: slot.date,
+                start_time: slot.start_time,
+                end_time: slot.end_time,
+                points_used: pointsCost,
+                remaining_balance: newBalance + (selectedSlots.length - i - 1) * pointsCost,
+                meeting_link: coach.meeting_link,
+              }
+            })
+          })
+        } catch (e) {
+          console.error('Failed to send student email:', e)
+        }
+        
+        // Send notification to coach
+        try {
+          await fetch('/api/points-purchase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'coachFlexibleBookingNotification',
+              data: {
+                student_name: formData.studentName,
+                student_email: formData.studentEmail,
+                student_phone: formData.studentPhone,
+                coach_name: coach.name,
+                coach_email: coach.email,
+                session_date: slot.date,
+                start_time: slot.start_time,
+                end_time: slot.end_time,
+                points_used: pointsCost,
+                meeting_link: coach.meeting_link,
+              }
+            })
+          })
+        } catch (e) {
+          console.error('Failed to send coach email:', e)
+        }
       }
       
       toast.success(`Successfully booked ${selectedSlots.length} session(s)!`)

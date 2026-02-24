@@ -103,7 +103,7 @@ function BookingCard({ booking, onCancel }) {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => onCancel(booking.id)}
+                onClick={() => onCancel(booking)}
                 className="text-red-600 border-red-200 hover:bg-red-50"
               >
                 Cancel & Refund
@@ -183,13 +183,19 @@ export default function DashboardClient() {
     }
   }, [user, authLoading, router])
   
-  const handleCancel = async (bookingId) => {
+  const handleCancel = async (booking) => {
     if (!confirm('Are you sure you want to cancel this booking? Points will be refunded.')) {
       return
     }
     
     try {
-      await cancelBooking.mutateAsync({ bookingId, userId: user.id })
+      await cancelBooking.mutateAsync({ 
+        bookingId: booking.id, 
+        userId: user.id,
+        userEmail: user.email,
+        userName: user.user_metadata?.full_name || user.email,
+        coachName: booking.coaches?.name
+      })
       toast.success('Booking cancelled and points refunded!')
     } catch (error) {
       toast.error(error.message || 'Failed to cancel booking')
