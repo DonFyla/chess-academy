@@ -66,6 +66,17 @@ export default function PointsBookingClient({ coachId }) {
     studentPhone: '',
   })
   
+  // Auto-populate form with user data when available
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        studentName: user.user_metadata?.full_name || user.user_metadata?.name || '',
+        studentEmail: user.email || '',
+        studentPhone: user.user_metadata?.phone || user.user_metadata?.phone_number || '',
+      })
+    }
+  }, [user])
+  
   // Redirect if not logged in
   useEffect(() => {
     if (!authLoading && !user) {
@@ -399,10 +410,11 @@ export default function PointsBookingClient({ coachId }) {
                   </CardContent>
                 </Card>
                 
-                {/* Contact Info */}
+                {/* Contact Info - Pre-filled from profile */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Your Information</CardTitle>
+                    <p className="text-sm text-gray-500">Pre-filled from your profile</p>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
@@ -412,7 +424,8 @@ export default function PointsBookingClient({ coachId }) {
                         value={formData.studentName}
                         onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
                         required
-                        className="mt-1"
+                        className="mt-1 bg-gray-50"
+                        placeholder="Your name from profile"
                       />
                     </div>
                     <div>
@@ -423,7 +436,8 @@ export default function PointsBookingClient({ coachId }) {
                         value={formData.studentEmail}
                         onChange={(e) => setFormData({ ...formData, studentEmail: e.target.value })}
                         required
-                        className="mt-1"
+                        className="mt-1 bg-gray-50"
+                        placeholder="Your email from profile"
                       />
                     </div>
                     <div>
@@ -434,7 +448,8 @@ export default function PointsBookingClient({ coachId }) {
                         value={formData.studentPhone}
                         onChange={(e) => setFormData({ ...formData, studentPhone: e.target.value })}
                         required
-                        className="mt-1"
+                        className="mt-1 bg-gray-50"
+                        placeholder={formData.studentPhone ? '' : 'Add phone number to your profile'}
                       />
                     </div>
                   </CardContent>

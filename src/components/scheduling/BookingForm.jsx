@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format, addWeeks, startOfWeek, addDays } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { DAYS_OF_WEEK, COURSE_TYPES } from '@/lib/scheduling-types'
 import { useCreateBooking } from '@/hooks/useBookings'
+import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 
 function formatTime(time) {
@@ -21,6 +22,7 @@ function formatTime(time) {
 }
 
 export default function BookingForm({ coachId, availability, existingBookings, coachName }) {
+  const { user } = useAuth()
   const [bookingMode, setBookingMode] = useState('single') // 'single' (4 sessions) or 'double' (8 sessions)
   
   // Selected days and times (recurring weekly)
@@ -29,12 +31,21 @@ export default function BookingForm({ coachId, availability, existingBookings, c
   const [selectedDay2, setSelectedDay2] = useState(null)
   const [selectedSlot2, setSelectedSlot2] = useState(null)
   
-  // Student info
+  // Student info - auto-populate from user profile
   const [studentName, setStudentName] = useState('')
   const [studentEmail, setStudentEmail] = useState('')
   const [studentPhone, setStudentPhone] = useState('')
   const [courseType, setCourseType] = useState('')
   const [notes, setNotes] = useState('')
+  
+  // Auto-populate form with user data when available
+  useEffect(() => {
+    if (user) {
+      setStudentName(user.user_metadata?.full_name || user.user_metadata?.name || '')
+      setStudentEmail(user.email || '')
+      setStudentPhone(user.user_metadata?.phone || user.user_metadata?.phone_number || '')
+    }
+  }, [user])
   
   const createBooking = useCreateBooking()
 
@@ -391,6 +402,7 @@ export default function BookingForm({ coachId, availability, existingBookings, c
             <CardTitle className="text-lg text-black">
               {bookingMode === 'single' ? '2' : '3'}. Your Information
             </CardTitle>
+            <p className="text-sm text-gray-500">Pre-filled from your profile</p>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Booking Summary */}
@@ -419,9 +431,9 @@ export default function BookingForm({ coachId, availability, existingBookings, c
                   id="name"
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
-                  placeholder="John Doe"
+                  placeholder="Your name from profile"
                   required
-                  className="border-gray-300"
+                  className="bg-gray-50"
                 />
               </div>
               <div className="space-y-2">
@@ -431,9 +443,9 @@ export default function BookingForm({ coachId, availability, existingBookings, c
                   type="email"
                   value={studentEmail}
                   onChange={(e) => setStudentEmail(e.target.value)}
-                  placeholder="john@example.com"
+                  placeholder="Your email from profile"
                   required
-                  className="border-gray-300"
+                  className="bg-gray-50"
                 />
               </div>
             </div>
@@ -446,8 +458,8 @@ export default function BookingForm({ coachId, availability, existingBookings, c
                   type="tel"
                   value={studentPhone}
                   onChange={(e) => setStudentPhone(e.target.value)}
-                  placeholder="+234..."
-                  className="border-gray-300"
+                  placeholder={studentPhone ? '' : 'Add phone to your profile'}
+                  className="bg-gray-50"
                 />
               </div>
               <div className="space-y-2">

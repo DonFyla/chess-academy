@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import { useAuth } from '@/contexts/AuthContext'
 import { useSpecialCoach } from '@/hooks/useSpecialCoaches'
 import { useCoachAvailability } from '@/hooks/useAvailability'
 import { useCreateSpecialBooking } from '@/hooks/useSpecialCoaches'
@@ -244,6 +245,7 @@ function SessionScheduler({
 
 export default function SpecialBookingClient({ coachId }) {
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
   const { data: coach, isLoading: loadingCoach } = useSpecialCoach(coachId)
   const { data: availability = [], isLoading: loadingAvailability } = useCoachAvailability(coachId)
   const createBooking = useCreateSpecialBooking()
@@ -260,6 +262,17 @@ export default function SpecialBookingClient({ coachId }) {
     studentEmail: '',
     studentPhone: '',
   })
+  
+  // Auto-populate form with user data when available
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        studentName: user.user_metadata?.full_name || user.user_metadata?.name || '',
+        studentEmail: user.email || '',
+        studentPhone: user.user_metadata?.phone || user.user_metadata?.phone_number || '',
+      })
+    }
+  }, [user])
   
   const totalAmount = (coach?.hourly_rate || 15000) * totalSessions
   
@@ -295,7 +308,7 @@ export default function SpecialBookingClient({ coachId }) {
     }
   }
   
-  if (loadingCoach) {
+  if (loadingCoach || authLoading) {
     return (
       <>
         <Navbar />
@@ -449,6 +462,7 @@ export default function SpecialBookingClient({ coachId }) {
                       <span className="w-8 h-8 bg-[#5E5044] text-white rounded-full flex items-center justify-center text-sm">3</span>
                       Your Information
                     </CardTitle>
+                    <p className="text-sm text-gray-500">Pre-filled from your profile</p>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
@@ -458,8 +472,8 @@ export default function SpecialBookingClient({ coachId }) {
                         value={formData.studentName}
                         onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
                         required
-                        className="mt-1"
-                        placeholder="Enter your full name"
+                        className="mt-1 bg-gray-50"
+                        placeholder="Your name from profile"
                       />
                     </div>
                     <div>
@@ -470,8 +484,8 @@ export default function SpecialBookingClient({ coachId }) {
                         value={formData.studentEmail}
                         onChange={(e) => setFormData({ ...formData, studentEmail: e.target.value })}
                         required
-                        className="mt-1"
-                        placeholder="your@email.com"
+                        className="mt-1 bg-gray-50"
+                        placeholder="Your email from profile"
                       />
                     </div>
                     <div>
@@ -482,8 +496,8 @@ export default function SpecialBookingClient({ coachId }) {
                         value={formData.studentPhone}
                         onChange={(e) => setFormData({ ...formData, studentPhone: e.target.value })}
                         required
-                        className="mt-1"
-                        placeholder="+234 800 000 0000"
+                        className="mt-1 bg-gray-50"
+                        placeholder={formData.studentPhone ? '' : 'Add phone number to your profile'}
                       />
                     </div>
                   </CardContent>
