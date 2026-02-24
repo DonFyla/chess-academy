@@ -8,15 +8,9 @@ export function usePendingPointsPurchases() {
   return useQuery({
     queryKey: ['pending-points-purchases'],
     queryFn: async () => {
+      // Use the secure function that bypasses RLS for admin
       const { data, error } = await supabase
-        .from('point_transactions')
-        .select(`
-          *,
-          users:user_id(email, raw_user_meta_data)
-        `)
-        .eq('type', 'purchase')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
+        .rpc('get_pending_points_purchases')
       
       if (error) throw error
       return data || []

@@ -51,8 +51,8 @@ function useAdminUsers() {
 }
 
 function PendingPurchaseCard({ purchase, onConfirm, onReject, isProcessing }) {
-  const userName = purchase.users?.raw_user_meta_data?.full_name || purchase.users?.email
-  const userEmail = purchase.users?.email
+  const userName = purchase.user_name || purchase.user_email
+  const userEmail = purchase.user_email
   
   return (
     <Card className="mb-4 border-yellow-200">
@@ -318,10 +318,10 @@ export default function AdminPointsClient() {
         transactionId: purchase.id,
         userId: purchase.user_id,
         pointsAmount: purchase.amount,
-        userEmail: purchase.users?.email,
-        userName: purchase.users?.raw_user_meta_data?.full_name,
+        userEmail: purchase.user_email,
+        userName: purchase.user_name,
       })
-      toast.success(`Added ${purchase.amount} points to ${purchase.users?.email}`)
+      toast.success(`Added ${purchase.amount} points to ${purchase.user_email}`)
     } catch (error) {
       toast.error('Failed to confirm: ' + error.message)
     }
