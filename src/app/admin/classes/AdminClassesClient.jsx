@@ -157,15 +157,13 @@ export default function AdminClassesClient() {
       console.log('Destructured:', {
         bookingsDataExists: !!bookingsData,
         bookingsDataLength: bookingsData?.length,
-        bookingsErrorExists: !!bookingsError,
-        bookingsErrorMessage: bookingsError?.message,
-        bookingsErrorCode: bookingsError?.code,
+        bookingsError: bookingsError,
+        bookingsErrorType: typeof bookingsError,
         flexibleDataExists: !!flexibleData,
         flexibleDataLength: flexibleData?.length,
-        flexibleErrorExists: !!flexibleError,
-        flexibleErrorMessage: flexibleError?.message,
-        flexibleErrorCode: flexibleError?.code,
-        flexibleErrorFull: JSON.stringify(flexibleError)
+        flexibleError: flexibleError,
+        flexibleErrorType: typeof flexibleError,
+        flexibleErrorKeys: flexibleError ? Object.keys(flexibleError) : 'N/A'
       })
 
       // Only throw if there's an actual error (with message or code)
@@ -175,8 +173,14 @@ export default function AdminClassesClient() {
       }
       
       // Log flexible error but don't throw - use empty array as fallback
-      if (flexibleError && (flexibleError.message || flexibleError.code)) {
+      if (flexibleError) {
         console.error('Flexible bookings error (non-fatal):', flexibleError)
+        console.log('Error details:', {
+          message: flexibleError.message,
+          code: flexibleError.code,
+          details: flexibleError.details,
+          hint: flexibleError.hint
+        })
         console.log('Continuing with empty flexible bookings')
       }
       
