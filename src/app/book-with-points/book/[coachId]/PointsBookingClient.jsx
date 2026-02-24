@@ -144,11 +144,20 @@ export default function PointsBookingClient({ coachId }) {
       // If no specific time (entire day blocked)
       if (!block.start_time || !block.end_time) return true
       
-      // Check if times overlap
-      const blockStart = block.start_time.slice(0, 5)
-      const blockEnd = block.end_time.slice(0, 5)
-      const slotStart = startTime.slice(0, 5)
-      const slotEnd = endTime.slice(0, 5)
+      // Format times for comparison (handle "14:30:00" or "14:30:00+00" format)
+      const formatTime = (t) => t ? t.slice(0, 5) : ''
+      const blockStart = formatTime(block.start_time)
+      const blockEnd = formatTime(block.end_time)
+      const slotStart = formatTime(startTime)
+      const slotEnd = formatTime(endTime)
+      
+      // Debug logging (remove in production)
+      console.log('Checking block:', { 
+        date: dateStr, 
+        blockStart, blockEnd, 
+        slotStart, slotEnd,
+        overlap: slotStart < blockEnd && slotEnd > blockStart 
+      })
       
       // Overlap exists if slot starts before block ends AND slot ends after block starts
       return slotStart < blockEnd && slotEnd > blockStart
