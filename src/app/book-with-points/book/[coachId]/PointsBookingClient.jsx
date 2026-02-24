@@ -119,8 +119,9 @@ export default function PointsBookingClient({ coachId }) {
   const totalCost = selectedSlots.length * pointsCost
   const canAfford = userBalance >= totalCost
   
-  // Generate next 4 weeks
-  const weeks = Array.from({ length: 4 }, (_, i) => addDays(currentWeek, i * 7))
+  // Generate next 4 weeks (starting from tomorrow)
+  const tomorrow = addDays(new Date(), 1)
+  const weeks = Array.from({ length: 4 }, (_, i) => addDays(startOfWeek(tomorrow, { weekStartsOn: 1 }), i * 7))
   
   // Check if a slot is already booked
   const isSlotBooked = (dateStr, startTime) => {
@@ -132,13 +133,48 @@ export default function PointsBookingClient({ coachId }) {
     )
   }
   
+  // Check if a slot is blocked by coach
+  const isSlotBlocked = (dateStr, startTime, endTime) => {
+    if (!blockedDates || blockedDates.length === 0) return false
+    
+    return blockedDates.some(block => {
+      // Check if date matches
+      if (block.blocked_date !== dateStr) return false
+      
+      // If no specific time (entire day blocked)
+      if (!block.start_time || !block.end_time) return true
+      
+      // Check if times overlap
+      const blockStart = block.start_time.slice(0, 5)
+      const blockEnd = block.end_time.slice(0, 5)
+      const slotStart = startTime.slice(0, 5)
+      const slotEnd = endTime.slice(0, 5)
+      
+      // Overlap exists if slot starts before block ends AND slot ends after block starts
+      return slotStart < blockEnd && slotEnd > blockStart
+    })
+  }
+  
+  // Check if date is in the past
+  const isDateInPast = (date) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return date < today
+  }
+  
   const getSlotsForDay = (date) => {
+    // Return empty if date is in the past
+    if (isDateInPast(date)) return []
+    
     const dayOfWeek = date.getDay()
     const dateStr = format(date, 'yyyy-MM-dd')
     const slots = availability?.filter(slot => slot.day_of_week === dayOfWeek) || []
     
-    // Filter out already booked slots
-    return slots.filter(slot => !isSlotBooked(dateStr, slot.start_time))
+    // Filter out already booked slots AND blocked slots
+    return slots.filter(slot => 
+      !isSlotBooked(dateStr, slot.start_time) && 
+      !isSlotBlocked(dateStr, slot.start_time, slot.end_time)
+    )
   }
   
   const isSlotSelected = (date, slot) => {
@@ -363,20 +399,11 @@ export default function PointsBookingClient({ coachId }) {
                                     </div>
                                     
                                     {isBlocked ? (
-                                      <div className="text-xs text-red-500">Blocked</div>
+                                      <div className="text-xs text-red-500 font-medium">Day Off</div>
                                     ) : slots.length > 0 ? (
                                       <div className="space-y-1">
                                         {slots.map((slot, idx) => {
-                                          const blocked = isSlotBlocked(blockedDates, dateStr, slot.start_time)
                                           const selected = isSlotSelected(date, slot)
-                                          
-                                          if (blocked) {
-                                            return (
-                                              <div key={idx} className="text-xs text-red-400 py-1">
-                                                {slot.start_time.slice(0, 5)} ✕
-                                              </div>
-                                            )
-                                          }
                                           
                                           return (
                                             <button
@@ -386,10 +413,10 @@ export default function PointsBookingClient({ coachId }) {
                                               className={`w-full text-xs py-1 px-1 rounded transition-colors ${
                                                 selected
                                                   ? 'bg-[#5E5044] text-white'
-                                                  : 'bg-white hover:bg-gray-100 text-gray-700'
+                                                  : 'bg-white hover:bg-[#F5EFE7] border border-gray-200'
                                               }`}
                                             >
-                                              {selected ? <Check className="w-3 h-3 inline" /> : null}
+                                              {selected ? <Check className="w-3 h-3 inline mr-1" /> : null}
                                               {slot.start_time.slice(0, 5)}
                                             </button>
                                           )
