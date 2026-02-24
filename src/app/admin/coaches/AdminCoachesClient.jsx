@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { useCoaches, useCreateCoach, useDeleteCoach } from '@/hooks/useCoaches'
+import { useAllCoaches, useCreateCoach, useDeleteCoach } from '@/hooks/useCoaches'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -36,7 +36,7 @@ export default function AdminCoachesClient() {
     user_id: ''
   })
 
-  const { data: coaches, isLoading: loadingCoaches } = useCoaches()
+  const { data: coaches, isLoading: loadingCoaches } = useAllCoaches()
   const createCoach = useCreateCoach()
   const deleteCoach = useDeleteCoach()
 

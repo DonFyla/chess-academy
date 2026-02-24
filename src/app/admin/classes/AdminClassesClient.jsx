@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { useCoaches } from '@/hooks/useCoaches'
+import { useAllCoaches } from '@/hooks/useCoaches'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -38,7 +38,7 @@ export default function AdminClassesClient() {
   const [classes, setClasses] = useState([])
   const [selectedCoach, setSelectedCoach] = useState('all')
   const [selectedWeek, setSelectedWeek] = useState(() => format(new Date(), 'yyyy-MM-dd'))
-  const { data: coaches, isLoading: loadingCoaches } = useCoaches()
+  const { data: coaches, isLoading: loadingCoaches } = useAllCoaches()
 
   // Check admin auth
   useEffect(() => {

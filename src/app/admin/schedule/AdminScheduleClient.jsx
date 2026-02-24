@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { useCoaches, useCreateCoach, useDeleteCoach } from '@/hooks/useCoaches'
+import { useAllCoaches, useCreateCoach, useDeleteCoach } from '@/hooks/useCoaches'
 import { useCoachAvailability, useCreateAvailability, useDeleteAvailability } from '@/hooks/useAvailability'
 import { useAllBookings, useConfirmPayment, useRejectBooking } from '@/hooks/useBookings'
 import { useAllFlexibleBookings } from '@/hooks/usePoints'
@@ -114,7 +114,7 @@ export default function AdminScheduleClient() {
     }
   }
 
-  const { data: coaches, isLoading: loadingCoaches } = useCoaches()
+  const { data: coaches, isLoading: loadingCoaches } = useAllCoaches()
   const { data: allBookings, isLoading: loadingBookings } = useAllBookings()
   const { data: flexibleBookings = [], isLoading: loadingFlexibleBookings } = useAllFlexibleBookings()
   const { data: availability = [], isLoading: loadingAvailability } = useCoachAvailability(selectedCoach?.id)
