@@ -83,10 +83,21 @@ export default function AdminClassesClient() {
   const fetchClasses = async () => {
     try {
       // Calculate week range - normalize to start of day for accurate comparison
-      const weekStart = startOfDay(startOfWeek(parseISO(selectedWeek), { weekStartsOn: 0 }))
-      const weekEnd = startOfDay(addDays(weekStart, 6))
+      let weekStart, weekEnd
+      try {
+        weekStart = startOfDay(startOfWeek(parseISO(selectedWeek), { weekStartsOn: 0 }))
+        weekEnd = startOfDay(addDays(weekStart, 6))
+      } catch (dateError) {
+        console.error('Date parsing error:', dateError, 'selectedWeek:', selectedWeek)
+        // Fallback to current week
+        weekStart = startOfDay(startOfWeek(new Date(), { weekStartsOn: 0 }))
+        weekEnd = startOfDay(addDays(weekStart, 6))
+      }
       
-      console.log('Fetching classes for week:', format(weekStart, 'yyyy-MM-dd'), 'to', format(weekEnd, 'yyyy-MM-dd'))
+      const startDateStr = format(weekStart, 'yyyy-MM-dd')
+      const endDateStr = format(weekEnd, 'yyyy-MM-dd')
+      
+      console.log('Fetching classes for week:', startDateStr, 'to', endDateStr)
 
       // Fetch regular confirmed bookings
       let bookingsQuery = supabase
@@ -98,6 +109,7 @@ export default function AdminClassesClient() {
         .eq('status', 'confirmed')
 
       // Fetch flexible point bookings
+      console.log('Building flexible query with dates:', startDateStr, endDateStr)
       let flexibleQuery = supabase
         .from('flexible_bookings')
         .select(`
@@ -106,8 +118,8 @@ export default function AdminClassesClient() {
           users:user_id(email, raw_user_meta_data)
         `)
         .in('status', ['confirmed', 'completed'])
-        .gte('session_date', format(weekStart, 'yyyy-MM-dd'))
-        .lte('session_date', format(weekEnd, 'yyyy-MM-dd'))
+        .gte('session_date', startDateStr)
+        .lte('session_date', endDateStr)
 
       // Filter by coach if selected
       if (selectedCoach && selectedCoach !== 'all') {
@@ -116,13 +128,32 @@ export default function AdminClassesClient() {
       }
 
       // Execute both queries in parallel
-      const [bookingsResult, flexibleResult] = await Promise.all([
-        bookingsQuery,
-        flexibleQuery
-      ])
+      console.log('Executing queries...')
+      let bookingsResult, flexibleResult
+      try {
+        [bookingsResult, flexibleResult] = await Promise.all([
+          bookingsQuery,
+          flexibleQuery
+        ])
+      } catch (promiseError) {
+        console.error('Promise.all error:', promiseError)
+        throw promiseError
+      }
       
-      const { data: bookingsData, error: bookingsError } = bookingsResult
-      const { data: flexibleData, error: flexibleError } = flexibleResult
+      console.log('Raw results:', { 
+        bookingsResult: bookingsResult ? 'OK' : 'NULL', 
+        flexibleResult: flexibleResult ? 'OK' : 'NULL' 
+      })
+      
+      const { data: bookingsData, error: bookingsError } = bookingsResult || {}
+      const { data: flexibleData, error: flexibleError } = flexibleResult || {}
+
+      console.log('Destructured:', {
+        bookingsData: bookingsData?.length,
+        bookingsError: bookingsError?.message,
+        flexibleData: flexibleData?.length,
+        flexibleError: flexibleError?.message
+      })
 
       if (bookingsError) {
         console.error('Bookings error:', bookingsError)
