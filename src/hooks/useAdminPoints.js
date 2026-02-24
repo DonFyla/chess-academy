@@ -8,11 +8,58 @@ export function usePendingPointsPurchases() {
   return useQuery({
     queryKey: ['pending-points-purchases'],
     queryFn: async () => {
-      // Use the secure function that bypasses RLS for admin
-      const { data, error } = await supabase
-        .rpc('get_pending_points_purchases')
+      console.log('Fetching pending purchases...')
       
-      if (error) throw error
+      // First try the RPC function (try both function names)
+      let result = await supabase.rpc('get_pending_purchases')
+      
+      if (result.error) {
+        console.log('Trying old function name...')
+        result = await supabase.rpc('get_pending_points_purchases')
+      }
+      
+      const { data, error } = result
+      
+      if (error) {
+        console.error('RPC Error:', error)
+        // Fallback to direct query if function fails
+        console.log('Falling back to direct query...')
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('point_transactions')
+          .select(`
+            *,
+            users:user_id(email, raw_user_meta_data)
+          `)
+          .eq('type', 'purchase')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+        
+        if (fallbackError) {
+          console.error('Fallback Error:', fallbackError)
+          // Last resort: try the view
+          console.log('Trying view...')
+          const { data: viewData, error: viewError } = await supabase
+            .from('admin_pending_purchases')
+            .select('*')
+            .order('created_at', { ascending: false })
+          
+          if (viewError) {
+            console.error('View Error:', viewError)
+            throw viewError
+          }
+          
+          return viewData || []
+        }
+        
+        // Transform data to match expected format
+        return (fallbackData || []).map(tx => ({
+          ...tx,
+          user_email: tx.users?.email,
+          user_name: tx.users?.raw_user_meta_data?.full_name || tx.users?.email
+        }))
+      }
+      
+      console.log('Pending purchases:', data?.length || 0, 'items')
       return data || []
     },
   })
