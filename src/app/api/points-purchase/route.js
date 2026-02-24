@@ -320,41 +320,49 @@ export async function POST(request) {
 
     const { subject, html } = template(data)
 
-    // Determine recipient
-    let to = data.student_email || data.coach_email
+    // Determine recipients - some emails go to both student and coach
+    const isBookingEmail = type === 'flexibleBookingConfirmed' || type === 'coachFlexibleBookingNotification'
+    const recipients = []
     
-    if (!to) {
+    if (data.student_email) recipients.push(data.student_email)
+    if (data.coach_email && (isBookingEmail || type === 'coachFlexibleBookingNotification')) {
+      recipients.push(data.coach_email)
+    }
+    
+    if (recipients.length === 0) {
       return NextResponse.json(
         { error: 'No recipient email address' },
         { status: 400 }
       )
     }
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: 'Moving Train Chess Academy <bookings@themovingtrain.org>',
-        to,
-        subject,
-        html,
-      }),
-    })
+    // Send emails to all recipients
+    const results = []
+    for (const to of recipients) {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: 'Moving Train Chess Academy <bookings@themovingtrain.org>',
+          to,
+          subject,
+          html,
+        }),
+      })
 
-    if (!res.ok) {
-      const error = await res.text()
-      console.error('Resend API error:', error)
-      return NextResponse.json(
-        { error: 'Failed to send email' },
-        { status: 500 }
-      )
+      if (!res.ok) {
+        const error = await res.text()
+        console.error('Resend API error for', to, ':', error)
+      } else {
+        const result = await res.json()
+        results.push(result)
+      }
     }
 
-    const result = await res.json()
-    return NextResponse.json({ success: true, data: result })
+    return NextResponse.json({ success: true, data: results })
   } catch (error) {
     console.error('Error sending email:', error)
     return NextResponse.json(
