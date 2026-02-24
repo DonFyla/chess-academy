@@ -272,8 +272,9 @@ export default function AdminPointsClient() {
   const [rejectReason, setRejectReason] = useState('')
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [selectedPurchase, setSelectedPurchase] = useState(null)
+  const [debugInfo, setDebugInfo] = useState(null)
   
-  const { data: pendingPurchases, isLoading: pendingLoading } = usePendingPointsPurchases()
+  const { data: pendingPurchases, isLoading: pendingLoading, refetch: refetchPending } = usePendingPointsPurchases()
   const { data: allTransactions, isLoading: transactionsLoading } = useAllPointsTransactions()
   const confirmPurchase = useConfirmPointsPurchase()
   const rejectPurchase = useRejectPointsPurchase()
@@ -361,6 +362,42 @@ export default function AdminPointsClient() {
     }
   }
   
+  // Debug function to check database directly
+  const runDebugQuery = async () => {
+    setDebugInfo({ loading: true })
+    try {
+      // Test 1: Direct query with explicit filter
+      const { data: direct, error: directErr } = await supabase
+        .from('point_transactions')
+        .select('*')
+        .eq('type', 'purchase')
+        .eq('status', 'pending')
+      
+      // Test 2: All transactions
+      const { data: all, error: allErr } = await supabase
+        .from('point_transactions')
+        .select('*')
+        .limit(10)
+      
+      // Test 3: Check user admin status
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: coach } = await supabase
+        .from('coaches')
+        .select('is_admin')
+        .eq('user_id', user?.id)
+        .single()
+      
+      setDebugInfo({
+        directQuery: { data: direct, error: directErr?.message, count: direct?.length },
+        allQuery: { data: all, error: allErr?.message, count: all?.length },
+        adminStatus: { userId: user?.id, isAdmin: coach?.is_admin },
+        loading: false
+      })
+    } catch (e) {
+      setDebugInfo({ error: e.message, loading: false })
+    }
+  }
+  
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#F5EFE7] flex items-center justify-center">
@@ -408,10 +445,46 @@ export default function AdminPointsClient() {
             
             <TabsContent value="pending">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Pending Points Purchases</CardTitle>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={runDebugQuery}
+                      disabled={debugInfo?.loading}
+                    >
+                      {debugInfo?.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Debug'}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => refetchPending()}
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
+                  {/* Debug Panel */}
+                  {debugInfo && !debugInfo.loading && (
+                    <div className="mb-4 p-4 bg-gray-100 rounded-lg text-xs font-mono">
+                      <h4 className="font-bold mb-2">Debug Info:</h4>
+                      <p>Admin: {debugInfo.adminStatus?.isAdmin ? 'Yes' : 'No'} (User: {debugInfo.adminStatus?.userId})</p>
+                      <p>Direct Query (pending purchases): {debugInfo.directQuery?.count || 0} items</p>
+                      <p>All Transactions (last 10): {debugInfo.allQuery?.count || 0} items</p>
+                      {debugInfo.directQuery?.error && <p className="text-red-600">Direct Error: {debugInfo.directQuery.error}</p>}
+                      {debugInfo.allQuery?.error && <p className="text-red-600">All Error: {debugInfo.allQuery.error}</p>}
+                      {debugInfo.error && <p className="text-red-600">Error: {debugInfo.error}</p>}
+                      <details>
+                        <summary className="cursor-pointer text-blue-600">View Raw Data</summary>
+                        <pre className="mt-2 overflow-auto max-h-40">
+                          {JSON.stringify(debugInfo, null, 2)}
+                        </pre>
+                      </details>
+                    </div>
+                  )}
+                  
                   {pendingLoading ? (
                     <div className="flex justify-center py-12">
                       <Loader2 className="w-8 h-8 animate-spin text-[#5E5044]" />
@@ -420,6 +493,7 @@ export default function AdminPointsClient() {
                     <div className="text-center py-12 text-gray-500">
                       <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-500" />
                       <p>No pending purchases</p>
+                      <p className="text-sm mt-2">Click "Debug" to troubleshoot</p>
                     </div>
                   ) : (
                     pendingPurchases.map(purchase => (
