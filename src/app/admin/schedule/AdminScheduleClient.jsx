@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { format } from 'date-fns'
-import { Plus, Trash2, CheckCircle, XCircle, Calendar, Users, Clock, Coins } from 'lucide-react'
+import { Plus, Trash2, CheckCircle, XCircle, Calendar, Users, Clock, Coins, Crown } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 
@@ -598,9 +598,17 @@ export default function AdminScheduleClient() {
                           key={coach.id}
                           className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
                         >
-                          <div>
-                            <h3 className="font-medium text-black">{coach.name}</h3>
-                            <p className="text-sm text-gray-500">{coach.specialization}</p>
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <h3 className="font-medium text-black">{coach.name}</h3>
+                              <p className="text-sm text-gray-500">{coach.specialization}</p>
+                            </div>
+                            {coach.is_special && (
+                              <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                                <Crown className="w-3 h-3 mr-1" />
+                                Elite
+                              </Badge>
+                            )}
                           </div>
                           <Button
                             variant="ghost"
@@ -638,7 +646,10 @@ export default function AdminScheduleClient() {
                           }`}
                           onClick={() => setSelectedCoach(coach)}
                         >
-                          {coach.name}
+                          <span className="flex-1 text-left">{coach.name}</span>
+                          {coach.is_special && (
+                            <Crown className="w-4 h-4 text-purple-500" />
+                          )}
                         </Button>
                       ))}
                     </div>

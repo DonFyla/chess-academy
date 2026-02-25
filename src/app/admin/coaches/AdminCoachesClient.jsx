@@ -338,6 +338,7 @@ export default function AdminCoachesClient() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Name</TableHead>
+                          <TableHead>Type</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Linked User</TableHead>
                           <TableHead>Specialization</TableHead>
@@ -350,6 +351,18 @@ export default function AdminCoachesClient() {
                           <TableRow key={coach.id}>
                             <TableCell>
                               <div className="font-medium text-black">{coach.name}</div>
+                            </TableCell>
+                            <TableCell>
+                              {coach.is_special ? (
+                                <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                                  <Crown className="w-3 h-3 mr-1" />
+                                  Elite
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-gray-600">
+                                  Regular
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell>
                               {coach.email ? (
