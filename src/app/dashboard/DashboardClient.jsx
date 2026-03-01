@@ -22,7 +22,8 @@ import {
   Plus,
   ArrowRight,
   Crown,
-  Loader2
+  Loader2,
+  User
 } from 'lucide-react'
 import { format, parseISO, isPast, differenceInHours } from 'date-fns'
 import { toast } from 'sonner'
@@ -37,6 +38,7 @@ function formatTime(time) {
 }
 
 function BookingCard({ booking, onCancel }) {
+  const [isExpanded, setIsExpanded] = useState(false)
   const sessionDate = parseISO(booking.session_date)
   const isPastSession = isPast(sessionDate)
   const hoursUntil = differenceInHours(sessionDate, new Date())
@@ -50,9 +52,10 @@ function BookingCard({ booking, onCancel }) {
   }
   
   return (
-    <Card className="mb-4">
+    <Card className="mb-4 overflow-hidden">
+      {/* Main Info - Always Visible */}
       <CardContent className="p-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <Badge className={statusColors[booking.status] || 'bg-gray-100'}>
@@ -68,10 +71,11 @@ function BookingCard({ booking, onCancel }) {
             
             <h3 className="font-bold text-lg text-black">{booking.coaches?.name}</h3>
             
+            {/* Schedule Summary */}
             <div className="flex items-center gap-4 text-sm text-gray-600 mt-2">
               <span className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                {format(sessionDate, 'MMM d, yyyy')}
+                {format(sessionDate, 'EEE, MMM d, yyyy')}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="w-4 h-4" />
@@ -84,13 +88,14 @@ function BookingCard({ booking, onCancel }) {
               <span className="font-semibold text-[#5E5044]">{booking.points_used}</span>
             </div>
             
+            {/* Meeting Link */}
             {booking.meeting_link && booking.status === 'confirmed' && (
               <div className="mt-3">
                 <a 
                   href={booking.meeting_link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-blue-600 hover:underline"
+                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
                 >
                   Join Meeting →
                 </a>
@@ -98,6 +103,7 @@ function BookingCard({ booking, onCancel }) {
             )}
           </div>
           
+          {/* Right Side: Actions + Expand */}
           <div className="flex flex-col items-end gap-2">
             {canCancel ? (
               <Button 
@@ -120,8 +126,69 @@ function BookingCard({ booking, onCancel }) {
                 Cannot cancel (&lt; 24h)
               </span>
             )}
+            
+            {/* View More Button */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-gray-500 mt-2"
+            >
+              {isExpanded ? 'Show Less' : 'View Details'}
+              {isExpanded ? '▲' : '▼'}
+            </Button>
           </div>
         </div>
+        
+        {/* Expanded Details */}
+        {isExpanded && (
+          <div className="mt-4 pt-4 border-t bg-gray-50 -mx-4 -mb-4 px-4 pb-4">
+            <div className="grid md:grid-cols-2 gap-4 text-sm">
+              {/* Coach Info */}
+              <div>
+                <h4 className="font-semibold text-gray-700 mb-2">Coach Details</h4>
+                <div className="space-y-1 text-gray-600">
+                  <p><span className="font-medium">Name:</span> {booking.coaches?.name}</p>
+                  <p><span className="font-medium">Specialization:</span> {booking.coaches?.specialization || 'General'}</p>
+                  {booking.coaches?.email && (
+                    <p><span className="font-medium">Email:</span> {booking.coaches.email}</p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Booking Details */}
+              <div>
+                <h4 className="font-semibold text-gray-700 mb-2">Booking Details</h4>
+                <div className="space-y-1 text-gray-600">
+                  <p><span className="font-medium">Booked on:</span> {format(parseISO(booking.created_at), 'MMM d, yyyy')}</p>
+                  <p><span className="font-medium">Points used:</span> {booking.points_used} pts</p>
+                  <p><span className="font-medium">Status:</span> {booking.status}</p>
+                  {booking.cancelled_at && (
+                    <p><span className="font-medium">Cancelled:</span> {format(parseISO(booking.cancelled_at), 'MMM d, yyyy')}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Notes Section */}
+            {(booking.student_notes || booking.coach_notes) && (
+              <div className="mt-4 pt-3 border-t">
+                {booking.student_notes && (
+                  <div className="mb-2">
+                    <span className="font-medium text-sm">Your Notes:</span>
+                    <p className="text-sm text-gray-600 mt-1">{booking.student_notes}</p>
+                  </div>
+                )}
+                {booking.coach_notes && (
+                  <div>
+                    <span className="font-medium text-sm">Coach Notes:</span>
+                    <p className="text-sm text-gray-600 mt-1">{booking.coach_notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -233,9 +300,61 @@ export default function DashboardClient() {
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-black mb-2">My Dashboard</h1>
+            <h1 className="text-3xl font-bold text-black mb-2">
+              Welcome back, {user?.user_metadata?.full_name?.split(' ')[0] || 
+                             user?.user_metadata?.name?.split(' ')[0] || 
+                             'Student'}!
+            </h1>
             <p className="text-gray-600">Manage your points and bookings</p>
           </div>
+          
+          {/* User Profile Card */}
+          <Card className="mb-8">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center gap-6">
+                {/* Avatar */}
+                <div className="w-20 h-20 bg-[#5E5044] rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                  {user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() || 
+                   user?.user_metadata?.name?.charAt(0)?.toUpperCase() || 
+                   user?.email?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+                
+                {/* User Info */}
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold text-black">
+                    {user?.user_metadata?.full_name || 
+                     user?.user_metadata?.name || 
+                     'Student'}
+                  </h2>
+                  <p className="text-gray-600">{user?.email}</p>
+                  
+                  {/* Additional Info */}
+                  <div className="flex flex-wrap gap-4 mt-3 text-sm text-gray-600">
+                    {user?.user_metadata?.phone && (
+                      <span className="flex items-center gap-1">
+                        📞 {user.user_metadata.phone}
+                      </span>
+                    )}
+                    {user?.user_metadata?.age && (
+                      <span className="flex items-center gap-1">
+                        🎂 {user.user_metadata.age} years old
+                      </span>
+                    )}
+                    {user?.user_metadata?.skill_level && (
+                      <span className="flex items-center gap-1">
+                        ♟️ {user.user_metadata.skill_level}
+                      </span>
+                    )}
+                    {user?.created_at && (
+                      <span className="flex items-center gap-1">
+                        📅 Member since {format(parseISO(user.created_at), 'MMM yyyy')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
           {/* Points Card */}
           <Card className="mb-8 bg-gradient-to-r from-[#5E5044] to-[#7a6b5c] text-white">

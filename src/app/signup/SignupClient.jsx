@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3'
+import HoneypotField from '@/components/HoneypotField'
+import { validateSignupData } from '@/lib/emailValidation'
 
 export default function SignupClient() {
   const [name, setName] = useState('')
@@ -11,17 +13,19 @@ export default function SignupClient() {
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [honeypot, setHoneypot] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const { signUp } = useAuth()
   const router = useRouter()
+  const { executeRecaptcha } = useGoogleReCaptcha()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setMessage('')
 
+    // Client-side validation
     if (password !== confirmPassword) {
       setError('Passwords do not match')
       return
@@ -32,27 +36,60 @@ export default function SignupClient() {
       return
     }
 
-    setLoading(true)
-
-    const { data, error } = await signUp(email, password, { 
-      full_name: name,
-      phone: phone
-    })
-
-    if (error) {
-      setError(error.message)
-      setLoading(false)
+    // Validate for bots/suspicious data
+    const validation = validateSignupData(email, name, honeypot)
+    if (!validation.valid) {
+      setError(validation.errors.join(', '))
       return
     }
 
-    if (data?.user) {
-      setMessage('Check your email to confirm your account!')
-      setTimeout(() => {
-        router.push('/login')
-      }, 3000)
+    setLoading(true)
+
+    try {
+      // Get reCAPTCHA token if available
+      let recaptchaToken = null
+      if (executeRecaptcha) {
+        try {
+          recaptchaToken = await executeRecaptcha('signup')
+        } catch (e) {
+          console.warn('reCAPTCHA failed, continuing without:', e)
+        }
+      }
+
+      // Call our secure API
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          phone,
+          honeypot,
+          recaptchaToken
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Signup failed. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      if (data.success) {
+        setMessage(data.message || 'Check your email to confirm your account!')
+        setTimeout(() => {
+          router.push('/login')
+        }, 3000)
+      }
+    } catch (err) {
+      console.error('Signup error:', err)
+      setError('An unexpected error occurred. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    
-    setLoading(false)
   }
 
   return (
@@ -78,10 +115,13 @@ export default function SignupClient() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5 relative">
+            {/* Honeypot field - invisible to humans */}
+            <HoneypotField value={honeypot} onChange={setHoneypot} />
+
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
+                Full Name *
               </label>
               <input
                 id="name"
@@ -91,12 +131,14 @@ export default function SignupClient() {
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5E5044] focus:border-[#5E5044] outline-none transition-colors"
                 placeholder="John Doe"
+                minLength={2}
+                maxLength={50}
               />
             </div>
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+                Email Address *
               </label>
               <input
                 id="email"
@@ -111,7 +153,7 @@ export default function SignupClient() {
 
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number
+                Phone Number *
               </label>
               <input
                 id="phone"
@@ -127,7 +169,7 @@ export default function SignupClient() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                Password *
               </label>
               <input
                 id="password"
@@ -144,7 +186,7 @@ export default function SignupClient() {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
+                Confirm Password *
               </label>
               <input
                 id="confirmPassword"

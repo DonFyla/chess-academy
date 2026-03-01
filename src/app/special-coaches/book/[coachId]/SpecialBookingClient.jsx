@@ -1,93 +1,145 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
-import { useAuth } from '@/contexts/AuthContext'
-import { useSpecialCoach } from '@/hooks/useSpecialCoaches'
-import { useCoachAvailability } from '@/hooks/useAvailability'
-import { useCreateSpecialBooking } from '@/hooks/useSpecialCoaches'
+import Link from 'next/link'
+import { format, parseISO, addDays, startOfWeek } from 'date-fns'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Crown, Calendar, Clock, Minus, Plus, Check, Loader2 } from 'lucide-react'
-import { format, addDays, startOfWeek, isSameDay, parseISO } from 'date-fns'
+import Navbar from '@/components/Navbar'
+import Footer from '@/components/Footer'
+import { Loader2, ArrowLeft, Crown, Calendar, Plus, Minus, Clock, CheckCircle, CreditCard, AlertCircle, ChevronRight, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { useSpecialCoach } from '@/hooks/useSpecialCoaches'
+import { useCreateSpecialBooking } from '@/hooks/useSpecialCoaches'
+import { useCoachAvailability } from '@/hooks/useAvailability'
+import { useAuth } from '@/contexts/AuthContext'
+import { DAYS_OF_WEEK } from '@/lib/scheduling-types'
 
-const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const WHATSAPP_LINK = process.env.NEXT_PUBLIC_WHATSAPP_LINK || 'https://wa.link/uj48gk'
 
+const BANK_DETAILS = {
+  bankName: 'Guarantee Trust Bank(GTB)',
+  accountNumber: '0449558330',
+  accountName: 'Moving Train Chess Academy Ltd',
+}
+
+// Session Scheduler Component
 function SessionScheduler({ 
   availability, 
   totalSessions, 
   selectedSlots, 
   onSlotSelect,
   recurringMode,
+  setRecurringMode,
   recurringDays,
   onRecurringDaysChange
 }) {
-  const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const [selectedDate, setSelectedDate] = useState(null)
+  const [currentWeek, setCurrentWeek] = useState(0)
   
-  // Generate next 8 weeks
-  const weeks = Array.from({ length: 8 }, (_, i) => addDays(currentWeek, i * 7))
+  // Generate weeks starting from next week
+  const weeks = []
+  const today = new Date()
+  const nextWeekStart = addDays(startOfWeek(today, { weekStartsOn: 1 }), 7)
   
-  // Get available slots for a specific day
-  const getSlotsForDay = (date) => {
+  for (let i = 0; i < 8; i++) {
+    const weekStart = addDays(nextWeekStart, i * 7)
+    const weekDays = []
+    for (let j = 0; j < 7; j++) {
+      weekDays.push(addDays(weekStart, j))
+    }
+    weeks.push(weekDays)
+  }
+  
+  const currentWeekDays = weeks[currentWeek]
+  
+  // Get available slots for a specific date
+  const getSlotsForDate = (date) => {
     const dayOfWeek = date.getDay()
     return availability.filter(slot => slot.day_of_week === dayOfWeek)
   }
   
+  const handleDateSelect = (date) => {
+    setSelectedDate(date)
+  }
+  
+  const handleSlotSelect = (slot) => {
+    if (!selectedDate) return
+    
+    const dateStr = format(selectedDate, 'yyyy-MM-dd')
+    const newSlot = {
+      date: dateStr,
+      start_time: slot.start_time,
+      end_time: slot.end_time,
+      day_of_week: selectedDate.getDay()
+    }
+    
+    // Check if already selected
+    const exists = selectedSlots.find(s => 
+      s.date === dateStr && s.start_time === slot.start_time
+    )
+    
+    if (exists) {
+      onSlotSelect(selectedSlots.filter(s => 
+        !(s.date === dateStr && s.start_time === slot.start_time)
+      ))
+    } else if (selectedSlots.length < totalSessions) {
+      onSlotSelect([...selectedSlots, newSlot])
+    } else {
+      toast.error(`You can only select ${totalSessions} sessions`)
+    }
+    
+    setSelectedDate(null)
+  }
+  
+  // Check if a slot is already selected
   const isSlotSelected = (date, slot) => {
     const dateStr = format(date, 'yyyy-MM-dd')
-    return selectedSlots.some(s => s.date === dateStr && s.start_time === slot.start_time)
+    return selectedSlots.some(s => 
+      s.date === dateStr && s.start_time === slot.start_time
+    )
   }
   
-  const toggleSlot = (date, slot) => {
+  // Count selected slots for a date
+  const getSelectedCountForDate = (date) => {
     const dateStr = format(date, 'yyyy-MM-dd')
-    const slotKey = `${dateStr}_${slot.start_time}`
-    
-    if (isSlotSelected(date, slot)) {
-      onSlotSelect(selectedSlots.filter(s => !(s.date === dateStr && s.start_time === slot.start_time)))
-    } else {
-      if (selectedSlots.length >= totalSessions) {
-        toast.error(`You can only select ${totalSessions} sessions`)
-        return
-      }
-      onSlotSelect([...selectedSlots, {
-        date: dateStr,
-        start_time: slot.start_time,
-        end_time: slot.end_time,
-        day_of_week: date.getDay()
-      }])
-    }
+    return selectedSlots.filter(s => s.date === dateStr).length
   }
   
-  // Auto-select recurring slots
+  // Auto-generate recurring slots when days are selected
   useEffect(() => {
-    if (recurringMode && recurringDays.length > 0) {
+    if (recurringMode && recurringDays.length > 0 && totalSessions > 0) {
       const newSlots = []
       let sessionsAdded = 0
       
-      // For each week
-      for (const weekStart of weeks) {
-        if (sessionsAdded >= totalSessions) break
+      // Generate 8 weeks of recurring sessions
+      for (let week = 0; week < 8 && sessionsAdded < totalSessions; week++) {
+        const weekStart = addDays(nextWeekStart, week * 7)
         
-        // For each recurring day
         for (const dayIndex of recurringDays) {
           if (sessionsAdded >= totalSessions) break
           
-          const date = addDays(weekStart, dayIndex)
-          const dateStr = format(date, 'yyyy-MM-dd')
-          const daySlots = getSlotsForDay(date)
+          // Find the date for this day in the current week
+          const targetDate = addDays(weekStart, dayIndex)
+          const dateStr = format(targetDate, 'yyyy-MM-dd')
           
-          // Pick first available slot of the day
+          // Get available slots for this day
+          const daySlots = availability.filter(s => s.day_of_week === dayIndex)
+          
           if (daySlots.length > 0) {
+            // Use the first available slot
             const slot = daySlots[0]
-            // Check if not already selected
-            if (!newSlots.some(s => s.date === dateStr && s.start_time === slot.start_time)) {
+            
+            // Check if not already added
+            const exists = newSlots.find(s => 
+              s.date === dateStr && s.start_time === slot.start_time
+            )
+            
+            if (!exists) {
               newSlots.push({
                 date: dateStr,
                 start_time: slot.start_time,
@@ -156,73 +208,103 @@ function SessionScheduler({
         </div>
       )}
       
-      {/* Progress */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-gray-600">
-          Selected: {selectedSlots.length} / {totalSessions} sessions
-        </span>
-        <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-[#5E5044] transition-all"
-            style={{ width: `${(selectedSlots.length / totalSessions) * 100}%` }}
-          />
+      {/* Week Navigator */}
+      {!recurringMode && (
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setCurrentWeek(Math.max(0, currentWeek - 1))}
+            disabled={currentWeek === 0}
+            className="px-3 py-1 text-sm bg-gray-100 rounded disabled:opacity-50 text-black hover:bg-gray-200"
+          >
+            Previous Week
+          </button>
+          <span className="text-sm font-medium text-black">
+            {format(currentWeekDays[0], 'MMM d')} - {format(currentWeekDays[6], 'MMM d, yyyy')}
+          </span>
+          <button
+            type="button"
+            onClick={() => setCurrentWeek(Math.min(7, currentWeek + 1))}
+            disabled={currentWeek === 7}
+            className="px-3 py-1 text-sm bg-gray-100 rounded disabled:opacity-50 text-black hover:bg-gray-200"
+          >
+            Next Week
+          </button>
         </div>
-      </div>
+      )}
       
       {/* Calendar Grid */}
       {!recurringMode && (
-        <div className="space-y-4 max-h-96 overflow-y-auto">
-          {weeks.map((weekStart) => (
-            <div key={weekStart.toISOString()} className="border rounded-lg p-4">
-              <h4 className="font-semibold text-black mb-3">
-                Week of {format(weekStart, 'MMM d, yyyy')}
-              </h4>
-              <div className="grid grid-cols-7 gap-2">
-                {Array.from({ length: 7 }, (_, i) => {
-                  const date = addDays(weekStart, i)
-                  const slots = getSlotsForDay(date)
-                  const isToday = isSameDay(date, new Date())
-                  
-                  return (
-                    <div key={i} className={`min-h-[80px] p-2 rounded-lg border ${
-                      isToday ? 'bg-[#F5EFE7] border-[#5E5044]' : 'bg-gray-50'
-                    }`}>
-                      <div className="text-xs text-gray-500 mb-1">
-                        {format(date, 'EEE')}
-                      </div>
-                      <div className="text-sm font-semibold text-black mb-2">
-                        {format(date, 'd')}
-                      </div>
-                      
-                      {slots.length > 0 ? (
-                        <div className="space-y-1">
-                          {slots.map((slot, idx) => {
-                            const selected = isSlotSelected(date, slot)
-                            return (
-                              <button
-                                key={idx}
-                                onClick={() => toggleSlot(date, slot)}
-                                className={`w-full text-xs py-1 px-2 rounded transition-colors ${
-                                  selected
-                                    ? 'bg-[#5E5044] text-white'
-                                    : 'bg-white hover:bg-gray-100 text-gray-700'
-                                }`}
-                              >
-                                {selected ? <Check className="w-3 h-3 inline" /> : null}
-                                {slot.start_time.slice(0, 5)}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">-</span>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+        <div className="grid grid-cols-7 gap-1">
+          {DAYS_OF_WEEK.map(day => (
+            <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+              {day.slice(0, 3)}
             </div>
           ))}
+          {currentWeekDays.map((date, idx) => {
+            const slots = getSlotsForDate(date)
+            const hasAvailability = slots.length > 0
+            const isSelectedDate = selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+            const selectedCount = getSelectedCountForDate(date)
+            
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => hasAvailability && handleDateSelect(date)}
+                disabled={!hasAvailability}
+                className={`
+                  p-2 min-h-[60px] rounded-lg border text-sm relative
+                  ${!hasAvailability 
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' 
+                    : isSelectedDate
+                      ? 'bg-[#5E5044] text-white border-[#5E5044]'
+                      : 'bg-white text-black border-gray-200 hover:border-[#5E5044]'
+                  }
+                `}
+              >
+                <div className="font-medium">{format(date, 'd')}</div>
+                {hasAvailability && (
+                  <div className="text-xs mt-1">
+                    {slots.length} slot{slots.length > 1 ? 's' : ''}
+                  </div>
+                )}
+                {selectedCount > 0 && (
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white rounded-full text-xs flex items-center justify-center">
+                    {selectedCount}
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+      
+      {/* Time Slots for Selected Date */}
+      {selectedDate && !recurringMode && (
+        <div className="p-4 border rounded-lg">
+          <h4 className="font-medium text-black mb-3">
+            Available times for {format(selectedDate, 'EEEE, MMM d')}:
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {getSlotsForDate(selectedDate).map((slot, idx) => {
+              const isSelected = isSlotSelected(selectedDate, slot)
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSlotSelect(slot)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isSelected
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
       
@@ -243,6 +325,238 @@ function SessionScheduler({
   )
 }
 
+// Confirmation Page Component
+function BookingConfirmation({ 
+  coach, 
+  formData, 
+  selectedSlots, 
+  totalSessions, 
+  totalAmount, 
+  recurringMode, 
+  recurringDays,
+  onConfirm,
+  onBack,
+  isSubmitting 
+}) {
+  const bookingRef = Math.random().toString(36).substring(2, 10).toUpperCase()
+  
+  return (
+    <div className="max-w-3xl mx-auto">
+      {/* Progress Steps */}
+      <div className="flex items-center justify-center mb-8">
+        <div className="flex items-center">
+          <div className="flex items-center">
+            <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-medium">
+              <CheckCircle className="w-5 h-5" />
+            </div>
+            <span className="ml-2 text-sm font-medium text-green-600">Details</span>
+          </div>
+          <ChevronRight className="w-5 h-5 mx-4 text-gray-400" />
+          <div className="flex items-center">
+            <div className="w-8 h-8 bg-[#5E5044] text-white rounded-full flex items-center justify-center text-sm font-medium">
+              2
+            </div>
+            <span className="ml-2 text-sm font-medium text-[#5E5044]">Confirmation</span>
+          </div>
+          <ChevronRight className="w-5 h-5 mx-4 text-gray-400" />
+          <div className="flex items-center">
+            <div className="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-medium">
+              3
+            </div>
+            <span className="ml-2 text-sm font-medium text-gray-500">Payment</span>
+          </div>
+        </div>
+      </div>
+
+      <Card className="mb-6">
+        <CardHeader className="bg-gradient-to-r from-[#5E5044] to-[#7a6b5c] text-white">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-[#5E5044] text-xl font-bold">
+              {coach.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+            </div>
+            <div>
+              <CardTitle className="text-white">Review Your Booking</CardTitle>
+              <p className="text-gray-200 text-sm">Special Coaching Session</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          {/* Coach Info */}
+          <div className="flex justify-between items-start p-4 bg-[#F5EFE7] rounded-lg">
+            <div>
+              <p className="text-sm text-gray-600">Coach</p>
+              <p className="font-semibold text-black flex items-center gap-2">
+                <Crown className="w-4 h-4 text-yellow-600" />
+                {coach.name}
+              </p>
+              <p className="text-sm text-gray-500">{coach.rank_title || 'Elite Coach'}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600">Rate</p>
+              <p className="font-semibold text-black">₦{coach.hourly_rate?.toLocaleString()}/session</p>
+            </div>
+          </div>
+
+          {/* Student Info */}
+          <div className="grid md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-sm text-gray-600">Student Name</p>
+              <p className="font-medium text-black">{formData.studentName}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Email</p>
+              <p className="font-medium text-black">{formData.studentEmail}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Phone</p>
+              <p className="font-medium text-black">{formData.studentPhone}</p>
+            </div>
+          </div>
+
+          {/* Sessions */}
+          <div>
+            <p className="text-sm text-gray-600 mb-2">Sessions ({selectedSlots.length})</p>
+            <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+              {selectedSlots.map((slot, idx) => (
+                <div key={idx} className="flex items-center gap-3 text-sm p-2 bg-gray-50 rounded">
+                  <Calendar className="w-4 h-4 text-[#5E5044]" />
+                  <span className="text-black">
+                    {format(parseISO(slot.date), 'EEEE, MMMM d, yyyy')}
+                  </span>
+                  <span className="text-gray-400">|</span>
+                  <Clock className="w-4 h-4 text-[#5E5044]" />
+                  <span className="text-black">
+                    {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {recurringMode && (
+              <p className="text-sm text-gray-500 mt-2">
+                Recurring weekly on: {recurringDays.map(d => DAYS_OF_WEEK[d]).join(', ')}
+              </p>
+            )}
+          </div>
+
+          {/* Total */}
+          <div className="border-t pt-4">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Amount</span>
+              <span className="text-2xl font-bold text-[#5E5044]">₦{totalAmount.toLocaleString()}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Payment Instructions */}
+      <Card className="mb-6 border-green-200">
+        <CardHeader className="bg-green-50">
+          <CardTitle className="flex items-center gap-2 text-green-800">
+            <CreditCard className="w-5 h-5" />
+            Payment Instructions
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          {/* Bank Transfer Details */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              Bank Transfer Details
+            </h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Bank:</span>
+                <span className="font-medium text-black">{BANK_DETAILS.bankName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Account Number:</span>
+                <span className="font-mono font-medium text-black bg-white px-2 py-1 rounded">{BANK_DETAILS.accountNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Account Name:</span>
+                <span className="font-medium text-black">{BANK_DETAILS.accountName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Amount:</span>
+                <span className="font-bold text-black">₦{totalAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Reference:</span>
+                <span className="font-mono font-medium text-black bg-white px-2 py-1 rounded">{bookingRef}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* WhatsApp Confirmation */}
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <h4 className="font-semibold text-orange-900 mb-3 flex items-center gap-2">
+              <MessageCircle className="w-5 h-5" />
+              Confirm Your Payment
+            </h4>
+            <ol className="text-sm text-orange-800 space-y-2 list-decimal list-inside">
+              <li>Make the transfer using the bank details above</li>
+              <li>Take a screenshot of the payment receipt</li>
+              <li>Send the receipt via WhatsApp with your reference number</li>
+              <li>We&apos;ll verify and confirm your booking within 24 hours</li>
+            </ol>
+            
+            <a
+              href={`${WHATSAPP_LINK}?text=Hello! I've made a payment for Special Coaching.%0A%0AReference: ${bookingRef}%0AAmount: ₦${totalAmount.toLocaleString()}%0ACoach: ${coach.name}%0ASessions: ${totalSessions}%0A%0AAttached is my payment receipt.`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-semibold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors"
+            >
+              <MessageCircle className="w-5 h-5" />
+              Send Payment Receipt via WhatsApp
+            </a>
+          </div>
+
+          {/* Time Notice */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-yellow-800">
+              <strong>Important:</strong> Your spot is held for 48 hours. Please complete payment within this time to secure your booking. 
+              You will receive an email with these payment details.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Actions */}
+      <div className="flex gap-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onBack}
+          disabled={isSubmitting}
+          className="flex-1 py-6"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Edit
+        </Button>
+        <Button
+          type="button"
+          onClick={onConfirm}
+          disabled={isSubmitting}
+          className="flex-1 bg-[#5E5044] hover:bg-[#4a3f35] py-6 text-lg"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Confirming...
+            </>
+          ) : (
+            <>
+              <CheckCircle className="w-5 h-5 mr-2" />
+              Confirm & Create Booking
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export default function SpecialBookingClient({ coachId }) {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
@@ -251,7 +565,7 @@ export default function SpecialBookingClient({ coachId }) {
   const createBooking = useCreateSpecialBooking()
   
   // Form state
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState('form') // 'form' or 'confirm'
   const [totalSessions, setTotalSessions] = useState(4)
   const [selectedSlots, setSelectedSlots] = useState([])
   const [recurringMode, setRecurringMode] = useState(false)
@@ -276,7 +590,7 @@ export default function SpecialBookingClient({ coachId }) {
   
   const totalAmount = (coach?.hourly_rate || 15000) * totalSessions
   
-  const handleSubmit = async (e) => {
+  const handleProceedToConfirm = (e) => {
     e.preventDefault()
     
     if (selectedSlots.length !== totalSessions) {
@@ -284,6 +598,16 @@ export default function SpecialBookingClient({ coachId }) {
       return
     }
     
+    if (!formData.studentName || !formData.studentEmail || !formData.studentPhone) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+    
+    setStep('confirm')
+    window.scrollTo(0, 0)
+  }
+  
+  const handleConfirmBooking = async () => {
     try {
       const booking = {
         coach_id: coachId,
@@ -301,8 +625,8 @@ export default function SpecialBookingClient({ coachId }) {
       
       await createBooking.mutateAsync(booking)
       
-      toast.success('Booking created! Proceed to payment.')
-      router.push('/payment/special-booking')
+      toast.success('Booking created successfully! Check your email for payment details.')
+      router.push('/dashboard')
     } catch (error) {
       toast.error('Failed to create booking: ' + error.message)
     }
@@ -337,6 +661,43 @@ export default function SpecialBookingClient({ coachId }) {
     )
   }
   
+  // Confirmation Step
+  if (step === 'confirm') {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-[#F5EFE7]">
+          {/* Header */}
+          <header className="bg-white border-b">
+            <div className="container mx-auto px-4 py-4">
+              <Link href="/special-coaches" className="flex items-center text-[#5E5044] hover:underline">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Elite Coaches
+              </Link>
+            </div>
+          </header>
+          
+          <div className="container mx-auto px-4 py-8">
+            <BookingConfirmation
+              coach={coach}
+              formData={formData}
+              selectedSlots={selectedSlots}
+              totalSessions={totalSessions}
+              totalAmount={totalAmount}
+              recurringMode={recurringMode}
+              recurringDays={recurringDays}
+              onConfirm={handleConfirmBooking}
+              onBack={() => setStep('form')}
+              isSubmitting={createBooking.isPending}
+            />
+          </div>
+        </div>
+        <Footer />
+      </>
+    )
+  }
+  
+  // Form Step
   return (
     <>
       <Navbar />
@@ -352,6 +713,32 @@ export default function SpecialBookingClient({ coachId }) {
         </header>
         
         <div className="container mx-auto px-4 py-8">
+          {/* Progress Steps */}
+          <div className="flex items-center justify-center mb-8">
+            <div className="flex items-center">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-[#5E5044] text-white rounded-full flex items-center justify-center text-sm font-medium">
+                  1
+                </div>
+                <span className="ml-2 text-sm font-medium text-[#5E5044]">Details</span>
+              </div>
+              <ChevronRight className="w-5 h-5 mx-4 text-gray-400" />
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-medium">
+                  2
+                </div>
+                <span className="ml-2 text-sm font-medium text-gray-500">Confirmation</span>
+              </div>
+              <ChevronRight className="w-5 h-5 mx-4 text-gray-400" />
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-medium">
+                  3
+                </div>
+                <span className="ml-2 text-sm font-medium text-gray-500">Payment</span>
+              </div>
+            </div>
+          </div>
+
           {/* Coach Summary */}
           <Card className="mb-8 bg-gradient-to-r from-[#5E5044] to-[#7a6b5c] text-white">
             <CardContent className="p-6">
@@ -375,7 +762,7 @@ export default function SpecialBookingClient({ coachId }) {
             </CardContent>
           </Card>
           
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleProceedToConfirm}>
             <div className="grid lg:grid-cols-3 gap-8">
               {/* Main Form */}
               <div className="lg:col-span-2 space-y-6">
@@ -548,27 +935,14 @@ export default function SpecialBookingClient({ coachId }) {
                     
                     <Button
                       type="submit"
-                      disabled={
-                        createBooking.isPending ||
-                        selectedSlots.length !== totalSessions ||
-                        !formData.studentName ||
-                        !formData.studentEmail ||
-                        !formData.studentPhone
-                      }
+                      disabled={selectedSlots.length !== totalSessions}
                       className="w-full bg-[#5E5044] hover:bg-[#4a3f35] py-6 text-lg"
                     >
-                      {createBooking.isPending ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        'Proceed to Payment'
-                      )}
+                      Review & Confirm
                     </Button>
                     
                     <p className="text-xs text-gray-500 text-center">
-                      You will receive an email with payment instructions
+                      You&apos;ll review payment details on the next step
                     </p>
                   </CardContent>
                 </Card>

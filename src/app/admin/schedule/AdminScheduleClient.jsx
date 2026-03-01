@@ -9,6 +9,8 @@ import { useAllCoaches, useCreateCoach, useDeleteCoach } from '@/hooks/useCoache
 import { useCoachAvailability, useCreateAvailability, useDeleteAvailability } from '@/hooks/useAvailability'
 import { useAllBookings, useConfirmPayment, useRejectBooking } from '@/hooks/useBookings'
 import { useAllFlexibleBookings } from '@/hooks/usePoints'
+import { useAllSpecialBookings, useConfirmSpecialBooking, useRejectSpecialBooking } from '@/hooks/useSpecialCoaches'
+import { useCoachBlockedDates, useBlockCoachDate, useUnblockCoachDate } from '@/hooks/useCoachBlocks'
 import AddAvailabilityForm from '@/components/scheduling/AddAvailabilityForm'
 import AvailabilityList from '@/components/scheduling/AvailabilityList'
 import { Button } from '@/components/ui/button'
@@ -20,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { format } from 'date-fns'
-import { Plus, Trash2, CheckCircle, XCircle, Calendar, Users, Clock, Coins, Crown } from 'lucide-react'
+import { Plus, Trash2, CheckCircle, XCircle, Calendar, Users, Clock, Coins, Crown, Star, Ban, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 
@@ -73,6 +75,105 @@ function getBookingModeLabel(mode) {
   return '1x/week (4 sessions)'
 }
 
+// Separate component for Flexible Bookings Tab
+function FlexibleBookingsTab({ flexibleBookings, loadingFlexibleBookings, flexibleUserMap, formatTime }) {
+  if (loadingFlexibleBookings) {
+    return (
+      <Card className="bg-white">
+        <CardHeader>
+          <CardTitle className="text-black flex items-center gap-2">
+            <Coins className="h-5 w-5" />
+            Flexible Point Bookings
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="animate-pulse h-32 bg-gray-200 rounded" />
+        </CardContent>
+      </Card>
+    )
+  }
+  
+  if (!flexibleBookings || flexibleBookings.length === 0) {
+    return (
+      <Card className="bg-white">
+        <CardHeader>
+          <CardTitle className="text-black flex items-center gap-2">
+            <Coins className="h-5 w-5" />
+            Flexible Point Bookings
+            <Badge variant="secondary" className="bg-blue-500 text-white">0</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-500 text-center py-8">No flexible bookings yet.</p>
+        </CardContent>
+      </Card>
+    )
+  }
+  
+  return (
+    <Card className="bg-white">
+      <CardHeader>
+        <CardTitle className="text-black flex items-center gap-2">
+          <Coins className="h-5 w-5" />
+          Flexible Point Bookings
+          <Badge variant="secondary" className="bg-blue-500 text-white">
+            {flexibleBookings.length}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Student</TableHead>
+              <TableHead>Coach</TableHead>
+              <TableHead>Date & Time</TableHead>
+              <TableHead>Points</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {flexibleBookings.map((booking) => {
+              const userInfo = flexibleUserMap[booking.user_id]
+              const coachName = booking.coaches?.name || `Coach ${booking.coach_id?.slice(0, 8)}`
+              const sessionDate = booking.session_date ? new Date(booking.session_date) : null
+              
+              return (
+                <TableRow key={booking.id}>
+                  <TableCell>
+                    <div className="font-medium text-black">
+                      {userInfo?.full_name || userInfo?.email || 'Unknown User'}
+                    </div>
+                    <div className="text-sm text-gray-500">{userInfo?.email || booking.user_id?.slice(0, 8)}</div>
+                  </TableCell>
+                  <TableCell>{coachName}</TableCell>
+                  <TableCell>
+                    <div className="text-sm">{sessionDate ? format(sessionDate, 'MMM d, yyyy') : 'Invalid Date'}</div>
+                    <div className="text-xs text-gray-500">
+                      {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className="bg-[#5E5044]">
+                      <Coins className="w-3 h-3 mr-1" />
+                      {booking.points_used} pts
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={booking.status === 'confirmed' ? 'bg-green-600' : 'bg-gray-500'}>
+                      {booking.status}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function AdminScheduleClient() {
   const router = useRouter()
   const [selectedCoach, setSelectedCoach] = useState(null)
@@ -116,7 +217,20 @@ export default function AdminScheduleClient() {
 
   const { data: coaches, isLoading: loadingCoaches } = useAllCoaches()
   const { data: allBookings, isLoading: loadingBookings } = useAllBookings()
+  
+  // Block dates state
+  const [blockCoachId, setBlockCoachId] = useState('')
+  const [blockDate, setBlockDate] = useState('')
+  const [blockStartTime, setBlockStartTime] = useState('')
+  const [blockEndTime, setBlockEndTime] = useState('')
+  const [blockReason, setBlockReason] = useState('')
+  const [blockAllDay, setBlockAllDay] = useState(true)
+  
+  const { data: blockedDates = [], isLoading: loadingBlockedDates } = useCoachBlockedDates(blockCoachId)
+  const blockDateMutation = useBlockCoachDate()
+  const unblockDateMutation = useUnblockCoachDate()
   const { data: flexibleBookings = [], isLoading: loadingFlexibleBookings } = useAllFlexibleBookings()
+  const { data: specialBookings = [], isLoading: loadingSpecialBookings } = useAllSpecialBookings()
   const { data: availability = [], isLoading: loadingAvailability } = useCoachAvailability(selectedCoach?.id)
 
   const createCoach = useCreateCoach()
@@ -125,15 +239,19 @@ export default function AdminScheduleClient() {
   const deleteAvailability = useDeleteAvailability()
   const confirmPayment = useConfirmPayment()
   const rejectBooking = useRejectBooking()
+  const confirmSpecialBooking = useConfirmSpecialBooking()
+  const rejectSpecialBooking = useRejectSpecialBooking()
   const [rejectNotes, setRejectNotes] = useState('')
   const [flexibleUserMap, setFlexibleUserMap] = useState({})
 
   // Fetch user details for flexible bookings
   useEffect(() => {
     const fetchUserDetails = async () => {
+      console.log('Fetching user details for flexible bookings:', flexibleBookings?.length)
       if (!flexibleBookings || flexibleBookings.length === 0) return
       
       const userIds = [...new Set(flexibleBookings.map(b => b.user_id).filter(Boolean))]
+      console.log('User IDs to fetch:', userIds)
       if (userIds.length === 0) return
       
       try {
@@ -145,6 +263,7 @@ export default function AdminScheduleClient() {
           return
         }
         
+        console.log('User data fetched:', userData)
         const userMap = {}
         userData?.forEach(user => {
           userMap[user.id] = user
@@ -209,6 +328,46 @@ export default function AdminScheduleClient() {
     }
   }
 
+  // Handle block date for coach
+  const handleBlockDate = async (e) => {
+    e.preventDefault()
+    if (!blockCoachId || !blockDate) {
+      toast.error('Please select a coach and date')
+      return
+    }
+    
+    try {
+      await blockDateMutation.mutateAsync({
+        coachId: blockCoachId,
+        blockedDate: blockDate,
+        startTime: blockAllDay ? null : blockStartTime,
+        endTime: blockAllDay ? null : blockEndTime,
+        reason: blockReason
+      })
+      toast.success('Date blocked successfully')
+      setBlockDate('')
+      setBlockStartTime('')
+      setBlockEndTime('')
+      setBlockReason('')
+    } catch (error) {
+      toast.error('Failed to block date: ' + error.message)
+    }
+  }
+  
+  // Handle unblock date
+  const handleUnblockDate = async (blockId) => {
+    if (!confirm('Are you sure you want to unblock this date?')) return
+    try {
+      await unblockDateMutation.mutateAsync({
+        blockId,
+        coachId: blockCoachId
+      })
+      toast.success('Date unblocked')
+    } catch (error) {
+      toast.error('Failed to unblock date')
+    }
+  }
+
   const handleConfirmPayment = async (booking) => {
     try {
       await confirmPayment.mutateAsync({
@@ -238,9 +397,58 @@ export default function AdminScheduleClient() {
     }
   }
 
+  // Special booking handlers
+  const handleConfirmSpecialBooking = async (booking) => {
+    try {
+      await confirmSpecialBooking.mutateAsync({
+        id: booking.id,
+        paymentDetails: {
+          payment_method: 'whatsapp_transfer'
+        }
+      })
+      toast.success('Special booking payment confirmed!')
+    } catch (error) {
+      console.error('Confirm special booking error:', error)
+      toast.error('Failed to confirm payment: ' + (error.message || 'Unknown error'))
+    }
+  }
+
+  const handleRejectSpecialBooking = async (booking) => {
+    try {
+      await rejectSpecialBooking.mutateAsync({
+        id: booking.id,
+        adminNotes: rejectNotes
+      })
+      toast.success('Special booking cancelled')
+      setRejectNotes('')
+    } catch (error) {
+      toast.error('Failed to cancel special booking')
+    }
+  }
+
+  // Format special booking sessions for display
+  const formatSpecialSessions = (sessionDates) => {
+    if (!sessionDates || !Array.isArray(sessionDates) || sessionDates.length === 0) {
+      return 'No sessions scheduled'
+    }
+    // Sort by date and take first 2
+    const sorted = [...sessionDates].sort((a, b) => new Date(a.date) - new Date(b.date))
+    const formatted = sorted.slice(0, 2).map(s => 
+      `${format(new Date(s.date), 'MMM d')} at ${s.start_time?.slice(0, 5)}`
+    )
+    if (sorted.length > 2) {
+      formatted.push(`+${sorted.length - 2} more`)
+    }
+    return formatted.join(', ')
+  }
+
   const pendingPaymentBookings = allBookings?.filter(b => b.status === 'pending_payment') || []
   const confirmedBookings = allBookings?.filter(b => b.status === 'confirmed') || []
   const paymentReceivedBookings = allBookings?.filter(b => b.status === 'payment_received') || []
+  
+  // Special bookings filters
+  const pendingSpecialBookings = specialBookings?.filter(b => b.status === 'pending_payment') || []
+  const confirmedSpecialBookings = specialBookings?.filter(b => b.status === 'confirmed') || []
 
   if (isLoading) {
     return (
@@ -285,10 +493,17 @@ export default function AdminScheduleClient() {
 
         <main className="container mx-auto px-4 py-8">
           <Tabs defaultValue="bookings" className="space-y-6">
-            <TabsList className="bg-white">
+            <TabsList className="bg-white flex-wrap h-auto">
               <TabsTrigger value="bookings" className="data-[state=active]:bg-[#5E5044] data-[state=active]:text-white">
                 <Calendar className="mr-2 h-4 w-4" />
                 Bookings
+              </TabsTrigger>
+              <TabsTrigger value="special" className="data-[state=active]:bg-[#5E5044] data-[state=active]:text-white">
+                <Star className="mr-2 h-4 w-4" />
+                Special Coaching
+                {pendingSpecialBookings.length > 0 && (
+                  <Badge variant="secondary" className="ml-2 bg-yellow-500 text-white">{pendingSpecialBookings.length}</Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger value="flexible" className="data-[state=active]:bg-[#5E5044] data-[state=active]:text-white">
                 <Coins className="mr-2 h-4 w-4" />
@@ -301,6 +516,10 @@ export default function AdminScheduleClient() {
               <TabsTrigger value="availability" className="data-[state=active]:bg-[#5E5044] data-[state=active]:text-white">
                 <Clock className="mr-2 h-4 w-4" />
                 Availability
+              </TabsTrigger>
+              <TabsTrigger value="blockdates" className="data-[state=active]:bg-[#5E5044] data-[state=active]:text-white">
+                <Ban className="mr-2 h-4 w-4" />
+                Block Dates
               </TabsTrigger>
             </TabsList>
 
@@ -460,70 +679,165 @@ export default function AdminScheduleClient() {
               </div>
             </TabsContent>
 
+            {/* Special Coaching Tab */}
+            <TabsContent value="special">
+              <div className="grid gap-6">
+                {/* Pending Special Bookings */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <CardTitle className="text-black flex items-center gap-2">
+                      <Star className="h-5 w-5 text-yellow-500" />
+                      Special Coaching - Awaiting Payment
+                      <Badge variant="secondary" className="bg-yellow-500">{pendingSpecialBookings.length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingSpecialBookings ? (
+                      <div className="animate-pulse h-32 bg-gray-200 rounded" />
+                    ) : pendingSpecialBookings.length === 0 ? (
+                      <p className="text-gray-500 text-center py-8">No special coaching bookings awaiting payment.</p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Student</TableHead>
+                            <TableHead>Coach</TableHead>
+                            <TableHead>Sessions</TableHead>
+                            <TableHead>Schedule Preview</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {pendingSpecialBookings.map((booking) => (
+                            <TableRow key={booking.id}>
+                              <TableCell>
+                                <div className="font-medium text-black">{booking.student_name}</div>
+                                <div className="text-sm text-gray-500">{booking.student_email}</div>
+                                {booking.student_phone && (
+                                  <div className="text-sm text-gray-400">{booking.student_phone}</div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Crown className="w-4 h-4 text-yellow-600" />
+                                  {booking.coaches?.name}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{booking.total_sessions} sessions</Badge>
+                                {booking.is_recurring && (
+                                  <div className="text-xs text-gray-500 mt-1">Recurring weekly</div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm text-gray-700">{formatSpecialSessions(booking.session_dates)}</div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-medium text-black">
+                                  ₦{parseInt(booking.total_amount || 0).toLocaleString()}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleConfirmSpecialBooking(booking)}
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    <CheckCircle className="mr-1 h-4 w-4" />
+                                    Confirm
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => handleRejectSpecialBooking(booking)}
+                                  >
+                                    <XCircle className="mr-1 h-4 w-4" />
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Confirmed Special Bookings */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <CardTitle className="text-black flex items-center gap-2">
+                      <Star className="h-5 w-5 text-yellow-500" />
+                      Confirmed Special Bookings
+                      <Badge variant="default" className="bg-green-600">{confirmedSpecialBookings.length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingSpecialBookings ? (
+                      <div className="animate-pulse h-32 bg-gray-200 rounded" />
+                    ) : confirmedSpecialBookings.length === 0 ? (
+                      <p className="text-gray-500 text-center py-8">No confirmed special coaching bookings.</p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Student</TableHead>
+                            <TableHead>Coach</TableHead>
+                            <TableHead>Sessions</TableHead>
+                            <TableHead>Schedule</TableHead>
+                            <TableHead>Amount</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {confirmedSpecialBookings.map((booking) => (
+                            <TableRow key={booking.id}>
+                              <TableCell>
+                                <div className="font-medium text-black">{booking.student_name}</div>
+                                <div className="text-sm text-gray-500">{booking.student_email}</div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Crown className="w-4 h-4 text-yellow-600" />
+                                  {booking.coaches?.name}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="bg-green-50">{booking.total_sessions} sessions</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm text-gray-700">{formatSpecialSessions(booking.session_dates)}</div>
+                                {booking.payment_date && (
+                                  <div className="text-xs text-green-600">
+                                    Paid {format(new Date(booking.payment_date), 'MMM d, yyyy')}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-medium text-black">
+                                  ₦{parseInt(booking.total_amount || 0).toLocaleString()}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
             {/* Flexible Bookings Tab */}
             <TabsContent value="flexible">
-              <Card className="bg-white">
-                <CardHeader>
-                  <CardTitle className="text-black flex items-center gap-2">
-                    <Coins className="h-5 w-5" />
-                    Flexible Point Bookings
-                    <Badge variant="secondary" className="bg-blue-500 text-white">
-                      {flexibleBookings.length}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {loadingFlexibleBookings ? (
-                    <div className="animate-pulse h-32 bg-gray-200 rounded" />
-                  ) : flexibleBookings.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">No flexible bookings yet.</p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Student</TableHead>
-                          <TableHead>Coach</TableHead>
-                          <TableHead>Date & Time</TableHead>
-                          <TableHead>Points</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {flexibleBookings.map((booking) => {
-                          const userInfo = flexibleUserMap[booking.user_id]
-                          return (
-                          <TableRow key={booking.id}>
-                            <TableCell>
-                              <div className="font-medium text-black">
-                                {userInfo?.full_name || userInfo?.email || 'Unknown'}
-                              </div>
-                              <div className="text-sm text-gray-500">{userInfo?.email || booking.user_id?.slice(0, 8)}</div>
-                            </TableCell>
-                            <TableCell>{booking.coaches?.name}</TableCell>
-                            <TableCell>
-                              <div className="text-sm">{format(new Date(booking.session_date), 'MMM d, yyyy')}</div>
-                              <div className="text-xs text-gray-500">
-                                {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className="bg-[#5E5044]">
-                                <Coins className="w-3 h-3 mr-1" />
-                                {booking.points_used} pts
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={booking.status === 'confirmed' ? 'bg-green-600' : 'bg-gray-500'}>
-                                {booking.status}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        )})}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
+              <FlexibleBookingsTab 
+                flexibleBookings={flexibleBookings}
+                loadingFlexibleBookings={loadingFlexibleBookings}
+                flexibleUserMap={flexibleUserMap}
+                formatTime={formatTime}
+              />
             </TabsContent>
 
             {/* Coaches Tab */}
@@ -680,6 +994,172 @@ export default function AdminScheduleClient() {
                     </CardContent>
                   </Card>
                 )}
+              </div>
+            </TabsContent>
+
+            {/* Block Dates Tab */}
+            <TabsContent value="blockdates">
+              <div className="grid gap-6 lg:grid-cols-2">
+                {/* Block Date Form */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <CardTitle className="text-black flex items-center gap-2">
+                      <Ban className="h-5 w-5" />
+                      Block Coach Date/Time
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleBlockDate} className="space-y-4">
+                      <div>
+                        <Label className="text-black">Select Coach *</Label>
+                        <select
+                          value={blockCoachId}
+                          onChange={(e) => setBlockCoachId(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg bg-white mt-1"
+                          required
+                        >
+                          <option value="">-- Select a coach --</option>
+                          {coaches?.map(coach => (
+                            <option key={coach.id} value={coach.id}>
+                              {coach.name} {coach.is_special ? '(Special)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-black">Date to Block *</Label>
+                        <Input
+                          type="date"
+                          value={blockDate}
+                          onChange={(e) => setBlockDate(e.target.value)}
+                          required
+                          className="mt-1"
+                          min={new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="allDay"
+                          checked={blockAllDay}
+                          onChange={(e) => setBlockAllDay(e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                        <Label htmlFor="allDay" className="text-black cursor-pointer">
+                          Block entire day
+                        </Label>
+                      </div>
+                      
+                      {!blockAllDay && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-black">Start Time</Label>
+                            <Input
+                              type="time"
+                              value={blockStartTime}
+                              onChange={(e) => setBlockStartTime(e.target.value)}
+                              required={!blockAllDay}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-black">End Time</Label>
+                            <Input
+                              type="time"
+                              value={blockEndTime}
+                              onChange={(e) => setBlockEndTime(e.target.value)}
+                              required={!blockAllDay}
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div>
+                        <Label className="text-black">Reason (optional)</Label>
+                        <Input
+                          value={blockReason}
+                          onChange={(e) => setBlockReason(e.target.value)}
+                          placeholder="e.g., Personal leave, Holiday, etc."
+                          className="mt-1"
+                        />
+                      </div>
+                      
+                      <Button 
+                        type="submit" 
+                        disabled={blockDateMutation.isPending || !blockCoachId || !blockDate}
+                        className="w-full bg-red-600 hover:bg-red-700"
+                      >
+                        {blockDateMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Blocking...
+                          </>
+                        ) : (
+                          <>
+                            <Ban className="w-4 h-4 mr-2" />
+                            Block Date
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                {/* Blocked Dates List */}
+                <Card className="bg-white">
+                  <CardHeader>
+                    <CardTitle className="text-black">
+                      Blocked Dates
+                      {blockCoachId && coaches?.find(c => c.id === blockCoachId)?.name && (
+                        <span className="text-gray-500 text-base font-normal ml-2">
+                          - {coaches.find(c => c.id === blockCoachId).name}
+                        </span>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!blockCoachId ? (
+                      <p className="text-gray-500 text-center py-8">Select a coach to view blocked dates</p>
+                    ) : loadingBlockedDates ? (
+                      <div className="animate-pulse h-32 bg-gray-200 rounded" />
+                    ) : blockedDates.length === 0 ? (
+                      <p className="text-gray-500 text-center py-8">No blocked dates for this coach</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {blockedDates.map((block) => (
+                          <div key={block.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <div>
+                              <div className="font-medium text-black">
+                                {format(new Date(block.blocked_date), 'EEEE, MMM d, yyyy')}
+                              </div>
+                              {block.start_time && block.end_time ? (
+                                <div className="text-sm text-gray-600">
+                                  {formatTime(block.start_time)} - {formatTime(block.end_time)}
+                                </div>
+                              ) : (
+                                <div className="text-sm text-red-600 font-medium">All day</div>
+                              )}
+                              {block.reason && (
+                                <div className="text-xs text-gray-500 mt-1">{block.reason}</div>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleUnblockDate(block.id)}
+                              disabled={unblockDateMutation.isPending}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
           </Tabs>

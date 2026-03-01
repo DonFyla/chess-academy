@@ -33,6 +33,7 @@ export default function CoachAvailabilityClient() {
   const [loading, setLoading] = useState(true)
   const [meetingLink, setMeetingLink] = useState('')
   const [savingLink, setSavingLink] = useState(false)
+  const [expandedBooking, setExpandedBooking] = useState(null)
 
   useEffect(() => {
     async function loadCoach() {
@@ -161,10 +162,40 @@ export default function CoachAvailabilityClient() {
     return null // Redirect handled in useEffect
   }
 
+  // Group bookings by student for cleaner display
   const upcomingBookings = bookings
-    ?.filter(b => new Date(b.booking_date) >= new Date() && b.status !== 'cancelled')
-    ?.sort((a, b) => new Date(a.booking_date) - new Date(b.booking_date))
-    ?.slice(0, 10) || []
+    ?.filter(b => b.status !== 'cancelled' && b.status !== 'rejected')
+    ?.map(booking => {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      // Get upcoming sessions for this booking
+      let upcomingSessions = []
+      if (booking.recurring_dates && Array.isArray(booking.recurring_dates)) {
+        upcomingSessions = booking.recurring_dates
+          .filter(session => new Date(session.date) >= today)
+          .sort((a, b) => new Date(a.date) - new Date(b.date))
+      } else {
+        // Single session
+        if (new Date(booking.booking_date) >= today) {
+          upcomingSessions = [{
+            date: booking.booking_date,
+            start_time: booking.start_time,
+            end_time: booking.end_time
+          }]
+        }
+      }
+      
+      return {
+        ...booking,
+        upcomingSessions,
+        totalSessions: booking.recurring_dates?.length || 1,
+        remainingSessions: upcomingSessions.length
+      }
+    })
+    ?.filter(b => b.upcomingSessions.length > 0)
+    ?.sort((a, b) => new Date(a.upcomingSessions[0].date) - new Date(b.upcomingSessions[0].date))
+    || []
 
   return (
     <>
@@ -238,35 +269,104 @@ export default function CoachAvailabilityClient() {
                   <p className="text-gray-500 text-center py-8">No monthly bookings.</p>
                 ) : (
                   <div className="space-y-3">
-                    {upcomingBookings.map((booking) => (
-                      <div
-                        key={booking.id}
-                        className="p-4 border rounded-lg hover:bg-gray-50"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-black">{booking.student_name}</span>
-                          <Badge
-                            variant={
-                              booking.status === 'confirmed'
-                                ? 'default'
-                                : booking.status === 'pending'
-                                ? 'secondary'
-                                : 'destructive'
-                            }
-                            className={booking.status === 'confirmed' ? 'bg-green-600' : ''}
+                    {upcomingBookings.map((booking) => {
+                      const isExpanded = expandedBooking === booking.id
+                      const firstSession = booking.upcomingSessions[0]
+                      const hasMultipleSessions = booking.upcomingSessions.length > 1
+                      
+                      return (
+                        <div
+                          key={booking.id}
+                          className="border rounded-lg overflow-hidden"
+                        >
+                          {/* Main Info - Always Visible */}
+                          <div 
+                            className="p-4 hover:bg-gray-50 cursor-pointer"
+                            onClick={() => setExpandedBooking(isExpanded ? null : booking.id)}
                           >
-                            {booking.status}
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          <div>{format(new Date(booking.booking_date), 'MMM d, yyyy')}</div>
-                          <div>{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</div>
-                          {booking.student_email && (
-                            <div className="mt-1">{booking.student_email}</div>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-semibold text-black text-lg">{booking.student_name}</span>
+                                  <Badge
+                                    variant={
+                                      booking.status === 'confirmed'
+                                        ? 'default'
+                                        : booking.status === 'pending'
+                                        ? 'secondary'
+                                        : 'destructive'
+                                    }
+                                    className={booking.status === 'confirmed' ? 'bg-green-600' : ''}
+                                  >
+                                    {booking.status}
+                                  </Badge>
+                                </div>
+                                
+                                {/* Schedule Summary */}
+                                <div className="text-sm text-gray-600 mt-2">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="w-4 h-4 text-[#5E5044]" />
+                                    <span>
+                                      {hasMultipleSessions 
+                                        ? `${format(new Date(firstSession.date), 'EEEE')}s • ${booking.upcomingSessions.length} upcoming sessions`
+                                        : `${format(new Date(firstSession.date), 'EEEE, MMM d')} • One-time`
+                                      }
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <Clock className="w-4 h-4 text-[#5E5044]" />
+                                    <span>{formatTime(firstSession.start_time || booking.start_time)} - {formatTime(firstSession.end_time || booking.end_time)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <Button variant="ghost" size="sm" className="text-gray-400">
+                                {isExpanded ? '▲' : '▼'}
+                              </Button>
+                            </div>
+                            
+                            {/* Contact Info */}
+                            {booking.student_email && (
+                              <div className="text-sm text-gray-500 mt-2 pt-2 border-t">
+                                📧 {booking.student_email}
+                                {booking.student_phone && ` • 📞 ${booking.student_phone}`}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Expanded Details */}
+                          {isExpanded && (
+                            <div className="px-4 pb-4 border-t bg-gray-50">
+                              {/* Upcoming Sessions List */}
+                              <div className="mt-3">
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                                  Upcoming Sessions ({booking.upcomingSessions.length} remaining)
+                                </h4>
+                                <div className="space-y-1 max-h-40 overflow-y-auto">
+                                  {booking.upcomingSessions.map((session, idx) => (
+                                    <div 
+                                      key={idx} 
+                                      className="text-sm py-1 px-2 bg-white rounded border"
+                                    >
+                                      {format(new Date(session.date), 'EEE, MMM d, yyyy')} at {' '}
+                                      {formatTime(session.start_time || booking.start_time)} - {formatTime(session.end_time || booking.end_time)}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              {/* Extra Details */}
+                              <div className="mt-3 pt-3 border-t text-sm text-gray-600 space-y-1">
+                                <div><span className="font-medium">Booked on:</span> {format(new Date(booking.created_at), 'MMM d, yyyy')}</div>
+                                {booking.course_type && <div><span className="font-medium">Course:</span> {booking.course_type}</div>}
+                                {booking.monthly_amount && <div><span className="font-medium">Amount:</span> ₦{parseInt(booking.monthly_amount).toLocaleString()}</div>}
+                                {booking.notes && <div><span className="font-medium">Notes:</span> {booking.notes}</div>}
+                              </div>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -294,7 +394,7 @@ export default function CoachAvailabilityClient() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-black">
-                            {booking.users?.raw_user_meta_data?.full_name || booking.users?.email}
+                            {booking.users?.full_name || booking.users?.email || 'Unknown Student'}
                           </span>
                           <div className="flex items-center gap-2">
                             <Badge className="bg-[#5E5044]">
@@ -309,7 +409,9 @@ export default function CoachAvailabilityClient() {
                           </div>
                         </div>
                         <div className="text-sm text-gray-500">
-                          <div>{format(new Date(booking.session_date), 'MMM d, yyyy')}</div>
+                          <div className="font-medium text-gray-700">
+                            {format(new Date(booking.session_date), 'EEE')} • {format(new Date(booking.session_date), 'MMM d, yyyy')}
+                          </div>
                           <div>{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</div>
                           {booking.users?.email && (
                             <div className="mt-1">{booking.users.email}</div>

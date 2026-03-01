@@ -124,13 +124,65 @@ export default function PointsBookingClient({ coachId }) {
   const weeks = Array.from({ length: 4 }, (_, i) => addDays(startOfWeek(tomorrow, { weekStartsOn: 1 }), i * 7))
   
   // Check if a slot is already booked
-  const isSlotBooked = (dateStr, startTime) => {
-    if (!existingBookings || existingBookings.length === 0) return false
-    return existingBookings.some(booking => 
-      booking.session_date === dateStr && 
-      booking.start_time === startTime &&
-      ['confirmed', 'completed'].includes(booking.status)
-    )
+  // All booking types only block if time overlaps (not entire day)
+  const isSlotBooked = (dateStr, startTime, endTime) => {
+    if (!existingBookings || existingBookings.length === 0) {
+      return false
+    }
+    
+    return existingBookings.some(booking => {
+      // Check date match
+      if (booking.session_date !== dateStr) {
+        return false
+      }
+      
+      // Check status
+      if (!['confirmed', 'completed'].includes(booking.status)) {
+        return false
+      }
+      
+      // All bookings: Only block if time overlaps
+      // A slot conflicts if: slotStart < bookingEnd AND slotEnd > bookingStart
+      const slotStart = startTime?.slice(0, 5)
+      const slotEnd = endTime?.slice(0, 5)
+      const bookingStart = booking.start_time?.slice(0, 5)
+      const bookingEnd = booking.end_time?.slice(0, 5)
+      
+      return slotStart < bookingEnd && slotEnd > bookingStart
+    })
+  }
+  
+  // Get info about what's blocking a slot (for display)
+  const getSlotBlockInfo = (dateStr, startTime, endTime) => {
+    if (!existingBookings) return null
+    
+    const blocking = existingBookings.find(booking => {
+      if (booking.session_date !== dateStr) return false
+      if (!['confirmed', 'completed'].includes(booking.status)) return false
+      
+      // All bookings: Check time overlap
+      const slotStart = startTime?.slice(0, 5)
+      const slotEnd = endTime?.slice(0, 5)
+      const bookingStart = booking.start_time?.slice(0, 5)
+      const bookingEnd = booking.end_time?.slice(0, 5)
+      
+      return slotStart < bookingEnd && slotEnd > bookingStart
+    })
+    
+    if (!blocking) return null
+    
+    // Return human-readable booking type
+    const typeLabels = {
+      'monthly': 'Monthly Class',
+      'points': 'Point Booking',
+      'special': 'Special Session'
+    }
+    
+    return {
+      type: blocking.booking_type || 'points',
+      label: typeLabels[blocking.booking_type] || 'Booking',
+      student: blocking.student_name
+    }
   }
   
   // Check if a slot is blocked by coach
@@ -180,10 +232,46 @@ export default function PointsBookingClient({ coachId }) {
     const slots = availability?.filter(slot => slot.day_of_week === dayOfWeek) || []
     
     // Filter out already booked slots AND blocked slots
+    // UPDATED: Now passes end_time for proper overlap checking
     return slots.filter(slot => 
-      !isSlotBooked(dateStr, slot.start_time) && 
+      !isSlotBooked(dateStr, slot.start_time, slot.end_time) && 
       !isSlotBlocked(dateStr, slot.start_time, slot.end_time)
     )
+  }
+  
+  // Get status info for a day (for UI feedback)
+  const getDayStatus = (date) => {
+    if (isDateInPast(date)) return { type: 'past', message: 'Past' }
+    
+    const dayOfWeek = date.getDay()
+    const dateStr = format(date, 'yyyy-MM-dd')
+    const slots = availability?.filter(slot => slot.day_of_week === dayOfWeek) || []
+    
+    // Check if day is fully blocked by coach
+    const isDayFullyBlocked = blockedDates?.some(b => 
+      b.blocked_date === dateStr && !b.start_time
+    )
+    if (isDayFullyBlocked) return { type: 'blocked', message: 'Day Off' }
+    
+    // No availability set for this day
+    if (slots.length === 0) return { type: 'no_availability', message: '—' }
+    
+    // Check if all slots are booked
+    const availableSlots = slots.filter(slot => 
+      !isSlotBooked(dateStr, slot.start_time, slot.end_time) && 
+      !isSlotBlocked(dateStr, slot.start_time, slot.end_time)
+    )
+    
+    if (availableSlots.length === 0) {
+      // Check if it's due to bookings or blocks
+      const hasBookings = slots.some(slot => isSlotBooked(dateStr, slot.start_time, slot.end_time))
+      const hasBlocks = slots.some(slot => isSlotBlocked(dateStr, slot.start_time, slot.end_time))
+      
+      if (hasBookings) return { type: 'fully_booked', message: 'Fully Booked' }
+      if (hasBlocks) return { type: 'partially_blocked', message: 'Blocked' }
+    }
+    
+    return { type: 'available', message: '' }
   }
   
   const isSlotSelected = (date, slot) => {
@@ -394,9 +482,7 @@ export default function PointsBookingClient({ coachId }) {
                                 const date = addDays(weekStart, dayIdx)
                                 const dateStr = format(date, 'yyyy-MM-dd')
                                 const slots = getSlotsForDay(date)
-                                const isBlocked = blockedDates?.some(b => 
-                                  b.blocked_date === dateStr && !b.start_time
-                                )
+                                const dayStatus = getDayStatus(date)
                                 
                                 return (
                                   <div key={dayIdx} className="min-h-[100px] p-2 bg-gray-50 rounded">
@@ -407,8 +493,12 @@ export default function PointsBookingClient({ coachId }) {
                                       {format(date, 'd')}
                                     </div>
                                     
-                                    {isBlocked ? (
+                                    {dayStatus.type === 'blocked' ? (
                                       <div className="text-xs text-red-500 font-medium">Day Off</div>
+                                    ) : dayStatus.type === 'fully_booked' ? (
+                                      <div className="text-xs text-orange-500 font-medium">Fully Booked</div>
+                                    ) : dayStatus.type === 'past' ? (
+                                      <div className="text-xs text-gray-400">—</div>
                                     ) : slots.length > 0 ? (
                                       <div className="space-y-1">
                                         {slots.map((slot, idx) => {
@@ -432,7 +522,9 @@ export default function PointsBookingClient({ coachId }) {
                                         })}
                                       </div>
                                     ) : (
-                                      <span className="text-xs text-gray-400">-</span>
+                                      <span className={`text-xs ${dayStatus.type === 'partially_blocked' ? 'text-orange-400' : 'text-gray-400'}`}>
+                                        {dayStatus.message}
+                                      </span>
                                     )}
                                   </div>
                                 )

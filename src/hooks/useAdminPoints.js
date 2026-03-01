@@ -10,57 +10,65 @@ export function usePendingPointsPurchases() {
     queryFn: async () => {
       console.log('Fetching pending purchases...')
       
-      // First try the RPC function (try both function names)
-      let result = await supabase.rpc('get_pending_purchases')
+      // Try the RPC function first
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_pending_purchases')
       
-      if (result.error) {
-        console.log('Trying old function name...')
-        result = await supabase.rpc('get_pending_points_purchases')
+      if (!rpcError && rpcData) {
+        console.log('Pending purchases (RPC):', rpcData.length, 'items')
+        return rpcData
       }
       
-      const { data, error } = result
+      console.log('RPC failed, trying view...', rpcError?.message)
       
-      if (error) {
-        console.error('RPC Error:', error)
-        // Fallback to direct query if function fails
-        console.log('Falling back to direct query...')
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('point_transactions')
-          .select(`
-            *,
-            users:user_id(email, raw_user_meta_data)
-          `)
-          .eq('type', 'purchase')
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false })
-        
-        if (fallbackError) {
-          console.error('Fallback Error:', fallbackError)
-          // Last resort: try the view
-          console.log('Trying view...')
-          const { data: viewData, error: viewError } = await supabase
-            .from('admin_pending_purchases')
-            .select('*')
-            .order('created_at', { ascending: false })
-          
-          if (viewError) {
-            console.error('View Error:', viewError)
-            throw viewError
-          }
-          
-          return viewData || []
+      // Fallback to view
+      const { data: viewData, error: viewError } = await supabase
+        .from('admin_pending_purchases')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (!viewError && viewData) {
+        console.log('Pending purchases (view):', viewData.length, 'items')
+        return viewData
+      }
+      
+      console.log('View failed, using direct query...', viewError?.message)
+      
+      // Last resort: direct query with manual user lookup
+      const { data: transactions, error: txError } = await supabase
+        .from('point_transactions')
+        .select('*')
+        .eq('type', 'purchase')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+      
+      if (txError) {
+        console.error('Direct query error:', txError)
+        throw txError
+      }
+      
+      // Get user info for each transaction
+      const userIds = [...new Set(transactions.map(tx => tx.user_id).filter(Boolean))]
+      let userMap = {}
+      
+      if (userIds.length > 0) {
+        try {
+          const { data: userData } = await supabase.rpc('get_user_info', { user_ids: userIds })
+          userData?.forEach(user => {
+            userMap[user.id] = user
+          })
+        } catch (e) {
+          console.error('Failed to fetch user info:', e)
         }
-        
-        // Transform data to match expected format
-        return (fallbackData || []).map(tx => ({
-          ...tx,
-          user_email: tx.users?.email,
-          user_name: tx.users?.raw_user_meta_data?.full_name || tx.users?.email
-        }))
       }
       
-      console.log('Pending purchases:', data?.length || 0, 'items')
-      return data || []
+      const result = transactions.map(tx => ({
+        ...tx,
+        user_email: userMap[tx.user_id]?.email || 'Unknown',
+        user_name: userMap[tx.user_id]?.full_name || userMap[tx.user_id]?.email || 'Unknown'
+      }))
+      
+      console.log('Pending purchases (direct):', result.length, 'items')
+      return result
     },
   })
 }
@@ -70,17 +78,49 @@ export function useAllPointsTransactions() {
   return useQuery({
     queryKey: ['all-points-transactions'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, get all transactions
+      const { data: transactions, error } = await supabase
         .from('point_transactions')
-        .select(`
-          *,
-          users:user_id(email, raw_user_meta_data)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100)
       
-      if (error) throw error
-      return data || []
+      if (error) {
+        console.error('Error fetching transactions:', error)
+        throw error
+      }
+      
+      if (!transactions || transactions.length === 0) {
+        return []
+      }
+      
+      // Get unique user IDs
+      const userIds = [...new Set(transactions.map(tx => tx.user_id).filter(Boolean))]
+      
+      // Fetch user info using the RPC function
+      let userMap = {}
+      if (userIds.length > 0) {
+        try {
+          const { data: userData, error: userError } = await supabase
+            .rpc('get_user_info', { user_ids: userIds })
+          
+          if (userError) {
+            console.error('Error fetching user info:', userError)
+          } else {
+            userData?.forEach(user => {
+              userMap[user.id] = user
+            })
+          }
+        } catch (e) {
+          console.error('Failed to fetch user details:', e)
+        }
+      }
+      
+      // Merge transactions with user data
+      return transactions.map(tx => ({
+        ...tx,
+        users: userMap[tx.user_id] || null
+      }))
     },
   })
 }

@@ -135,7 +135,11 @@ function TransactionItem({ transaction }) {
     cancelled: 'bg-gray-100 text-gray-800',
   }
   
-  const userName = transaction.users?.raw_user_meta_data?.full_name || transaction.users?.email
+  // Handle both old and new data formats
+  const userName = transaction.users?.full_name 
+    || transaction.users?.email 
+    || transaction.user_email 
+    || 'Unknown User'
   
   return (
     <div className="flex items-center justify-between py-3 border-b last:border-0">

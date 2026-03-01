@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { DAYS_OF_WEEK, COURSE_TYPES } from '@/lib/scheduling-types'
 import { useCreateBooking } from '@/hooks/useBookings'
 import { useAuth } from '@/contexts/AuthContext'
+import { useUnifiedSchedule } from '@/hooks/useUnifiedSchedule'
 import { toast } from 'sonner'
 
 function formatTime(time) {
@@ -22,6 +23,8 @@ function formatTime(time) {
 }
 
 export default function BookingForm({ coachId, availability, existingBookings, coachName }) {
+  // Fetch unified schedule to check conflicts across ALL booking types
+  const { data: unifiedSchedule = [] } = useUnifiedSchedule(coachId)
   const { user } = useAuth()
   const [bookingMode, setBookingMode] = useState('single') // 'single' (4 sessions) or 'double' (8 sessions)
   
@@ -62,10 +65,12 @@ export default function BookingForm({ coachId, availability, existingBookings, c
   const slotsForDay2 = getSlotsForDay(selectedDay2)
 
   // Check if a specific time slot conflicts with an existing booking
+  // UPDATED: Now checks against ALL booking types (monthly, points, special)
   const isSlotBooked = (dayOfWeek, slot) => {
     if (!slot) return false
     
-    return existingBookings.some(
+    // Check 1: Monthly recurring bookings (from existingBookings prop)
+    const monthlyConflict = existingBookings.some(
       (b) =>
         b.recurring_days &&
         b.recurring_days.includes(dayOfWeek) &&
@@ -75,6 +80,27 @@ export default function BookingForm({ coachId, availability, existingBookings, c
         b.start_time < slot.end_time &&
         b.end_time > slot.start_time
     )
+    
+    if (monthlyConflict) return true
+    
+    // Check 2: Point-based and Special bookings (from unified schedule)
+    // These have specific dates, so we need to check if any fall on this day of week
+    const unifiedConflict = unifiedSchedule.some((b) => {
+      // Handle both date formats
+      const sessionDate = b.session_date ? new Date(b.session_date) : null
+      if (!sessionDate || isNaN(sessionDate.getTime())) return false
+      
+      const bookingDayOfWeek = sessionDate.getDay()
+      
+      return (
+        bookingDayOfWeek === dayOfWeek &&
+        // Check for time overlap
+        b.start_time < slot.end_time &&
+        b.end_time > slot.start_time
+      )
+    })
+    
+    return unifiedConflict
   }
 
   // Check if a day has ANY available slots (used to disable days with no free slots)
