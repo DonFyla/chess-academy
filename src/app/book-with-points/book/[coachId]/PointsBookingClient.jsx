@@ -337,9 +337,25 @@ export default function PointsBookingClient({ coachId }) {
     const dateStr = format(date, 'yyyy-MM-dd')
     const slots = availability?.filter(slot => slot.day_of_week === dayOfWeek) || []
     
+    // Debug: Log availability slots for target date
+    if (debugBookedDate && dateStr === debugBookedDate && process.env.NODE_ENV === 'development') {
+      console.log(`getSlotsForDay: Found ${slots.length} availability slots for ${dateStr}:`, 
+        slots.map(s => ({ start: s.start_time, end: s.end_time })))
+    }
+    
     // Filter out already booked slots AND blocked slots
     // UPDATED: Now passes end_time for proper overlap checking
     const filteredSlots = slots.filter(slot => {
+      // Debug: Log raw slot data for target date
+      if (debugBookedDate && dateStr === debugBookedDate && process.env.NODE_ENV === 'development') {
+        console.log(`getSlotsForDay: Checking slot`, { 
+          slotStart: slot.start_time, 
+          slotEnd: slot.end_time,
+          slotStartType: typeof slot.start_time,
+          slotEndType: typeof slot.end_time
+        })
+      }
+      
       const isBooked = isSlotBooked(dateStr, slot.start_time, slot.end_time)
       const isBlocked = isSlotBlocked(dateStr, slot.start_time, slot.end_time)
       
@@ -350,6 +366,12 @@ export default function PointsBookingClient({ coachId }) {
       
       return !isBooked && !isBlocked
     })
+    
+    // Debug: Log final filtered slots
+    if (debugBookedDate && dateStr === debugBookedDate && process.env.NODE_ENV === 'development') {
+      console.log(`getSlotsForDay: Returning ${filteredSlots.length} slots for ${dateStr}:`, 
+        filteredSlots.map(s => s.start_time))
+    }
     
     return filteredSlots
   }
