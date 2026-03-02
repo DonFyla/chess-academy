@@ -725,6 +725,10 @@ export default function PointsBookingClient({ coachId }) {
                                 } else if (!hasAvailableSlots) {
                                   dayContent = <span className="text-xs text-orange-400">Blocked</span>
                                 } else {
+                                  // DEBUG: Log what's being rendered
+                                  if (isDebugDate && process.env.NODE_ENV === 'development') {
+                                    console.log(`[DEBUG] ${dateStr}: RENDERING slots:`, availableSlots.map(s => s.start_time))
+                                  }
                                   dayContent = (
                                     <div className="space-y-1">
                                       {availableSlots.map((slot, idx) => {
