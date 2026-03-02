@@ -608,7 +608,7 @@ export default function PointsBookingClient({ coachId }) {
                         <p className="text-gray-600">This coach has no availability set.</p>
                       </div>
                     ) : (
-                      <div className="space-y-6" key={`calendar-${existingBookings?.length || 0}`}>
+                      <div className="space-y-6" key={`calendar-${existingBookings?.length || 0}-${JSON.stringify(existingBookings?.map(b => b.session_date))}`}>
                         {weeks.map((weekStart, weekIdx) => (
                           <div key={weekIdx} className="border rounded-lg p-4">
                             <h4 className="font-semibold text-black mb-3">
