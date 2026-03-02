@@ -714,6 +714,9 @@ export default function PointsBookingClient({ coachId }) {
                                 
                                 // Determine what to show
                                 let dayContent
+                                if (isDebugDate && process.env.NODE_ENV === 'development') {
+                                  console.log(`[DEBUG] ${dateStr}: BRANCH CHECK - isPast=${isPast}, isDayFullyBlocked=${isDayFullyBlocked}, hasAnySlots=${hasAnySlots}, hasAvailableSlots=${hasAvailableSlots}, hasBookings=${hasBookings}`)
+                                }
                                 if (isPast) {
                                   dayContent = <div className="text-xs text-gray-400">—</div>
                                 } else if (isDayFullyBlocked) {
@@ -727,7 +730,7 @@ export default function PointsBookingClient({ coachId }) {
                                 } else {
                                   // DEBUG: Log what's being rendered
                                   if (isDebugDate && process.env.NODE_ENV === 'development') {
-                                    console.log(`[DEBUG] ${dateStr}: RENDERING slots:`, availableSlots.map(s => s.start_time))
+                                    console.log(`[DEBUG] ${dateStr}: RENDERING ${availableSlots.length} slots:`, availableSlots.map(s => s.start_time))
                                   }
                                   dayContent = (
                                     <div className="space-y-1">
