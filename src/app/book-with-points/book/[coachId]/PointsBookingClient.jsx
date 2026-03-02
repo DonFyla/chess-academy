@@ -618,8 +618,130 @@ export default function PointsBookingClient({ coachId }) {
                               {Array.from({ length: 7 }, (_, dayIdx) => {
                                 const date = addDays(weekStart, dayIdx)
                                 const dateStr = format(date, 'yyyy-MM-dd')
-                                const slots = getSlotsForDay(date)
-                                const dayStatus = getDayStatus(date)
+                                
+                                // INLINE slot calculation to avoid stale closures
+                                const dayOfWeek = date.getDay()
+                                const allSlots = availability?.filter(slot => slot.day_of_week === dayOfWeek) || []
+                                
+                                // Filter out booked/blocked slots inline
+                                const availableSlots = allSlots.filter(slot => {
+                                  // Check if slot is booked
+                                  const slotStart = slot.start_time?.slice(0, 5)
+                                  const slotEnd = slot.end_time?.slice(0, 5)
+                                  
+                                  const isBooked = existingBookings?.some(booking => {
+                                    const bookingDate = booking.session_date 
+                                      ? (typeof booking.session_date === 'string' 
+                                          ? booking.session_date 
+                                          : format(new Date(booking.session_date), 'yyyy-MM-dd'))
+                                      : null
+                                    if (bookingDate !== dateStr) return false
+                                    const validStatuses = ['confirmed', 'completed', 'pending_payment', 'payment_received']
+                                    if (!validStatuses.includes(booking.status)) return false
+                                    const bookingStart = booking.start_time?.slice(0, 5)
+                                    const bookingEnd = booking.end_time?.slice(0, 5)
+                                    return slotStart < bookingEnd && slotEnd > bookingStart
+                                  }) || false
+                                  
+                                  // Check if slot is blocked
+                                  const isBlocked = blockedDates?.some(block => {
+                                    if (block.blocked_date !== dateStr) return false
+                                    if (!block.start_time || !block.end_time) return true
+                                    const formatTime = (t) => t ? t.slice(0, 5) : ''
+                                    const blockStart = formatTime(block.start_time)
+                                    const blockEnd = formatTime(block.end_time)
+                                    return slotStart < blockEnd && slotEnd > blockStart
+                                  }) || false
+                                  
+                                  return !isBooked && !isBlocked
+                                })
+                                
+                                // Calculate day status inline
+                                const isPast = (() => {
+                                  const today = new Date()
+                                  today.setHours(0, 0, 0, 0)
+                                  return date < today
+                                })()
+                                
+                                const isDayFullyBlocked = blockedDates?.some(b => 
+                                  b.blocked_date === dateStr && !b.start_time
+                                )
+                                
+                                const hasAnySlots = allSlots.length > 0
+                                const hasAvailableSlots = availableSlots.length > 0
+                                const hasBookings = allSlots.some(slot => {
+                                  const slotStart = slot.start_time?.slice(0, 5)
+                                  const slotEnd = slot.end_time?.slice(0, 5)
+                                  return existingBookings?.some(booking => {
+                                    const bookingDate = booking.session_date 
+                                      ? (typeof booking.session_date === 'string' 
+                                          ? booking.session_date 
+                                          : format(new Date(booking.session_date), 'yyyy-MM-dd'))
+                                      : null
+                                    if (bookingDate !== dateStr) return false
+                                    const validStatuses = ['confirmed', 'completed', 'pending_payment', 'payment_received']
+                                    if (!validStatuses.includes(booking.status)) return false
+                                    const bookingStart = booking.start_time?.slice(0, 5)
+                                    const bookingEnd = booking.end_time?.slice(0, 5)
+                                    return slotStart < bookingEnd && slotEnd > bookingStart
+                                  })
+                                })
+                                
+                                // Determine what to show
+                                let dayContent
+                                if (isPast) {
+                                  dayContent = <div className="text-xs text-gray-400">—</div>
+                                } else if (isDayFullyBlocked) {
+                                  dayContent = <div className="text-xs text-red-500 font-medium">Day Off</div>
+                                } else if (!hasAnySlots) {
+                                  dayContent = <span className="text-xs text-gray-400">—</span>
+                                } else if (!hasAvailableSlots && hasBookings) {
+                                  dayContent = <div className="text-xs text-orange-500 font-medium">Fully Booked</div>
+                                } else if (!hasAvailableSlots) {
+                                  dayContent = <span className="text-xs text-orange-400">Blocked</span>
+                                } else {
+                                  dayContent = (
+                                    <div className="space-y-1">
+                                      {availableSlots.map((slot, idx) => {
+                                        const selected = selectedSlots.some(s => 
+                                          s.date === dateStr && s.start_time === slot.start_time
+                                        )
+                                        return (
+                                          <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => {
+                                              if (selected) {
+                                                setSelectedSlots(selectedSlots.filter(s => 
+                                                  !(s.date === dateStr && s.start_time === slot.start_time)
+                                                ))
+                                              } else {
+                                                if (selectedSlots.length >= 10) {
+                                                  toast.error('You can book up to 10 sessions at a time')
+                                                  return
+                                                }
+                                                setSelectedSlots([...selectedSlots, {
+                                                  date: dateStr,
+                                                  start_time: slot.start_time,
+                                                  end_time: slot.end_time,
+                                                  day_of_week: date.getDay()
+                                                }])
+                                              }
+                                            }}
+                                            className={`w-full text-xs py-1 px-1 rounded transition-colors ${
+                                              selected
+                                                ? 'bg-[#5E5044] text-white'
+                                                : 'bg-white hover:bg-[#F5EFE7] border border-gray-200'
+                                            }`}
+                                          >
+                                            {selected ? <Check className="w-3 h-3 inline mr-1" /> : null}
+                                            {slot.start_time.slice(0, 5)}
+                                          </button>
+                                        )
+                                      })}
+                                    </div>
+                                  )
+                                }
                                 
                                 return (
                                   <div key={dayIdx} className="min-h-[100px] p-2 bg-gray-50 rounded">
@@ -629,40 +751,7 @@ export default function PointsBookingClient({ coachId }) {
                                     <div className="text-sm font-semibold text-black mb-2">
                                       {format(date, 'd')}
                                     </div>
-                                    
-                                    {dayStatus.type === 'blocked' ? (
-                                      <div className="text-xs text-red-500 font-medium">Day Off</div>
-                                    ) : dayStatus.type === 'fully_booked' ? (
-                                      <div className="text-xs text-orange-500 font-medium">Fully Booked</div>
-                                    ) : dayStatus.type === 'past' ? (
-                                      <div className="text-xs text-gray-400">—</div>
-                                    ) : slots.length > 0 ? (
-                                      <div className="space-y-1">
-                                        {slots.map((slot, idx) => {
-                                          const selected = isSlotSelected(date, slot)
-                                          
-                                          return (
-                                            <button
-                                              key={idx}
-                                              type="button"
-                                              onClick={() => toggleSlot(date, slot)}
-                                              className={`w-full text-xs py-1 px-1 rounded transition-colors ${
-                                                selected
-                                                  ? 'bg-[#5E5044] text-white'
-                                                  : 'bg-white hover:bg-[#F5EFE7] border border-gray-200'
-                                              }`}
-                                            >
-                                              {selected ? <Check className="w-3 h-3 inline mr-1" /> : null}
-                                              {slot.start_time.slice(0, 5)}
-                                            </button>
-                                          )
-                                        })}
-                                      </div>
-                                    ) : (
-                                      <span className={`text-xs ${dayStatus.type === 'partially_blocked' ? 'text-orange-400' : 'text-gray-400'}`}>
-                                        {dayStatus.message}
-                                      </span>
-                                    )}
+                                    {dayContent}
                                   </div>
                                 )
                               })}
