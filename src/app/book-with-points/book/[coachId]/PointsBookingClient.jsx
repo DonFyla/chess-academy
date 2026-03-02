@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
@@ -158,7 +158,7 @@ export default function PointsBookingClient({ coachId }) {
   const weeks = Array.from({ length: 4 }, (_, i) => addDays(startOfWeek(tomorrow, { weekStartsOn: 1 }), i * 7))
   
   // Helper to format time as HH:MM string for comparison
-  const formatTimeHM = (timeVal) => {
+  const formatTimeHM = useCallback((timeVal) => {
     if (!timeVal) return null
     // If it's already a string like "14:00:00" or "14:00" or "14:00:00+00"
     if (typeof timeVal === 'string') {
@@ -176,11 +176,11 @@ export default function PointsBookingClient({ coachId }) {
     const strVal = String(timeVal)
     const timeMatch = strVal.match(/(\d{2}):(\d{2})/)
     return timeMatch ? `${timeMatch[1]}:${timeMatch[2]}` : strVal.slice(0, 5)
-  }
+  }, [])
   
   // Check if a slot is already booked
   // All booking types only block if time overlaps (not entire day)
-  const isSlotBooked = (dateStr, startTime, endTime) => {
+  const isSlotBooked = useCallback((dateStr, startTime, endTime) => {
     if (!existingBookings || existingBookings.length === 0) {
       return false
     }
@@ -245,7 +245,7 @@ export default function PointsBookingClient({ coachId }) {
       
       return hasOverlap
     })
-  }
+  }, [existingBookings, debugBookedDate, formatTimeHM])
   
   // Get info about what's blocking a slot (for display)
   const getSlotBlockInfo = (dateStr, startTime, endTime) => {
@@ -294,7 +294,7 @@ export default function PointsBookingClient({ coachId }) {
   // Check if a slot is blocked by coach
   // This handles both full-day blocks and partial time ranges
   // Example: Blocking 10:00-12:00 will block slots 10:00-11:00 and 11:00-12:00
-  const isSlotBlocked = (dateStr, startTime, endTime) => {
+  const isSlotBlocked = useCallback((dateStr, startTime, endTime) => {
     if (!blockedDates || blockedDates.length === 0) return false
     
     return blockedDates.some(block => {
@@ -320,7 +320,7 @@ export default function PointsBookingClient({ coachId }) {
       // Block 10:00-12:00, Slot 12:00-13:00 -> 12:00 < 12:00 = false = NOT BLOCKED
       return slotStart < blockEnd && slotEnd > blockStart
     })
-  }
+  }, [blockedDates])
   
   // Check if date is in the past
   const isDateInPast = (date) => {
@@ -329,7 +329,7 @@ export default function PointsBookingClient({ coachId }) {
     return date < today
   }
   
-  const getSlotsForDay = (date) => {
+  const getSlotsForDay = useCallback((date) => {
     // Return empty if date is in the past
     if (isDateInPast(date)) return []
     
@@ -374,10 +374,10 @@ export default function PointsBookingClient({ coachId }) {
     }
     
     return filteredSlots
-  }
+  }, [availability, debugBookedDate, isSlotBooked, isSlotBlocked])
   
   // Get status info for a day (for UI feedback)
-  const getDayStatus = (date) => {
+  const getDayStatus = useCallback((date) => {
     if (isDateInPast(date)) return { type: 'past', message: 'Past' }
     
     const dayOfWeek = date.getDay()
@@ -409,7 +409,7 @@ export default function PointsBookingClient({ coachId }) {
     }
     
     return { type: 'available', message: '' }
-  }
+  }, [availability, blockedDates, isSlotBooked, isSlotBlocked])
   
   const isSlotSelected = (date, slot) => {
     const dateStr = format(date, 'yyyy-MM-dd')
@@ -608,7 +608,7 @@ export default function PointsBookingClient({ coachId }) {
                         <p className="text-gray-600">This coach has no availability set.</p>
                       </div>
                     ) : (
-                      <div className="space-y-6">
+                      <div className="space-y-6" key={`calendar-${existingBookings?.length || 0}`}>
                         {weeks.map((weekStart, weekIdx) => (
                           <div key={weekIdx} className="border rounded-lg p-4">
                             <h4 className="font-semibold text-black mb-3">
