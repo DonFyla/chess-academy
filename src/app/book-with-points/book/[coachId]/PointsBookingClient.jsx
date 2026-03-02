@@ -713,20 +713,24 @@ export default function PointsBookingClient({ coachId }) {
                                 })
                                 
                                 // Determine what to show
+                                // PRIORITY: Bookings check comes BEFORE past date check
+                                // so users see "Fully Booked" even if date is somehow marked as past
                                 let dayContent
                                 if (isDebugDate && process.env.NODE_ENV === 'development') {
                                   console.log(`[DEBUG] ${dateStr}: BRANCH CHECK - isPast=${isPast}, isDayFullyBlocked=${isDayFullyBlocked}, hasAnySlots=${hasAnySlots}, hasAvailableSlots=${hasAvailableSlots}, hasBookings=${hasBookings}`)
                                 }
-                                if (isPast) {
-                                  dayContent = <div className="text-xs text-gray-400">—</div>
-                                } else if (isDayFullyBlocked) {
-                                  dayContent = <div className="text-xs text-red-500 font-medium">Day Off</div>
-                                } else if (!hasAnySlots) {
+                                
+                                if (!hasAnySlots) {
                                   dayContent = <span className="text-xs text-gray-400">—</span>
                                 } else if (!hasAvailableSlots && hasBookings) {
+                                  // Show Fully Booked when all slots are taken by bookings
                                   dayContent = <div className="text-xs text-orange-500 font-medium">Fully Booked</div>
+                                } else if (isDayFullyBlocked) {
+                                  dayContent = <div className="text-xs text-red-500 font-medium">Day Off</div>
                                 } else if (!hasAvailableSlots) {
                                   dayContent = <span className="text-xs text-orange-400">Blocked</span>
+                                } else if (isPast) {
+                                  dayContent = <div className="text-xs text-gray-400">—</div>
                                 } else {
                                   // DEBUG: Log what's being rendered
                                   if (isDebugDate && process.env.NODE_ENV === 'development') {
