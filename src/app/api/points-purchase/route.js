@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY
-const WHATSAPP_LINK = process.env.NEXT_PUBLIC_WHATSAPP_LINK || 'https://wa.link/uj48gk'
-
 const BANK_DETAILS = {
   bankName: 'Guarantee Trust Bank(GTB)',
   accountNumber: '0449558330',
@@ -57,7 +54,7 @@ const emailTemplates = {
             </ol>
             
             <div style="text-align: center; margin: 25px 0;">
-              <a href="${WHATSAPP_LINK}" 
+              <a href="${process.env.NEXT_PUBLIC_WHATSAPP_LINK || 'https://wa.link/uj48gk'}" 
                  style="display: inline-block; background: #25D366; color: white; padding: 15px 40px; 
                         text-decoration: none; border-radius: 25px; font-weight: bold;">
                 📤 Send Payment Receipt via WhatsApp
@@ -302,7 +299,9 @@ export async function POST(request) {
     const body = await request.json()
     const { type, data } = body
 
-    if (!RESEND_API_KEY) {
+    const resendKey = process.env.RESEND_API_KEY
+    
+    if (!resendKey) {
       console.error('RESEND_API_KEY is not configured')
       return NextResponse.json(
         { error: 'Email service not configured' },
@@ -334,7 +333,7 @@ export async function POST(request) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Authorization': `Bearer ${resendKey}`,
           },
           body: JSON.stringify({
             from: 'Moving Train Chess Academy <bookings@themovingtrain.org>',
@@ -362,7 +361,7 @@ export async function POST(request) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Authorization': `Bearer ${resendKey}`,
           },
           body: JSON.stringify({
             from: 'Moving Train Chess Academy <bookings@themovingtrain.org>',
@@ -396,7 +395,7 @@ export async function POST(request) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Authorization': `Bearer ${resendKey}`,
       },
       body: JSON.stringify({
         from: 'Moving Train Chess Academy <bookings@themovingtrain.org>',

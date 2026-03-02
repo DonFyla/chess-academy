@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server'
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY
-const WHATSAPP_LINK = process.env.NEXT_PUBLIC_WHATSAPP_LINK || 'https://wa.link/uj48gk'
-
 // Bank account details for payment
 const BANK_DETAILS = {
   bankName: 'Guarantee Trust Bank(GTB)',
@@ -230,11 +227,19 @@ export async function POST(request) {
     
     const { subject, html } = template(booking)
     
+    const resendKey = process.env.RESEND_API_KEY
+    if (!resendKey) {
+      return NextResponse.json(
+        { success: false, message: 'Email service not configured' },
+        { status: 500 }
+      )
+    }
+    
     // Send email using Resend
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Authorization': `Bearer ${resendKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

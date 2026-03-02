@@ -1,17 +1,36 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Create admin client to bypass RLS
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
+// Lazy initialization of admin client (only created when needed at runtime)
+let supabaseAdmin = null
+
+function getSupabaseAdmin() {
+  if (supabaseAdmin) return supabaseAdmin
+  
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!url || !key) {
+    console.error('Missing Supabase admin credentials:', { 
+      hasUrl: !!url, 
+      hasKey: !!key 
+    })
+    throw new Error('Supabase admin configuration missing')
   }
-)
+  
+  supabaseAdmin = createClient(
+    url,
+    key,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+  
+  return supabaseAdmin
+}
 
 const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY
 
@@ -145,8 +164,20 @@ export async function POST(request) {
       }
     }
     
+    // Get admin client (lazy initialization)
+    let admin
+    try {
+      admin = getSupabaseAdmin()
+    } catch (err) {
+      console.error('Failed to initialize admin client:', err)
+      return NextResponse.json(
+        { error: 'Server configuration error. Please try again later.' },
+        { status: 500 }
+      )
+    }
+    
     // Create user with Supabase Auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: authData, error: authError } = await admin.auth.admin.createUser({
       email,
       password,
       email_confirm: false, // Require email confirmation
@@ -165,15 +196,15 @@ export async function POST(request) {
     }
     
     // Send confirmation email
-    const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'signup',
-      email,
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login`
-      }
-    })
-    
-    if (emailError) {
+    try {
+      await admin.auth.admin.generateLink({
+        type: 'signup',
+        email,
+        options: {
+          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login`
+        }
+      })
+    } catch (emailError) {
       console.error('Failed to send confirmation email:', emailError)
       // Don't fail the signup, just log the error
     }
