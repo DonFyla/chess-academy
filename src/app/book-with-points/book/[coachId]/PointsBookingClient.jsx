@@ -735,6 +735,12 @@ export default function PointsBookingClient({ coachId }) {
                                   // DEBUG: Log what's being rendered
                                   if (isDebugDate && process.env.NODE_ENV === 'development') {
                                     console.log(`[DEBUG] ${dateStr}: RENDERING ${availableSlots.length} slots:`, availableSlots.map(s => s.start_time))
+                                    // CRITICAL CHECK: Is 10:00 in availableSlots when it shouldn't be?
+                                    const has10Slot = availableSlots.some(s => s.start_time?.includes('10:00'))
+                                    if (has10Slot) {
+                                      console.error(`[CRITICAL BUG] ${dateStr}: 10:00 slot is in availableSlots but should be filtered out!`)
+                                      console.error(`[CRITICAL BUG] ${dateStr}: availableSlots =`, availableSlots)
+                                    }
                                   }
                                   dayContent = (
                                     <div className="space-y-1">
