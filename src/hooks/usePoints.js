@@ -301,7 +301,10 @@ export function useCoachBookingsForPoints(coachId) {
           p_days_ahead: 365
         })
       
+      console.log('[useCoachBookingsForPoints] RPC result:', { dataLength: data?.length, error })
+      
       if (error) {
+        console.error('[useCoachBookingsForPoints] RPC error:', error)
         // Fallback: Fetch both flexible bookings AND monthly bookings
         const [flexibleResult, monthlyResult] = await Promise.all([
           // Point-based bookings
@@ -382,7 +385,7 @@ export function useCoachBookingsForPoints(coachId) {
       }
       
       // Map unified schedule format to the expected format
-      return (data || []).map(booking => ({
+      const mapped = (data || []).map(booking => ({
         session_date: booking.session_date,
         start_time: booking.start_time,
         end_time: booking.end_time,
@@ -390,6 +393,8 @@ export function useCoachBookingsForPoints(coachId) {
         booking_type: booking.booking_type,
         student_name: booking.student_name
       }))
+      console.log('[useCoachBookingsForPoints] Mapped bookings:', mapped.length, 'Monthly:', mapped.filter(b => b.booking_type === 'monthly').length)
+      return mapped
     },
     enabled: !!coachId,
   })
