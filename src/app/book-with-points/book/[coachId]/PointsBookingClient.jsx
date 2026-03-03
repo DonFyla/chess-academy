@@ -739,6 +739,10 @@ export default function PointsBookingClient({ coachId }) {
                                   dayContent = (
                                     <div className="space-y-1">
                                       {availableSlots.map((slot, idx) => {
+                                        // DEBUG: Log every slot being rendered
+                                        if (isDebugDate && process.env.NODE_ENV === 'development') {
+                                          console.log(`[DEBUG RENDER] ${dateStr}: Rendering slot button:`, slot.start_time)
+                                        }
                                         const selected = selectedSlots.some(s => 
                                           s.date === dateStr && s.start_time === slot.start_time
                                         )
