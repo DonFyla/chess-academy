@@ -92,7 +92,7 @@ const isSlotBlockedByCoach = (dateStr, startTime, endTime, blockedDates) => {
 
 export default function SpecialBookingClient({ coachId }) {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth() // Optional - for pre-filling if logged in
   const { data: coach, isLoading: loadingCoach } = useSpecialCoach(coachId)
   const { data: availability = [], isLoading: loadingAvailability } = useCoachAvailability(coachId)
   const { data: blockedDates = [] } = useCoachBlockedDates(coachId)
@@ -158,14 +158,15 @@ export default function SpecialBookingClient({ coachId }) {
     studentPhone: '',
   })
   
-  // Auto-populate form with user data when available
+  // Auto-populate form with user data when available (optional - guests can book too)
   useEffect(() => {
     if (user) {
-      setFormData({
-        studentName: user.user_metadata?.full_name || user.user_metadata?.name || '',
-        studentEmail: user.email || '',
-        studentPhone: user.user_metadata?.phone || user.user_metadata?.phone_number || '',
-      })
+      setFormData(prev => ({
+        ...prev,
+        studentName: user.user_metadata?.full_name || user.user_metadata?.name || prev.studentName,
+        studentEmail: user.email || prev.studentEmail,
+        studentPhone: user.user_metadata?.phone || user.user_metadata?.phone_number || prev.studentPhone,
+      }))
     }
   }, [user])
   
@@ -247,7 +248,7 @@ export default function SpecialBookingClient({ coachId }) {
     }
   }
   
-  if (loadingCoach || authLoading) {
+  if (loadingCoach) {
     return (
       <>
         <Navbar />
