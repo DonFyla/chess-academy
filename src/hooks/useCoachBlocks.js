@@ -71,6 +71,25 @@ export function useUnblockCoachDate() {
   })
 }
 
+// Helper to format time as HH:MM for comparison
+function formatTimeHM(timeVal) {
+  if (!timeVal) return null
+  if (typeof timeVal === 'string') {
+    // Extract HH:MM from various formats: "14:00:00", "14:00:00+00", "1970-01-01T14:00:00.000Z"
+    const timeMatch = timeVal.match(/(\d{2}):(\d{2})/)
+    if (timeMatch) {
+      return `${timeMatch[1]}:${timeMatch[2]}`
+    }
+    return timeVal.slice(0, 5)
+  }
+  if (timeVal instanceof Date) {
+    return timeVal.toISOString().slice(11, 16)
+  }
+  const strVal = String(timeVal)
+  const timeMatch = strVal.match(/(\d{2}):(\d{2})/)
+  return timeMatch ? `${timeMatch[1]}:${timeMatch[2]}` : strVal.slice(0, 5)
+}
+
 // Check if a specific slot is blocked
 export function isSlotBlocked(blockedDates, date, startTime, endTime) {
   if (!blockedDates || blockedDates.length === 0) return false
@@ -82,11 +101,11 @@ export function isSlotBlocked(blockedDates, date, startTime, endTime) {
     // If no specific time (entire day blocked)
     if (!block.start_time || !block.end_time) return true
     
-    // Check if times overlap
-    const blockStart = block.start_time.slice(0, 5)
-    const blockEnd = block.end_time.slice(0, 5)
-    const slotStart = startTime.slice(0, 5)
-    const slotEnd = endTime.slice(0, 5)
+    // Check if times overlap using proper time parsing
+    const blockStart = formatTimeHM(block.start_time)
+    const blockEnd = formatTimeHM(block.end_time)
+    const slotStart = formatTimeHM(startTime)
+    const slotEnd = formatTimeHM(endTime)
     
     // Overlap exists if:
     // slot starts before block ends AND slot ends after block starts

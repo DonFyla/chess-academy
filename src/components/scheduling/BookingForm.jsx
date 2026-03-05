@@ -257,7 +257,7 @@ export default function BookingForm({ coachId, availability, existingBookings, c
             </Button>
           </div>
           <div className="text-sm text-gray-600 mt-3 space-y-1">
-            <p><strong>₦15,000</strong> per session</p>
+            <p><strong>₦10,000</strong> per session</p>
             {bookingMode === 'single' ? (
               <p>Total: <strong>₦40,000</strong> for 4 sessions</p>
             ) : (

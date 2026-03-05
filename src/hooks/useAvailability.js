@@ -28,8 +28,6 @@ export function useCreateAvailability() {
   
   return useMutation({
     mutationFn: async (slot) => {
-      console.log('Creating availability slot:', slot)
-      
       const { data, error } = await supabase
         .from('availability_slots')
         .insert([{
@@ -42,7 +40,6 @@ export function useCreateAvailability() {
         .single()
       
       if (error) {
-        console.error('Supabase error:', error)
         throw new Error(error.message)
       }
       

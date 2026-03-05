@@ -32,20 +32,25 @@ import { toast } from 'sonner'
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-// Check if slot is blocked
-function isSlotBlocked(blockedDates, date, startTime) {
-  if (!blockedDates || blockedDates.length === 0) return false
-  
-  return blockedDates.some(block => {
-    if (block.blocked_date !== date) return false
-    if (!block.start_time) return true // Entire day blocked
-    
-    const blockStart = block.start_time.slice(0, 5)
-    const blockEnd = block.end_time?.slice(0, 5) || '23:59'
-    const slotStart = startTime.slice(0, 5)
-    
-    return slotStart >= blockStart && slotStart < blockEnd
-  })
+// Helper to format time as HH:MM for comparison
+const formatTimeHM = (timeVal) => {
+  if (!timeVal) return null
+  // If it's already a string like "14:00:00" or "14:00" or "14:00:00+00"
+  if (typeof timeVal === 'string') {
+    // Extract HH:MM from various formats: "14:00:00", "14:00:00+00", "1970-01-01T14:00:00.000Z"
+    const timeMatch = timeVal.match(/(\d{2}):(\d{2})/)
+    if (timeMatch) {
+      return `${timeMatch[1]}:${timeMatch[2]}`
+    }
+    return timeVal.slice(0, 5)
+  }
+  // If it's a Date object or timestamp
+  if (timeVal instanceof Date) {
+    return format(timeVal, 'HH:mm')
+  }
+  const strVal = String(timeVal)
+  const timeMatch = strVal.match(/(\d{2}):(\d{2})/)
+  return timeMatch ? `${timeMatch[1]}:${timeMatch[2]}` : strVal.slice(0, 5)
 }
 
 export default function PointsBookingClient({ coachId }) {
@@ -67,8 +72,6 @@ export default function PointsBookingClient({ coachId }) {
     studentPhone: '',
   })
   
-  // Debug state to track a booked date for detailed logging
-  const [debugBookedDate, setDebugBookedDate] = useState(null)
   
   // Auto-populate form with user data when available
   useEffect(() => {
@@ -81,36 +84,7 @@ export default function PointsBookingClient({ coachId }) {
     }
   }, [user])
   
-  // Debug: Log existing bookings to help diagnose conflict detection issues
-  useEffect(() => {
-    if (existingBookings) {
-      console.log('=== DEBUG: Existing bookings loaded ===')
-      console.log('Total bookings:', existingBookings.length)
-      console.log('Monthly bookings:', existingBookings.filter(b => b.booking_type === 'monthly').length)
-      console.log('Points bookings:', existingBookings.filter(b => b.booking_type === 'points').length)
-      
-      // Log each monthly booking with details
-      const monthlyBookings = existingBookings.filter(b => b.booking_type === 'monthly')
-      monthlyBookings.forEach((b, i) => {
-        console.log(`Monthly booking ${i+1}:`, {
-          session_date: b.session_date,
-          start_date_type: typeof b.session_date,
-          start_time: b.start_time,
-          start_time_type: typeof b.start_time,
-          end_time: b.end_time,
-          end_time_type: typeof b.end_time,
-          status: b.status,
-          student_name: b.student_name
-        })
-      })
-      
-      // Set the first monthly booking date for debug targeting
-      if (monthlyBookings.length > 0 && monthlyBookings[0].session_date) {
-        setDebugBookedDate(monthlyBookings[0].session_date)
-        console.log('Debug target date set to:', monthlyBookings[0].session_date)
-      }
-    }
-  }, [existingBookings])
+  // Track existing bookings for conflict detection
   
   // Redirect if not logged in
   useEffect(() => {
@@ -157,26 +131,7 @@ export default function PointsBookingClient({ coachId }) {
   const tomorrow = addDays(new Date(), 1)
   const weeks = Array.from({ length: 4 }, (_, i) => addDays(startOfWeek(tomorrow, { weekStartsOn: 1 }), i * 7))
   
-  // Helper to format time as HH:MM string for comparison
-  const formatTimeHM = (timeVal) => {
-    if (!timeVal) return null
-    // If it's already a string like "14:00:00" or "14:00" or "14:00:00+00"
-    if (typeof timeVal === 'string') {
-      // Extract HH:MM from various formats: "14:00:00", "14:00:00+00", "1970-01-01T14:00:00.000Z"
-      const timeMatch = timeVal.match(/(\d{2}):(\d{2})/)
-      if (timeMatch) {
-        return `${timeMatch[1]}:${timeMatch[2]}`
-      }
-      return timeVal.slice(0, 5)
-    }
-    // If it's a Date object or timestamp
-    if (timeVal instanceof Date) {
-      return format(timeVal, 'HH:mm')
-    }
-    const strVal = String(timeVal)
-    const timeMatch = strVal.match(/(\d{2}):(\d{2})/)
-    return timeMatch ? `${timeMatch[1]}:${timeMatch[2]}` : strVal.slice(0, 5)
-  }
+
   
   // Check if a slot is already booked
   // All booking types only block if time overlaps (not entire day)
@@ -188,12 +143,6 @@ export default function PointsBookingClient({ coachId }) {
     const slotStart = formatTimeHM(startTime)
     const slotEnd = formatTimeHM(endTime)
     
-    // Debug: Log when checking the debug target date
-    const isTargetDate = debugBookedDate && dateStr === debugBookedDate
-    if (isTargetDate && process.env.NODE_ENV === 'development') {
-      console.log(`isSlotBooked called for TARGET date ${dateStr}:`, { slotStart, slotEnd, totalBookings: existingBookings.length })
-    }
-    
     return existingBookings.some(booking => {
       // Handle both string and Date object formats for session_date
       const bookingDate = booking.session_date 
@@ -201,17 +150,6 @@ export default function PointsBookingClient({ coachId }) {
             ? booking.session_date 
             : format(new Date(booking.session_date), 'yyyy-MM-dd'))
         : null
-      
-      // Debug: Log date comparison for target date
-      if (isTargetDate && process.env.NODE_ENV === 'development') {
-        console.log(`  Comparing with booking:`, { 
-          bookingDate, 
-          targetDate: dateStr,
-          dateMatch: bookingDate === dateStr,
-          rawSessionDate: booking.session_date,
-          rawType: typeof booking.session_date
-        })
-      }
       
       // Check date match
       if (bookingDate !== dateStr) {
@@ -221,9 +159,6 @@ export default function PointsBookingClient({ coachId }) {
       // Check status - monthly bookings can be 'confirmed' or 'pending_payment'
       const validStatuses = ['confirmed', 'completed', 'pending_payment', 'payment_received']
       if (!validStatuses.includes(booking.status)) {
-        if (isTargetDate && process.env.NODE_ENV === 'development') {
-          console.log(`  Status rejected:`, booking.status)
-        }
         return false
       }
       
@@ -233,17 +168,7 @@ export default function PointsBookingClient({ coachId }) {
       
       // All bookings: Only block if time overlaps
       // A slot conflicts if: slotStart < bookingEnd AND slotEnd > bookingStart
-      const hasOverlap = slotStart < bookingEnd && slotEnd > bookingStart
-      
-      if (isTargetDate && process.env.NODE_ENV === 'development') {
-        console.log(`  Time comparison:`, { slotStart, slotEnd, bookingStart, bookingEnd, hasOverlap, type: booking.booking_type })
-      }
-      
-      if (hasOverlap && process.env.NODE_ENV === 'development') {
-        console.log('OVERLAP DETECTED:', { slotStart, slotEnd, bookingStart, bookingEnd, type: booking.booking_type })
-      }
-      
-      return hasOverlap
+      return slotStart < bookingEnd && slotEnd > bookingStart
     })
   }
   
@@ -292,9 +217,7 @@ export default function PointsBookingClient({ coachId }) {
   }
   
   // Check if a slot is blocked by coach
-  // This handles both full-day blocks and partial time ranges
-  // Example: Blocking 10:00-12:00 will block slots 10:00-11:00 and 11:00-12:00
-  const isSlotBlocked = (dateStr, startTime, endTime) => {
+  const isSlotBlockedByCoach = (dateStr, startTime, endTime) => {
     if (!blockedDates || blockedDates.length === 0) return false
     
     return blockedDates.some(block => {
@@ -304,20 +227,13 @@ export default function PointsBookingClient({ coachId }) {
       // If no specific time (entire day blocked)
       if (!block.start_time || !block.end_time) return true
       
-      // Format times for comparison (handle "14:30:00" or "14:30:00+00" format)
-      const formatTime = (t) => t ? t.slice(0, 5) : ''
-      const blockStart = formatTime(block.start_time)
-      const blockEnd = formatTime(block.end_time)
-      const slotStart = formatTime(startTime)
-      const slotEnd = formatTime(endTime)
+      // Format times for comparison
+      const blockStart = formatTimeHM(block.start_time)
+      const blockEnd = formatTimeHM(block.end_time)
+      const slotStart = formatTimeHM(startTime)
+      const slotEnd = formatTimeHM(endTime)
       
-      // Overlap exists if:
-      // - Slot starts before block ends AND slot ends after block starts
-      // Examples:
-      // Block 10:00-12:00, Slot 10:00-11:00 -> 10:00 < 12:00 && 11:00 > 10:00 = BLOCKED
-      // Block 10:00-12:00, Slot 11:00-12:00 -> 11:00 < 12:00 && 12:00 > 10:00 = BLOCKED
-      // Block 10:00-12:00, Slot 09:00-10:00 -> 09:00 < 12:00 && 10:00 > 10:00 = NOT BLOCKED (edge case, exactly at end)
-      // Block 10:00-12:00, Slot 12:00-13:00 -> 12:00 < 12:00 = false = NOT BLOCKED
+      // Overlap exists if slot starts before block ends AND slot ends after block starts
       return slotStart < blockEnd && slotEnd > blockStart
     })
   }
@@ -337,43 +253,12 @@ export default function PointsBookingClient({ coachId }) {
     const dateStr = format(date, 'yyyy-MM-dd')
     const slots = availability?.filter(slot => slot.day_of_week === dayOfWeek) || []
     
-    // Debug: Log availability slots for target date
-    if (debugBookedDate && dateStr === debugBookedDate && process.env.NODE_ENV === 'development') {
-      console.log(`getSlotsForDay: Found ${slots.length} availability slots for ${dateStr}:`, 
-        slots.map(s => ({ start: s.start_time, end: s.end_time })))
-    }
-    
     // Filter out already booked slots AND blocked slots
-    // UPDATED: Now passes end_time for proper overlap checking
-    const filteredSlots = slots.filter(slot => {
-      // Debug: Log raw slot data for target date
-      if (debugBookedDate && dateStr === debugBookedDate && process.env.NODE_ENV === 'development') {
-        console.log(`getSlotsForDay: Checking slot`, { 
-          slotStart: slot.start_time, 
-          slotEnd: slot.end_time,
-          slotStartType: typeof slot.start_time,
-          slotEndType: typeof slot.end_time
-        })
-      }
-      
+    return slots.filter(slot => {
       const isBooked = isSlotBooked(dateStr, slot.start_time, slot.end_time)
-      const isBlocked = isSlotBlocked(dateStr, slot.start_time, slot.end_time)
-      
-      // Debug: Log filtering for target date
-      if (debugBookedDate && dateStr === debugBookedDate && process.env.NODE_ENV === 'development') {
-        console.log(`getSlotsForDay filtering ${dateStr} ${slot.start_time}:`, { isBooked, isBlocked, include: !isBooked && !isBlocked })
-      }
-      
+      const isBlocked = isSlotBlockedByCoach(dateStr, slot.start_time, slot.end_time)
       return !isBooked && !isBlocked
     })
-    
-    // Debug: Log final filtered slots
-    if (debugBookedDate && dateStr === debugBookedDate && process.env.NODE_ENV === 'development') {
-      console.log(`getSlotsForDay: Returning ${filteredSlots.length} slots for ${dateStr}:`, 
-        filteredSlots.map(s => s.start_time))
-    }
-    
-    return filteredSlots
   }
   
   // Get status info for a day (for UI feedback)
@@ -396,7 +281,7 @@ export default function PointsBookingClient({ coachId }) {
     // Check if all slots are booked
     const availableSlots = slots.filter(slot => 
       !isSlotBooked(dateStr, slot.start_time, slot.end_time) && 
-      !isSlotBlocked(dateStr, slot.start_time, slot.end_time)
+      !isSlotBlockedByCoach(dateStr, slot.start_time, slot.end_time)
     )
     
     if (availableSlots.length === 0) {
@@ -623,22 +508,11 @@ export default function PointsBookingClient({ coachId }) {
                                 const dayOfWeek = date.getDay()
                                 const allSlots = availability?.filter(slot => slot.day_of_week === dayOfWeek) || []
                                 
-                                // DEBUG: Log for March 2, 2026
-                                const isDebugDate = dateStr === '2026-03-02'
-                                if (isDebugDate && process.env.NODE_ENV === 'development') {
-                                  console.log(`[DEBUG] ${dateStr}: allSlots count = ${allSlots.length}, existingBookings count = ${existingBookings?.length || 0}`)
-                                  console.log(`[DEBUG] ${dateStr}: existingBookings =`, existingBookings?.map(b => ({ date: b.session_date, start: b.start_time, end: b.end_time, status: b.status })))
-                                }
-                                
                                 // Filter out booked/blocked slots inline
                                 const availableSlots = allSlots.filter(slot => {
                                   // Check if slot is booked
-                                  const slotStart = slot.start_time?.slice(0, 5)
-                                  const slotEnd = slot.end_time?.slice(0, 5)
-                                  
-                                  if (isDebugDate && process.env.NODE_ENV === 'development') {
-                                    console.log(`[DEBUG] ${dateStr}: Checking slot ${slotStart}-${slotEnd}`)
-                                  }
+                                  const slotStart = formatTimeHM(slot.start_time)
+                                  const slotEnd = formatTimeHM(slot.end_time)
                                   
                                   const isBooked = existingBookings?.some(booking => {
                                     const bookingDate = booking.session_date 
@@ -649,37 +523,22 @@ export default function PointsBookingClient({ coachId }) {
                                     if (bookingDate !== dateStr) return false
                                     const validStatuses = ['confirmed', 'completed', 'pending_payment', 'payment_received']
                                     if (!validStatuses.includes(booking.status)) return false
-                                    const bookingStart = booking.start_time?.slice(0, 5)
-                                    const bookingEnd = booking.end_time?.slice(0, 5)
-                                    const overlap = slotStart < bookingEnd && slotEnd > bookingStart
-                                    
-                                    if (isDebugDate && process.env.NODE_ENV === 'development' && overlap) {
-                                      console.log(`[DEBUG] ${dateStr}: OVERLAP FOUND! slot ${slotStart}-${slotEnd} overlaps with booking ${bookingStart}-${bookingEnd}`)
-                                    }
-                                    
-                                    return overlap
+                                    const bookingStart = formatTimeHM(booking.start_time)
+                                    const bookingEnd = formatTimeHM(booking.end_time)
+                                    return slotStart < bookingEnd && slotEnd > bookingStart
                                   }) || false
-                                  
-                                  if (isDebugDate && process.env.NODE_ENV === 'development') {
-                                    console.log(`[DEBUG] ${dateStr}: slot ${slotStart}-${slotEnd} isBooked = ${isBooked}`)
-                                  }
                                   
                                   // Check if slot is blocked
                                   const isBlocked = blockedDates?.some(block => {
                                     if (block.blocked_date !== dateStr) return false
                                     if (!block.start_time || !block.end_time) return true
-                                    const formatTime = (t) => t ? t.slice(0, 5) : ''
-                                    const blockStart = formatTime(block.start_time)
-                                    const blockEnd = formatTime(block.end_time)
+                                    const blockStart = formatTimeHM(block.start_time)
+                                    const blockEnd = formatTimeHM(block.end_time)
                                     return slotStart < blockEnd && slotEnd > blockStart
                                   }) || false
                                   
                                   return !isBooked && !isBlocked
                                 })
-                                
-                                if (isDebugDate && process.env.NODE_ENV === 'development') {
-                                  console.log(`[DEBUG] ${dateStr}: availableSlots count = ${availableSlots.length}`)
-                                }
                                 
                                 // Calculate day status inline
                                 const isPast = (() => {
@@ -695,8 +554,8 @@ export default function PointsBookingClient({ coachId }) {
                                 const hasAnySlots = allSlots.length > 0
                                 const hasAvailableSlots = availableSlots.length > 0
                                 const hasBookings = allSlots.some(slot => {
-                                  const slotStart = slot.start_time?.slice(0, 5)
-                                  const slotEnd = slot.end_time?.slice(0, 5)
+                                  const slotStart = formatTimeHM(slot.start_time)
+                                  const slotEnd = formatTimeHM(slot.end_time)
                                   return existingBookings?.some(booking => {
                                     const bookingDate = booking.session_date 
                                       ? (typeof booking.session_date === 'string' 
@@ -706,8 +565,8 @@ export default function PointsBookingClient({ coachId }) {
                                     if (bookingDate !== dateStr) return false
                                     const validStatuses = ['confirmed', 'completed', 'pending_payment', 'payment_received']
                                     if (!validStatuses.includes(booking.status)) return false
-                                    const bookingStart = booking.start_time?.slice(0, 5)
-                                    const bookingEnd = booking.end_time?.slice(0, 5)
+                                    const bookingStart = formatTimeHM(booking.start_time)
+                                    const bookingEnd = formatTimeHM(booking.end_time)
                                     return slotStart < bookingEnd && slotEnd > bookingStart
                                   })
                                 })
@@ -716,9 +575,6 @@ export default function PointsBookingClient({ coachId }) {
                                 // PRIORITY: Bookings check comes BEFORE past date check
                                 // so users see "Fully Booked" even if date is somehow marked as past
                                 let dayContent
-                                if (isDebugDate && process.env.NODE_ENV === 'development') {
-                                  console.log(`[DEBUG] ${dateStr}: BRANCH CHECK - isPast=${isPast}, isDayFullyBlocked=${isDayFullyBlocked}, hasAnySlots=${hasAnySlots}, hasAvailableSlots=${hasAvailableSlots}, hasBookings=${hasBookings}`)
-                                }
                                 
                                 if (!hasAnySlots) {
                                   dayContent = <span className="text-xs text-gray-400">—</span>
@@ -732,23 +588,9 @@ export default function PointsBookingClient({ coachId }) {
                                 } else if (isPast) {
                                   dayContent = <div className="text-xs text-gray-400">—</div>
                                 } else {
-                                  // DEBUG: Log what's being rendered
-                                  if (isDebugDate && process.env.NODE_ENV === 'development') {
-                                    console.log(`[DEBUG] ${dateStr}: RENDERING ${availableSlots.length} slots:`, availableSlots.map(s => s.start_time))
-                                    // CRITICAL CHECK: Is 10:00 in availableSlots when it shouldn't be?
-                                    const has10Slot = availableSlots.some(s => s.start_time?.includes('10:00'))
-                                    if (has10Slot) {
-                                      console.error(`[CRITICAL BUG] ${dateStr}: 10:00 slot is in availableSlots but should be filtered out!`)
-                                      console.error(`[CRITICAL BUG] ${dateStr}: availableSlots =`, availableSlots)
-                                    }
-                                  }
                                   dayContent = (
                                     <div className="space-y-1">
                                       {availableSlots.map((slot, idx) => {
-                                        // DEBUG: Log every slot being rendered
-                                        if (isDebugDate && process.env.NODE_ENV === 'development') {
-                                          console.log(`[DEBUG RENDER] ${dateStr}: Rendering slot button:`, slot.start_time)
-                                        }
                                         const selected = selectedSlots.some(s => 
                                           s.date === dateStr && s.start_time === slot.start_time
                                         )

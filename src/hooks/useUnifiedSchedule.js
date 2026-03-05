@@ -47,11 +47,7 @@ export function useUnifiedSchedule(coachId, daysAhead = 90) {
         })
       
       if (error) {
-        console.error('RPC Error:', error)
-        console.error('Error details:', JSON.stringify(error, null, 2))
-        
         // Fallback: Fetch manually if RPC fails
-        console.log('Falling back to manual fetch...')
         
         const [monthlyResult, pointsResult] = await Promise.all([
           // Monthly bookings
@@ -70,8 +66,7 @@ export function useUnifiedSchedule(coachId, daysAhead = 90) {
             .gte('session_date', today)
         ])
         
-        if (monthlyResult.error) console.error('Monthly fetch error:', monthlyResult.error)
-        if (pointsResult.error) console.error('Points fetch error:', pointsResult.error)
+
         
         // Convert monthly bookings to unified format
         const monthlyBookings = (monthlyResult.data || []).flatMap(b => {
@@ -138,7 +133,6 @@ export function useUnifiedSchedule(coachId, daysAhead = 90) {
         const combined = [...monthlyBookings, ...pointBookings]
           .sort((a, b) => new Date(a.session_date) - new Date(b.session_date))
         
-        console.log('Fallback fetch successful:', combined.length, 'bookings')
         return combined
       }
       
@@ -162,7 +156,6 @@ export function useAvailableSlotsForDate(coachId, date) {
         })
       
       if (error) {
-        console.error('Failed to fetch available slots:', error)
         throw error
       }
       
@@ -188,7 +181,6 @@ export async function checkSlotConflict(coachId, date, startTime, endTime) {
       })
     
     if (error) {
-      console.error('Conflict check failed:', error)
       return { available: false, error: error.message }
     }
     
