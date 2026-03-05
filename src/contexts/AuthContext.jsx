@@ -56,13 +56,16 @@ export function AuthProvider({ children }) {
         .eq('user_id', userId)
         .single()
       
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching coach:', error)
+      if (error) {
+        // PGRST116 = no rows returned (user is not a coach) - this is expected
+        if (error.code !== 'PGRST116') {
+          console.error('Error fetching coach:', error.message || error)
+        }
       }
       
       setCoach(data || null)
     } catch (error) {
-      console.error('Error fetching coach:', error.message)
+      console.error('Exception fetching coach:', error?.message || error)
     } finally {
       setLoading(false)
     }
