@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format, parseISO, addDays, startOfWeek } from 'date-fns'
@@ -17,7 +18,22 @@ import { useSpecialCoach } from '@/hooks/useSpecialCoaches'
 import { useCreateSpecialBooking } from '@/hooks/useSpecialCoaches'
 import { useCoachAvailability } from '@/hooks/useAvailability'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
 import { DAYS_OF_WEEK } from '@/lib/scheduling-types'
+
+// Helper to format time as HH:MM for comparison
+const formatTimeHM = (timeVal) => {
+  if (!timeVal) return null
+  if (typeof timeVal === 'string') {
+    const timeMatch = timeVal.match(/(\d{2}):(\d{2})/)
+    if (timeMatch) return `${timeMatch[1]}:${timeMatch[2]}`
+    return timeVal.slice(0, 5)
+  }
+  if (timeVal instanceof Date) return format(timeVal, 'HH:mm')
+  const strVal = String(timeVal)
+  const timeMatch = strVal.match(/(\d{2}):(\d{2})/)
+  return timeMatch ? `${timeMatch[1]}:${timeMatch[2]}` : strVal.slice(0, 5)
+}
 
 const WHATSAPP_LINK = process.env.NEXT_PUBLIC_WHATSAPP_LINK || 'https://wa.link/uj48gk'
 
@@ -25,6 +41,35 @@ const BANK_DETAILS = {
   bankName: 'Guarantee Trust Bank(GTB)',
   accountNumber: '0449558330',
   accountName: 'Moving Train Chess Academy Ltd',
+}
+
+// Check if a slot is already booked
+const isSlotBooked = (dateStr, startTime, endTime, existingBookings) => {
+  if (!existingBookings || existingBookings.length === 0) return false
+  
+  const slotStart = formatTimeHM(startTime)
+  const slotEnd = formatTimeHM(endTime)
+  
+  return existingBookings.some(booking => {
+    // Handle date format
+    const bookingDate = booking.session_date 
+      ? (typeof booking.session_date === 'string' 
+          ? booking.session_date 
+          : format(new Date(booking.session_date), 'yyyy-MM-dd'))
+      : null
+    
+    if (bookingDate !== dateStr) return false
+    
+    // Check status - only block confirmed/pending bookings
+    const validStatuses = ['confirmed', 'completed', 'pending_payment', 'payment_received']
+    if (!validStatuses.includes(booking.status)) return false
+    
+    // Check time overlap
+    const bookingStart = formatTimeHM(booking.start_time)
+    const bookingEnd = formatTimeHM(booking.end_time)
+    
+    return slotStart < bookingEnd && slotEnd > bookingStart
+  })
 }
 
 // Session Scheduler Component
@@ -36,7 +81,8 @@ function SessionScheduler({
   recurringMode,
   setRecurringMode,
   recurringDays,
-  onRecurringDaysChange
+  onRecurringDaysChange,
+  existingBookings
 }) {
   const [selectedDate, setSelectedDate] = useState(null)
   const [currentWeek, setCurrentWeek] = useState(0)
@@ -57,10 +103,16 @@ function SessionScheduler({
   
   const currentWeekDays = weeks[currentWeek]
   
-  // Get available slots for a specific date
+  // Get available slots for a specific date (excluding booked slots)
   const getSlotsForDate = (date) => {
     const dayOfWeek = date.getDay()
-    return availability.filter(slot => slot.day_of_week === dayOfWeek)
+    const dateStr = format(date, 'yyyy-MM-dd')
+    const slots = availability.filter(slot => slot.day_of_week === dayOfWeek)
+    
+    // Filter out already booked slots
+    return slots.filter(slot => 
+      !isSlotBooked(dateStr, slot.start_time, slot.end_time, existingBookings)
+    )
   }
   
   const handleDateSelect = (date) => {
@@ -165,6 +217,7 @@ function SessionScheduler({
           id="recurring"
           checked={recurringMode}
           onChange={(e) => {
+            setRecurringMode(e.target.checked)
             onRecurringDaysChange([])
             onSlotSelect([])
           }}
@@ -300,7 +353,7 @@ function SessionScheduler({
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
+                  {formatTimeHM(slot.start_time)} - {formatTimeHM(slot.end_time)}
                 </button>
               )
             })}
@@ -315,7 +368,7 @@ function SessionScheduler({
           <div className="space-y-1">
             {selectedSlots.map((slot, idx) => (
               <div key={idx} className="text-sm text-green-700">
-                {idx + 1}. {format(parseISO(slot.date), 'MMM d, yyyy')} at {slot.start_time.slice(0, 5)}
+                {idx + 1}. {format(parseISO(slot.date), 'MMM d, yyyy')} at {formatTimeHM(slot.start_time)}
               </div>
             ))}
           </div>
@@ -426,7 +479,7 @@ function BookingConfirmation({
                   <span className="text-gray-400">|</span>
                   <Clock className="w-4 h-4 text-[#5E5044]" />
                   <span className="text-black">
-                    {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
+                    {formatTimeHM(slot.start_time)} - {formatTimeHM(slot.end_time)}
                   </span>
                 </div>
               ))}
@@ -562,6 +615,32 @@ export default function SpecialBookingClient({ coachId }) {
   const { user, loading: authLoading } = useAuth()
   const { data: coach, isLoading: loadingCoach } = useSpecialCoach(coachId)
   const { data: availability = [], isLoading: loadingAvailability } = useCoachAvailability(coachId)
+  
+  // Fetch existing bookings to prevent double-booking
+  const { data: existingBookings = [] } = useQuery({
+    queryKey: ['special-bookings-conflicts', coachId],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0]
+      const { data, error } = await supabase
+        .from('special_bookings')
+        .select('session_dates, status')
+        .eq('coach_id', coachId)
+        .in('status', ['confirmed', 'pending_payment', 'payment_received'])
+        .gte('created_at', today)
+      
+      if (error) throw error
+      
+      // Flatten session_dates array from all bookings
+      return (data || []).flatMap(b => 
+        (b.session_dates || []).map(s => ({
+          ...s,
+          status: b.status
+        }))
+      )
+    },
+    enabled: !!coachId,
+  })
+  
   const createBooking = useCreateSpecialBooking()
   
   // Form state
@@ -837,6 +916,7 @@ export default function SpecialBookingClient({ coachId }) {
                         setRecurringMode={setRecurringMode}
                         recurringDays={recurringDays}
                         onRecurringDaysChange={setRecurringDays}
+                        existingBookings={existingBookings}
                       />
                     )}
                   </CardContent>
@@ -917,7 +997,7 @@ export default function SpecialBookingClient({ coachId }) {
                         <div className="space-y-1 max-h-32 overflow-y-auto">
                           {selectedSlots.map((slot, idx) => (
                             <div key={idx} className="text-xs text-gray-700">
-                              {idx + 1}. {format(parseISO(slot.date), 'MMM d')} at {slot.start_time.slice(0, 5)}
+                              {idx + 1}. {format(parseISO(slot.date), 'MMM d')} at {formatTimeHM(slot.start_time)}
                             </div>
                           ))}
                         </div>
