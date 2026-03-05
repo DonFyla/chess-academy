@@ -57,31 +57,113 @@ async function sendSpecialBookingEmail({ booking, type, recipient }) {
   return response.json()
 }
 
-// Create special session booking (uses API route to bypass RLS for guest bookings)
+// Create special session booking (like normal booking - direct Supabase insert)
+// NOTE: Requires RLS policy in Supabase to allow inserts for authenticated and anonymous users
 export function useCreateSpecialBooking() {
   const queryClient = useQueryClient()
   
   return useMutation({
     mutationFn: async (booking) => {
-      const response = await fetch('/api/special-booking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(booking)
-      })
+      const { data, error } = await supabase
+        .from('special_bookings')
+        .insert({
+          coach_id: booking.coach_id,
+          student_name: booking.student_name,
+          student_email: booking.student_email,
+          student_phone: booking.student_phone,
+          total_sessions: booking.total_sessions,
+          session_dates: booking.session_dates,
+          is_recurring: booking.is_recurring || false,
+          recurring_days: booking.recurring_days || [],
+          hourly_rate: booking.hourly_rate,
+          total_amount: booking.total_amount,
+          status: 'pending_payment'
+        })
+        .select()
+        .single()
       
-      const result = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create booking')
+      if (error) {
+        console.error('Special booking insert error:', error)
+        throw error
       }
-      
-      return result.data
+      return data
     },
-    onSuccess: (data) => {
-      // Invalidate queries to refresh data
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['special-bookings'] })
       queryClient.invalidateQueries({ queryKey: ['all-bookings-conflicts', data.coach_id] })
-      // Note: Emails are sent server-side in the API route
+      
+      try {
+        // Get coach details
+        const { data: coach, error: coachError } = await supabase
+          .from('coaches')
+          .select('*')
+          .eq('id', data.coach_id)
+          .single()
+        
+        if (coachError) {
+          console.error('Could not fetch coach details:', coachError)
+          return
+        }
+        
+        // Try multiple ways to get coach email
+        let coachEmail = null
+        
+        // Method 1: Direct email column
+        if (coach?.email) {
+          coachEmail = coach.email
+        }
+        
+        // Method 2: RPC to auth.users
+        if (!coachEmail && coach?.user_id) {
+          try {
+            const { data: userData, error: rpcError } = await supabase
+              .rpc('get_user_email', { user_id: coach.user_id })
+            
+            if (!rpcError && userData) {
+              coachEmail = userData
+            }
+          } catch (e) {
+            console.error('Could not get coach email via RPC:', e)
+          }
+        }
+        
+        const bookingWithCoach = { 
+          ...data, 
+          coach_name: coach?.name || 'Your Coach',
+          meeting_link: coach?.meeting_link || null
+        }
+        
+        // Email to student
+        try {
+          await sendSpecialBookingEmail({
+            booking: bookingWithCoach,
+            type: 'studentBookingReceived',
+            recipient: data.student_email
+          })
+          console.log('✅ Special booking student email sent to:', data.student_email)
+        } catch (studentEmailError) {
+          console.error('❌ Failed to send student email:', studentEmailError)
+        }
+        
+        // Email to coach (if coach has email)
+        if (coachEmail) {
+          try {
+            await sendSpecialBookingEmail({
+              booking: bookingWithCoach,
+              type: 'coachNewBooking',
+              recipient: coachEmail
+            })
+            console.log('✅ Special booking coach email sent to:', coachEmail)
+          } catch (coachEmailError) {
+            console.error('❌ Failed to send coach email:', coachEmailError)
+          }
+        } else {
+          console.warn('⚠️ No coach email found for special booking')
+        }
+      } catch (emailError) {
+        // Don't fail the booking if email fails
+        console.error('Email error (non-critical):', emailError)
+      }
     },
   })
 }
