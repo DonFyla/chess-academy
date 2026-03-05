@@ -2,9 +2,19 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 // Create admin client with service role to bypass RLS
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('Missing Supabase environment variables:', {
+    url: supabaseUrl ? 'set' : 'missing',
+    key: supabaseServiceKey ? 'set' : 'missing'
+  })
+}
+
 const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  supabaseUrl || '',
+  supabaseServiceKey || '',
   {
     auth: {
       autoRefreshToken: false,
@@ -15,6 +25,15 @@ const supabaseAdmin = createClient(
 
 export async function POST(request) {
   try {
+    // Check environment variables
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Server configuration error: Missing Supabase credentials')
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact support.' },
+        { status: 500 }
+      )
+    }
+    
     const booking = await request.json()
     
     // Validate required fields
