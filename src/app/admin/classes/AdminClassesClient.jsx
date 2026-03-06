@@ -18,7 +18,7 @@ function parseDateString(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number)
   return new Date(year, month - 1, day) // month is 0-indexed
 }
-import { Calendar, Clock, User, MapPin, Filter, Coins } from 'lucide-react'
+import { Calendar, Clock, User, MapPin, Filter, Coins, Crown } from 'lucide-react'
 
 const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -108,10 +108,9 @@ export default function AdminClassesClient() {
         `)
         .eq('status', 'confirmed')
 
-      // Fetch flexible point bookings - separate queries to avoid RLS issues
+      // Fetch flexible point bookings
       console.log('Building flexible query with dates:', startDateStr, endDateStr)
       
-      // First get the bookings
       let flexibleQuery = supabase
         .from('flexible_bookings')
         .select(`
@@ -121,34 +120,43 @@ export default function AdminClassesClient() {
         .gte('session_date', startDateStr)
         .lte('session_date', endDateStr)
       
-      console.log('Flexible query built (without users join)')
+      // Fetch special coach bookings
+      let specialQuery = supabase
+        .from('special_bookings')
+        .select(`
+          *,
+          coaches (name, email)
+        `)
+        .in('status', ['confirmed', 'pending_payment'])
+      
+      console.log('Flexible and special queries built')
 
       // Filter by coach if selected
       if (selectedCoach && selectedCoach !== 'all') {
         bookingsQuery = bookingsQuery.eq('coach_id', selectedCoach)
         flexibleQuery = flexibleQuery.eq('coach_id', selectedCoach)
+        specialQuery = specialQuery.eq('coach_id', selectedCoach)
       }
 
-      // Execute both queries in parallel
+      // Execute all queries in parallel
       console.log('Executing queries...')
-      let bookingsResult, flexibleResult
+      let bookingsResult, flexibleResult, specialResult
       try {
-        const [bookingsRes, flexibleRes] = await Promise.all([
+        const [bookingsRes, flexibleRes, specialRes] = await Promise.all([
           bookingsQuery,
-          flexibleQuery
+          flexibleQuery,
+          specialQuery
         ])
         
         // Supabase returns { data, error } object
         bookingsResult = bookingsRes
         flexibleResult = flexibleRes
+        specialResult = specialRes
         
         console.log('Query results received:', {
-          bookingsResType: typeof bookingsRes,
           bookingsResHasData: 'data' in bookingsRes,
-          bookingsResHasError: 'error' in bookingsRes,
-          flexibleResType: typeof flexibleRes,
           flexibleResHasData: 'data' in flexibleRes,
-          flexibleResHasError: 'error' in flexibleRes
+          specialResHasData: 'data' in specialRes
         })
       } catch (promiseError) {
         console.error('Promise.all error:', promiseError)
@@ -168,6 +176,7 @@ export default function AdminClassesClient() {
       
       const { data: bookingsData, error: bookingsError } = bookingsResult || {}
       const { data: flexibleData, error: flexibleError } = flexibleResult || {}
+      const { data: specialData, error: specialError } = specialResult || {}
 
       console.log('Destructured:', {
         bookingsDataExists: !!bookingsData,
@@ -190,16 +199,16 @@ export default function AdminClassesClient() {
       // Log flexible error but don't throw - use empty array as fallback
       if (flexibleError) {
         console.error('Flexible bookings error (non-fatal):', flexibleError)
-        console.log('Error details:', {
-          message: flexibleError.message,
-          code: flexibleError.code,
-          details: flexibleError.details,
-          hint: flexibleError.hint
-        })
         console.log('Continuing with empty flexible bookings')
       }
       
-      console.log('Fetched bookings:', bookingsData?.length, 'Flexible:', flexibleData?.length)
+      // Log special bookings error but don't throw
+      if (specialError) {
+        console.error('Special bookings error (non-fatal):', specialError)
+        console.log('Continuing with empty special bookings')
+      }
+      
+      console.log('Fetched bookings:', bookingsData?.length, 'Flexible:', flexibleData?.length, 'Special:', specialData?.length)
 
       // Expand bookings to include all recurring dates
       const expandedClasses = []
@@ -248,6 +257,36 @@ export default function AdminClassesClient() {
               _isRecurring: false
             })
           }
+        }
+      })
+      
+      // Process special bookings - similar to regular bookings with session_dates
+      console.log('Processing special bookings:', specialData?.length)
+      ;(specialData || []).forEach(booking => {
+        console.log('Processing special booking:', booking.id, 'session_dates:', booking.session_dates)
+        
+        // Special bookings have session_dates array
+        if (booking.session_dates && Array.isArray(booking.session_dates) && booking.session_dates.length > 0) {
+          booking.session_dates.forEach((session, idx) => {
+            console.log(`  Special Session ${idx}:`, session)
+            if (session.date) {
+              const sessionDate = startOfDay(parseDateString(session.date))
+              const isInWeek = isWithinInterval(sessionDate, { start: weekStart, end: weekEnd })
+              
+              if (isInWeek) {
+                console.log('  -> ADDED special to expandedClasses')
+                expandedClasses.push({
+                  ...booking,
+                  session_date: session.date,
+                  session_start_time: session.start_time,
+                  session_end_time: session.end_time,
+                  _isSpecial: true,
+                  student_name: booking.student_name,
+                  student_email: booking.student_email
+                })
+              }
+            }
+          })
         }
       })
       
@@ -473,6 +512,12 @@ export default function AdminClassesClient() {
                           </div>
                           
                           <div className="flex items-center gap-2">
+                            {booking._isSpecial && (
+                              <Badge className="text-xs bg-purple-600 text-white">
+                                <Crown className="w-3 h-3 mr-1" />
+                                Special
+                              </Badge>
+                            )}
                             {booking._isFlexible && (
                               <Badge className="text-xs bg-[#5E5044] text-white">
                                 <Coins className="w-3 h-3 mr-1" />
