@@ -219,7 +219,7 @@ export async function POST(request) {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              from: 'Chess Academy <noreply@chessacademy.com>',
+              from: 'Moving Train Chess Academy <info@themovingtrain.org>',
               to: email,
               subject: 'Confirm your Chess Academy account',
               html: `
