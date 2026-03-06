@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { useAuth } from '@/contexts/AuthContext'
@@ -55,9 +55,27 @@ const formatTimeHM = (timeVal) => {
 
 export default function PointsBookingClient({ coachId }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, loading: authLoading } = useAuth()
   
-  const { data: coach, isLoading: coachLoading } = useCoach(coachId)
+  // Determine back link based on current path
+  const isEliteBooking = pathname?.startsWith('/book-elite')
+  const backLink = isEliteBooking ? '/book-elite' : '/book-with-points'
+  const backText = isEliteBooking ? 'Back to Elite Coaches' : 'Back to Coaches'
+  
+  const { data: coach, isLoading: coachLoading, error: coachError } = useCoach(coachId)
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('[PointsBookingClient] Debug:', {
+      coachId,
+      pathname,
+      isEliteBooking,
+      coachLoading,
+      coachError: coachError?.message,
+      coachData: coach ? { id: coach.id, name: coach.name, is_special: coach.is_special } : null,
+    })
+  }, [coachId, pathname, isEliteBooking, coachLoading, coachError, coach])
   const { data: availability, isLoading: availLoading } = useCoachAvailability(coachId)
   const { data: blockedDates, isLoading: blocksLoading } = useCoachBlockedDates(coachId)
   const { data: existingBookings, isLoading: bookingsLoading } = useCoachBookingsForPoints(coachId)
@@ -105,15 +123,34 @@ export default function PointsBookingClient({ coachId }) {
     )
   }
   
-  if (!coach) {
+  if (coachError) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-[#F5EFE7] flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto px-4">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-black mb-2">Error loading coach</h2>
+            <p className="text-gray-600 mb-4">{coachError.message || 'Failed to load coach data'}</p>
+            <Link href={backLink}>
+              <Button className="bg-[#5E5044]">{backText}</Button>
+            </Link>
+          </div>
+        </div>
+        <Footer />
+      </>
+    )
+  }
+  
+  if (!coach && !coachLoading) {
     return (
       <>
         <Navbar />
         <div className="min-h-screen bg-[#F5EFE7] flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl font-bold text-black mb-2">Coach not found</h2>
-            <Link href="/book-with-points">
-              <Button className="bg-[#5E5044]">Back</Button>
+            <Link href={backLink}>
+              <Button className="bg-[#5E5044]">{backText}</Button>
             </Link>
           </div>
         </div>
@@ -410,9 +447,9 @@ export default function PointsBookingClient({ coachId }) {
         {/* Header */}
         <header className="bg-white border-b">
           <div className="container mx-auto px-4 py-4">
-            <Link href="/book-with-points" className="flex items-center text-[#5E5044] hover:underline">
+            <Link href={backLink} className="flex items-center text-[#5E5044] hover:underline">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Coaches
+              {backText}
             </Link>
           </div>
         </header>

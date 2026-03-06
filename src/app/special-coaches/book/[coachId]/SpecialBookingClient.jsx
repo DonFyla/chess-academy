@@ -51,7 +51,7 @@ const isSlotBooked = (dateStr, startTime, endTime, existingBookings) => {
   const slotStart = formatTimeHM(startTime)
   const slotEnd = formatTimeHM(endTime)
   
-  return existingBookings.some(booking => {
+  const isBooked = existingBookings.some(booking => {
     // Handle date format - special bookings use 'date', flexible bookings use 'session_date'
     const rawDate = booking.date || booking.session_date
     if (!rawDate) return false
@@ -70,8 +70,21 @@ const isSlotBooked = (dateStr, startTime, endTime, existingBookings) => {
     const bookingStart = formatTimeHM(booking.start_time)
     const bookingEnd = formatTimeHM(booking.end_time)
     
-    return slotStart < bookingEnd && slotEnd > bookingStart
+    const hasOverlap = slotStart < bookingEnd && slotEnd > bookingStart
+    
+    if (hasOverlap) {
+      console.log('[isSlotBooked] Found conflict:', {
+        date: dateStr,
+        slot: `${slotStart}-${slotEnd}`,
+        booking: `${bookingStart}-${bookingEnd}`,
+        type: booking.booking_type
+      })
+    }
+    
+    return hasOverlap
   })
+  
+  return isBooked
 }
 
 // Check if a slot is blocked by coach
@@ -99,50 +112,41 @@ export default function SpecialBookingClient({ coachId }) {
   const { data: blockedDates = [] } = useCoachBlockedDates(coachId)
   const createBooking = useCreateSpecialBooking()
   
-  // Fetch existing bookings from both special_bookings AND flexible_bookings (points)
-  const { data: existingBookings = [] } = useQuery({
+  // Fetch existing bookings using unified schedule function (works for anonymous users too)
+  const { data: existingBookings = [], error: bookingsError } = useQuery({
     queryKey: ['all-bookings-conflicts', coachId],
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0]
       
-      // Fetch special bookings
-      const { data: specialData, error: specialError } = await supabase
-        .from('special_bookings')
-        .select('session_dates, status')
-        .eq('coach_id', coachId)
-        .in('status', ['confirmed', 'pending_payment', 'payment_received'])
+      console.log('[SpecialBooking] Fetching unified schedule for coach:', coachId)
       
-      if (specialError) throw specialError
+      // Use the unified schedule function that bypasses RLS and includes all booking types
+      const { data, error } = await supabase
+        .rpc('get_coach_unified_schedule', {
+          p_coach_id: coachId,
+          p_start_date: today,
+          p_days_ahead: 365
+        })
       
-      // Fetch points/flexible bookings
-      const { data: flexibleData, error: flexibleError } = await supabase
-        .from('flexible_bookings')
-        .select('session_date, start_time, end_time, status')
-        .eq('coach_id', coachId)
-        .in('status', ['confirmed', 'pending_payment', 'payment_received'])
-        .gte('session_date', today)
+      if (error) {
+        console.error('[SpecialBooking] Error fetching unified schedule:', error)
+        throw error
+      }
       
-      if (flexibleError) throw flexibleError
+      console.log('[SpecialBooking] Unified schedule bookings found:', data?.length || 0)
+      console.log('[SpecialBooking] Points bookings:', data?.filter(b => b.booking_type === 'points').length || 0)
       
-      // Flatten special bookings
-      const specialSlots = (specialData || []).flatMap(b => 
-        (b.session_dates || []).map(s => ({
-          ...s,
-          status: b.status,
-          booking_type: 'special'
-        }))
-      )
-      
-      // Format flexible bookings
-      const flexibleSlots = (flexibleData || []).map(b => ({
-        session_date: b.session_date,
-        start_time: b.start_time,
-        end_time: b.end_time,
-        status: b.status,
-        booking_type: 'points'
+      // Map to the format expected by isSlotBooked
+      const mappedBookings = (data || []).map(booking => ({
+        session_date: booking.session_date,
+        date: booking.session_date, // for compatibility
+        start_time: booking.start_time,
+        end_time: booking.end_time,
+        status: booking.status,
+        booking_type: booking.booking_type
       }))
       
-      return [...specialSlots, ...flexibleSlots]
+      return mappedBookings
     },
     enabled: !!coachId,
   })

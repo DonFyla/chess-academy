@@ -86,7 +86,7 @@ BEGIN
         SELECT email FROM auth.users WHERE id = fb.user_id
     ) u ON true
     WHERE fb.coach_id = p_coach_id
-      AND fb.status IN ('confirmed', 'completed')
+      AND fb.status IN ('confirmed', 'completed', 'pending_payment', 'payment_received')
       AND fb.session_date BETWEEN p_start_date AND v_end_date
     
     UNION ALL

@@ -4,10 +4,12 @@ import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { useSpecialCoaches } from '@/hooks/useSpecialCoaches'
+import { useUserPoints } from '@/hooks/usePoints'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Crown, Star, Trophy, Medal, ArrowRight, Loader2 } from 'lucide-react'
+import { Crown, Star, Trophy, Medal, ArrowRight, Loader2, Coins } from 'lucide-react'
 
 const rankIcons = {
   1: Crown,
@@ -16,7 +18,7 @@ const rankIcons = {
   default: Star,
 }
 
-function SpecialCoachCard({ coach, index }) {
+function EliteCoachCard({ coach, index }) {
   const initials = coach.name
     .split(' ')
     .map((n) => n[0])
@@ -25,6 +27,7 @@ function SpecialCoachCard({ coach, index }) {
   
   const RankIcon = rankIcons[index + 1] || rankIcons.default
   const isTopThree = index < 3
+  const pointsCost = coach.points_cost || 2
   
   return (
     <Card className={`overflow-hidden transition-all duration-300 hover:shadow-xl ${
@@ -56,19 +59,18 @@ function SpecialCoachCard({ coach, index }) {
           </div>
         )}
         
-        {/* Hourly Rate Badge */}
-        <div className="absolute bottom-4 right-4 bg-white px-4 py-2 rounded-full shadow-lg">
-          <span className="text-lg font-bold text-[#5E5044]">
-            ₦{coach.hourly_rate?.toLocaleString() || '15,000'}
-          </span>
-          <span className="text-sm text-gray-500">/session</span>
+        {/* Points Cost Badge */}
+        <div className="absolute bottom-4 right-4 bg-white px-4 py-2 rounded-full shadow-lg flex items-center gap-1">
+          <Coins className="w-4 h-4 text-[#5E5044]" />
+          <span className="text-lg font-bold text-[#5E5044]">{pointsCost}</span>
+          <span className="text-sm text-gray-500">pts/class</span>
         </div>
       </div>
       
       <CardContent className="p-6">
         {/* Rank Title */}
         {coach.rank_title && (
-          <Badge className="mb-3 bg-[#5E5044] text-white">
+          <Badge className="mb-3 bg-purple-100 text-purple-800">
             <Crown className="w-3 h-3 mr-1" />
             {coach.rank_title}
           </Badge>
@@ -102,10 +104,10 @@ function SpecialCoachCard({ coach, index }) {
           {coach.special_bio || coach.bio || 'Elite chess coach with years of experience training champions.'}
         </p>
         
-        {/* CTA */}
-        <Link href={`/special-coaches/book/${coach.id}`}>
+        {/* CTA - Points Booking */}
+        <Link href={`/book-elite/book/${coach.id}`}>
           <Button className="w-full bg-[#5E5044] hover:bg-[#4a3f35] text-lg py-6">
-            Book Sessions
+            Book with Points
             <ArrowRight className="ml-2 w-5 h-5" />
           </Button>
         </Link>
@@ -114,8 +116,10 @@ function SpecialCoachCard({ coach, index }) {
   )
 }
 
-export default function SpecialCoachesClient() {
+export default function BookEliteClient() {
+  const { user } = useAuth()
   const { data: coaches, isLoading, error } = useSpecialCoaches()
+  const { data: points } = useUserPoints(user?.id)
 
   return (
     <>
@@ -126,12 +130,31 @@ export default function SpecialCoachesClient() {
           <div className="container mx-auto px-4 text-center">
             <Crown className="w-16 h-16 mx-auto mb-6 text-yellow-400" />
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Elite Chess Coaches
+              Elite Coaches
             </h1>
             <p className="text-xl text-gray-200 max-w-2xl mx-auto">
-              Personalized sessions with West Africa&apos;s best players. 
-              For executives, CEOs, VIPs and gifted children aiming to play chess professionally.
+              Book personalized sessions with West Africa&apos;s best players using your points.
+              For serious students aiming to play chess professionally.
             </p>
+            
+            {/* User Points Display */}
+            {user && (
+              <div className="mt-8 flex justify-center">
+                <div className="flex items-center gap-4 bg-white/10 px-6 py-3 rounded-lg">
+                  <Coins className="w-6 h-6 text-yellow-400" />
+                  <div>
+                    <p className="text-sm text-gray-300">Your Points Balance</p>
+                    <p className="text-2xl font-bold">{points?.balance || 0} points</p>
+                  </div>
+                  <Link href="/buy-points">
+                    <Button size="sm" className="bg-white text-[#5E5044] hover:bg-gray-100">
+                      Buy More
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
+            
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Badge className="bg-white text-[#5E5044] text-lg px-4 py-2">
                 <Crown className="w-4 h-4 mr-2" />
@@ -139,7 +162,7 @@ export default function SpecialCoachesClient() {
               </Badge>
               <Badge className="bg-white text-[#5E5044] text-lg px-4 py-2">
                 <Star className="w-4 h-4 mr-2" />
-                Executive-Focused Training
+                FIDE Masters & Experts
               </Badge>
               <Badge className="bg-white text-[#5E5044] text-lg px-4 py-2">
                 <Trophy className="w-4 h-4 mr-2" />
@@ -154,22 +177,22 @@ export default function SpecialCoachesClient() {
           {/* How It Works */}
           <div className="mb-16">
             <h2 className="text-3xl font-bold text-black text-center mb-8">
-              How Special Coaching Works
+              How Elite Coaching Works
             </h2>
             <div className="grid md:grid-cols-3 gap-8">
               <div className="text-center">
                 <div className="w-16 h-16 bg-[#5E5044] text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
                   1
                 </div>
-                <h3 className="font-bold text-black mb-2">Choose Your Coach</h3>
+                <h3 className="font-bold text-black mb-2">Choose Your Elite Coach</h3>
                 <p className="text-gray-600">Browse our elite coaches and pick the one that fits your goals.</p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 bg-[#5E5044] text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
                   2
                 </div>
-                <h3 className="font-bold text-black mb-2">Book Sessions</h3>
-                <p className="text-gray-600">Select how many sessions and choose dates from their availability.</p>
+                <h3 className="font-bold text-black mb-2">Book with Points</h3>
+                <p className="text-gray-600">Use your points to book sessions (2-3 points per class).</p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 bg-[#5E5044] text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
@@ -178,6 +201,14 @@ export default function SpecialCoachesClient() {
                 <h3 className="font-bold text-black mb-2">Start Learning</h3>
                 <p className="text-gray-600">Get personalized training and take your chess to the next level.</p>
               </div>
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="flex flex-wrap gap-4 mb-8 justify-center">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="w-3 h-3 bg-purple-100 border-2 border-purple-300 rounded"></div>
+              <span>Elite Coach (2-3 points/class)</span>
             </div>
           </div>
 
@@ -193,13 +224,13 @@ export default function SpecialCoachesClient() {
           ) : coaches?.length === 0 ? (
             <div className="text-center py-20">
               <Crown className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-xl font-bold text-black mb-2">No Special Coaches Available</h3>
+              <h3 className="text-xl font-bold text-black mb-2">No Elite Coaches Available</h3>
               <p className="text-gray-600">Check back soon for our elite coaching lineup.</p>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {coaches.map((coach, index) => (
-                <SpecialCoachCard key={coach.id} coach={coach} index={index} />
+                <EliteCoachCard key={coach.id} coach={coach} index={index} />
               ))}
             </div>
           )}
@@ -212,11 +243,11 @@ export default function SpecialCoachesClient() {
               Looking for More Affordable Options?
             </h2>
             <p className="text-gray-600 mb-6">
-              We also have excellent certified coaches at more affordable rates.
+              We also have excellent certified coaches at more affordable rates (1 point/class).
             </p>
-            <Link href="/book">
+            <Link href="/book-with-points">
               <Button variant="outline" className="border-[#5E5044] text-[#5E5044]">
-                View All Coaches
+                View Regular Coaches
               </Button>
             </Link>
           </div>

@@ -39,7 +39,7 @@ export function usePointTransactions(userId) {
   })
 }
 
-// Fetch all coaches available for points booking
+// Fetch all coaches available for points booking (excludes special/elite coaches)
 export function usePointsCoaches() {
   return useQuery({
     queryKey: ['points-coaches'],
@@ -47,6 +47,7 @@ export function usePointsCoaches() {
       const { data, error } = await supabase
         .from('coaches')
         .select('*')
+        .eq('is_special', false)
         .order('points_cost', { ascending: true })
         .order('name')
       
