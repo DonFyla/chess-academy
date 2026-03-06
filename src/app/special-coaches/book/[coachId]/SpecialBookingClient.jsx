@@ -52,12 +52,13 @@ const isSlotBooked = (dateStr, startTime, endTime, existingBookings) => {
   const slotEnd = formatTimeHM(endTime)
   
   return existingBookings.some(booking => {
-    // Handle date format
-    const bookingDate = booking.session_date 
-      ? (typeof booking.session_date === 'string' 
-          ? booking.session_date 
-          : format(new Date(booking.session_date), 'yyyy-MM-dd'))
-      : null
+    // Handle date format - special bookings use 'date', flexible bookings use 'session_date'
+    const rawDate = booking.date || booking.session_date
+    if (!rawDate) return false
+    
+    const bookingDate = typeof rawDate === 'string' 
+      ? rawDate 
+      : format(new Date(rawDate), 'yyyy-MM-dd')
     
     if (bookingDate !== dateStr) return false
     
