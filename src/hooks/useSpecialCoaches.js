@@ -40,21 +40,28 @@ export function useSpecialCoach(coachId) {
   })
 }
 
-// Send booking email helper
+// Send booking email helper (non-blocking - errors are logged but don't break booking)
 async function sendSpecialBookingEmail({ booking, type, recipient }) {
-  const response = await fetch('/api/send-special-booking-email', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ booking, type, recipient }),
-  })
-  
-  if (!response.ok) {
-    const error = await response.json()
-    console.error('Email sending failed:', error)
-    throw new Error(error.message || 'Failed to send email')
+  try {
+    const response = await fetch('/api/send-special-booking-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ booking, type, recipient }),
+    })
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }))
+      console.error('Email sending failed:', error)
+      // Don't throw - email failure shouldn't break booking
+      return { success: false, error: error.message }
+    }
+    
+    return response.json()
+  } catch (error) {
+    console.error('Email fetch error:', error)
+    // Don't throw - email failure shouldn't break booking
+    return { success: false, error: error.message }
   }
-  
-  return response.json()
 }
 
 // Create special session booking (like normal booking - direct Supabase insert)

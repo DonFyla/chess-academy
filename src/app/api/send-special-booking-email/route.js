@@ -7,6 +7,9 @@ const BANK_DETAILS = {
   accountName: 'Moving Train Chess Academy Ltd',
 }
 
+// WhatsApp link for payment confirmation
+const WHATSAPP_LINK = process.env.NEXT_PUBLIC_WHATSAPP_LINK || 'https://wa.link/uj48gk'
+
 const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 // Helper to format session dates

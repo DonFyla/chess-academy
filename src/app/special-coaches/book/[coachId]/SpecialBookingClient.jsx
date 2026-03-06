@@ -241,7 +241,8 @@ export default function SpecialBookingClient({ coachId }) {
       await createBooking.mutateAsync(booking)
       
       toast.success('Booking created successfully! Check your email for payment details.')
-      router.push('/dashboard')
+      // Redirect to confirmation/success page instead of dashboard (which requires login)
+      router.push('/special-coaches?booked=true')
     } catch (error) {
       console.error('Booking error:', error)
       toast.error('Failed to create booking: ' + error.message)
