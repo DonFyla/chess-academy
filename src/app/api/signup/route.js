@@ -195,15 +195,64 @@ export async function POST(request) {
       )
     }
     
-    // Send confirmation email
+    // Send confirmation email using Resend
     try {
-      await admin.auth.admin.generateLink({
+      const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
         type: 'signup',
         email,
         options: {
           redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login`
         }
       })
+      
+      if (linkError) {
+        console.error('Failed to generate confirmation link:', linkError)
+      } else {
+        // Send email via Resend
+        const confirmationUrl = linkData.properties?.action_link
+        
+        if (confirmationUrl && process.env.RESEND_API_KEY) {
+          const emailResponse = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              from: 'Chess Academy <noreply@chessacademy.com>',
+              to: email,
+              subject: 'Confirm your Chess Academy account',
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #5E5044;">Welcome to Chess Academy!</h2>
+                  <p>Hello ${name || 'there'},</p>
+                  <p>Thank you for creating an account. Please confirm your email address by clicking the button below:</p>
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${confirmationUrl}" 
+                       style="background-color: #5E5044; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                      Confirm My Account
+                    </a>
+                  </div>
+                  <p>Or copy and paste this link into your browser:</p>
+                  <p style="word-break: break-all; color: #666;">${confirmationUrl}</p>
+                  <p style="margin-top: 30px; font-size: 12px; color: #999;">
+                    If you didn't create this account, you can safely ignore this email.
+                  </p>
+                </div>
+              `
+            })
+          })
+          
+          if (!emailResponse.ok) {
+            const errorData = await emailResponse.json()
+            console.error('Failed to send confirmation email via Resend:', errorData)
+          } else {
+            console.log('Confirmation email sent to:', email)
+          }
+        } else {
+          console.warn('Missing confirmation URL or RESEND_API_KEY')
+        }
+      }
     } catch (emailError) {
       console.error('Failed to send confirmation email:', emailError)
       // Don't fail the signup, just log the error
