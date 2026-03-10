@@ -22,9 +22,9 @@ export default function RootLayout({ children }) {
       </head>
       <body className={inter.className}>
         <Providers>
-          <Breadcrumb />
-          {/* Spacer for fixed navbar only - breadcrumb scrolls normally */}
+          {/* Spacer for fixed navbar */}
           <div className="h-[100px]"></div>
+          <Breadcrumb />
           {children}
           <Toaster position="top-center" />
         </Providers>
