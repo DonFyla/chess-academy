@@ -88,7 +88,7 @@ export default function Breadcrumb() {
         zIndex: 400
       }}
     >
-      <div className="container mx-auto px-4 py-2">
+      <div className="container mx-auto px-4 py-3">
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center flex-wrap gap-1 text-sm">
             {/* Home */}
