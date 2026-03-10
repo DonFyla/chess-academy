@@ -74,18 +74,13 @@ export default function Breadcrumb() {
     })
   })
   
-  // Return with very obvious styling - fixed below navbar
+  // Return with very obvious styling
   return (
     <div 
       className="w-full"
       style={{ 
         backgroundColor: '#5E5044', 
-        borderBottom: '2px solid #D4A574',
-        position: 'fixed',
-        top: '100px',
-        left: 0,
-        right: 0,
-        zIndex: 400
+        borderBottom: '2px solid #D4A574'
       }}
     >
       <div className="container mx-auto px-4 py-3">
