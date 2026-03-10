@@ -31,7 +31,7 @@ const routeLabels = {
 }
 
 // Routes that don't have their own page (parent-only routes)
-const nonClickableParents = ['admin', 'coach']
+const nonClickableParents = ['admin', 'coach', 'book']
 
 export default function Breadcrumb() {
   const pathname = usePathname()
@@ -66,13 +66,16 @@ export default function Breadcrumb() {
     const label = routeLabels[segment] || segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ')
     
     // Check if this segment is a parent-only route (not clickable)
+    // 'book' is only clickable at root level (/book), not as child (/book-elite/book)
+    const parent = segments[index - 1]
+    const isBookSubroute = segment === 'book' && ['book-elite', 'book-with-points', 'special-coaches'].includes(parent)
     const isParentOnly = nonClickableParents.includes(segment) && index < segments.length - 1
     
     breadcrumbs.push({
       label,
       path: currentPath,
       isLast: index === segments.length - 1,
-      clickable: !isParentOnly
+      clickable: !isParentOnly && !isBookSubroute
     })
   })
   
