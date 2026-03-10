@@ -80,7 +80,7 @@ export default function Breadcrumb() {
       className="w-full"
       style={{ 
         backgroundColor: '#5E5044', 
-        borderBottom: '3px solid #D4A574',
+        borderBottom: '2px solid #D4A574',
         position: 'fixed',
         top: '100px', // Below the fixed navbar
         left: 0,
@@ -88,7 +88,7 @@ export default function Breadcrumb() {
         zIndex: 400
       }}
     >
-      <div className="container mx-auto px-4 py-3">
+      <div className="container mx-auto px-4 py-2">
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center flex-wrap gap-1 text-sm">
             {/* Home */}
