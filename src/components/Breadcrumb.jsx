@@ -77,7 +77,7 @@ export default function Breadcrumb() {
   // Return with very obvious styling
   return (
     <div 
-      className="w-full"
+      className="w-full relative z-[600]"
       style={{ 
         backgroundColor: '#5E5044', 
         borderBottom: '2px solid #D4A574'
