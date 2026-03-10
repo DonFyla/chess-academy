@@ -30,13 +30,11 @@ const routeLabels = {
   'schedule': 'Schedule',
 }
 
+// Routes that don't have their own page (parent-only routes)
+const nonClickableParents = ['admin', 'coach']
+
 export default function Breadcrumb() {
   const pathname = usePathname()
-  
-  // Debug - always log
-  if (typeof window !== 'undefined') {
-    console.log('[Breadcrumb] pathname:', pathname)
-  }
   
   // Don't show on home page
   if (!pathname || pathname === '/') {
@@ -60,24 +58,27 @@ export default function Breadcrumb() {
       else if (parent === 'special-coaches') label = 'Book Session'
       
       currentPath += '/' + segment
-      breadcrumbs.push({ label, path: currentPath, isLast: index === segments.length - 1 })
+      breadcrumbs.push({ label, path: currentPath, isLast: index === segments.length - 1, clickable: false })
       return
     }
     
     currentPath += '/' + segment
     const label = routeLabels[segment] || segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ')
     
+    // Check if this segment is a parent-only route (not clickable)
+    const isParentOnly = nonClickableParents.includes(segment) && index < segments.length - 1
+    
     breadcrumbs.push({
       label,
       path: currentPath,
-      isLast: index === segments.length - 1
+      isLast: index === segments.length - 1,
+      clickable: !isParentOnly
     })
   })
   
-  // Return with very obvious styling
   return (
     <div 
-      className="w-full relative z-[600]"
+      className="w-full sticky top-[100px] z-[600]"
       style={{ 
         backgroundColor: '#5E5044', 
         borderBottom: '2px solid #D4A574'
@@ -101,8 +102,8 @@ export default function Breadcrumb() {
             {breadcrumbs.map((crumb) => (
               <li key={crumb.path} className="flex items-center">
                 <ChevronRight className="w-4 h-4 text-yellow-300 mx-1" />
-                {crumb.isLast ? (
-                  <span className="text-yellow-300 font-bold">
+                {crumb.isLast || !crumb.clickable ? (
+                  <span className={crumb.isLast ? "text-yellow-300 font-bold" : "text-gray-300 font-medium"}>
                     {crumb.label}
                   </span>
                 ) : (
