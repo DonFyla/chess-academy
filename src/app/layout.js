@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import { defaultMetadata } from "@/lib/metadata";
 import "@/lib/debug"; // Debug utilities - remove in production
+import Breadcrumb from "@/components/Breadcrumb";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,6 +22,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className={inter.className}>
         <Providers>
+          <Breadcrumb />
           {children}
           <Toaster position="top-center" />
         </Providers>
