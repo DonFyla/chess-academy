@@ -33,37 +33,34 @@ const routeLabels = {
 export default function Breadcrumb() {
   const pathname = usePathname()
   
-  // Debug
-  console.log('[Breadcrumb] pathname:', pathname)
+  // Debug - always log
+  if (typeof window !== 'undefined') {
+    console.log('[Breadcrumb] pathname:', pathname)
+  }
   
   // Don't show on home page
   if (!pathname || pathname === '/') {
-    console.log('[Breadcrumb] Hiding - home page')
     return null
   }
   
-  // Split pathname
   const segments = pathname.split('/').filter(Boolean)
-  console.log('[Breadcrumb] segments:', segments)
   
   if (segments.length === 0) return null
   
-  // Build breadcrumbs
   const breadcrumbs = []
   let currentPath = ''
   
   segments.forEach((segment, index) => {
-    // Skip UUIDs and IDs (they're long strings)
+    // Skip UUIDs and IDs
     if (segment.length > 20) {
       const parent = segments[index - 1]
-      if (parent === 'book') {
-        breadcrumbs.push({ label: 'Booking', path: currentPath + '/' + segment, isLast: index === segments.length - 1 })
-      } else if (parent === 'book-elite' || parent === 'book-with-points') {
-        breadcrumbs.push({ label: 'Book', path: currentPath + '/' + segment, isLast: index === segments.length - 1 })
-      } else if (parent === 'special-coaches') {
-        breadcrumbs.push({ label: 'Book Session', path: currentPath + '/' + segment, isLast: index === segments.length - 1 })
-      }
+      let label = 'Details'
+      if (parent === 'book') label = 'Booking'
+      else if (parent === 'book-elite' || parent === 'book-with-points') label = 'Book'
+      else if (parent === 'special-coaches') label = 'Book Session'
+      
       currentPath += '/' + segment
+      breadcrumbs.push({ label, path: currentPath, isLast: index === segments.length - 1 })
       return
     }
     
@@ -77,10 +74,17 @@ export default function Breadcrumb() {
     })
   })
   
-  console.log('[Breadcrumb] breadcrumbs:', breadcrumbs)
-  
+  // Return with very obvious styling
   return (
-    <div className="bg-white border-b border-gray-200 shadow-sm">
+    <div 
+      className="w-full"
+      style={{ 
+        backgroundColor: '#5E5044', 
+        borderBottom: '3px solid #D4A574',
+        position: 'relative',
+        zIndex: 50
+      }}
+    >
       <div className="container mx-auto px-4 py-3">
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center flex-wrap gap-1 text-sm">
@@ -88,25 +92,25 @@ export default function Breadcrumb() {
             <li>
               <Link 
                 href="/" 
-                className="flex items-center text-[#5E5044] hover:text-[#3d332a] transition-colors font-medium"
+                className="flex items-center text-white hover:text-yellow-300 transition-colors font-semibold"
               >
                 <Home className="w-4 h-4 mr-1" />
                 <span>Home</span>
               </Link>
             </li>
             
-            {/* Separator and items */}
-            {breadcrumbs.map((crumb, index) => (
+            {/* Items */}
+            {breadcrumbs.map((crumb) => (
               <li key={crumb.path} className="flex items-center">
-                <ChevronRight className="w-4 h-4 text-gray-400 mx-1" />
+                <ChevronRight className="w-4 h-4 text-yellow-300 mx-1" />
                 {crumb.isLast ? (
-                  <span className="text-gray-800 font-semibold">
+                  <span className="text-yellow-300 font-bold">
                     {crumb.label}
                   </span>
                 ) : (
                   <Link
                     href={crumb.path}
-                    className="text-[#5E5044] hover:text-[#3d332a] hover:underline font-medium"
+                    className="text-white hover:text-yellow-300 hover:underline font-medium"
                   >
                     {crumb.label}
                   </Link>
