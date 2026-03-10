@@ -82,7 +82,7 @@ export default function Breadcrumb() {
         backgroundColor: '#5E5044', 
         borderBottom: '2px solid #D4A574',
         position: 'fixed',
-        top: '100px', // Below the fixed navbar
+        top: '100px',
         left: 0,
         right: 0,
         zIndex: 400
