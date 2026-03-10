@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server'
 
 // Bank account details for payment
 const BANK_DETAILS = {
-  bankName: 'Guarantee Trust Bank(GTB)',
-  accountNumber: '0449558330',
-  accountName: 'Moving Train Chess Academy Ltd',
+  bankName: 'GT Bank',
+  accountNumber: '0878016456',
+  accountName: 'The Moving Train Educational Services Ltd',
 }
 
 // WhatsApp link for payment confirmation

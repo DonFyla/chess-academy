@@ -39,9 +39,9 @@ const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const WHATSAPP_LINK = process.env.NEXT_PUBLIC_WHATSAPP_LINK || 'https://wa.link/uj48gk'
 
 const BANK_DETAILS = {
-  bankName: 'Guarantee Trust Bank(GTB)',
-  accountNumber: '0449558330',
-  accountName: 'Moving Train Chess Academy Ltd',
+  bankName: 'GT Bank',
+  accountNumber: '0878016456',
+  accountName: 'The Moving Train Educational Services Ltd',
 }
 
 // Check if a slot is already booked (from special bookings or points bookings)

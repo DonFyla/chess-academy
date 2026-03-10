@@ -40,9 +40,9 @@ const PRICE_PER_POINT = 12000 // Base price for custom amount
 const WHATSAPP_LINK = process.env.NEXT_PUBLIC_WHATSAPP_LINK || 'https://wa.link/uj48gk'
 
 const BANK_DETAILS = {
-  bankName: 'Guarantee Trust Bank (GTB)',
-  accountNumber: '0449558330',
-  accountName: 'Moving Train Chess Academy Ltd',
+  bankName: 'GT Bank',
+  accountNumber: '0878016456',
+  accountName: 'The Moving Train Educational Services Ltd',
 }
 
 export default function BuyPointsClient() {

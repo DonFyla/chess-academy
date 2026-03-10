@@ -96,9 +96,9 @@ The Moving Train Chess Academy Scheduling System is a web application built with
 ### Bank Transfer Method
 
 1. **Student Receives Email** with:
-   - Bank: Guarantee Trust Bank (GTB)
-   - Account: 0449558330
-   - Account Name: Moving Train Chess Academy Ltd
+   - Bank: GT Bank
+   - Account: 0878016456
+   - Account Name: The Moving Train Educational Services Ltd
    - Amount: ₦60,000 or ₦114,000
    - Reference: Booking ID (e.g., "ABC12345")
 
@@ -204,9 +204,9 @@ Coaches receive email notifications for:
 | `studentBookingRejected` | "Update on Your Booking Request" | Booking rejected |
 
 ### Bank Details (in emails)
-- **Bank**: Guarantee Trust Bank (GTB)
-- **Account Number**: 0449558330
-- **Account Name**: Moving Train Chess Academy Ltd
+- **Bank**: GT Bank
+- **Account Number**: 0878016456
+- **Account Name**: The Moving Train Educational Services Ltd
 
 ---
 
