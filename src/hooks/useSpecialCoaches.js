@@ -98,6 +98,8 @@ export function useCreateSpecialBooking() {
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['special-bookings'] })
       queryClient.invalidateQueries({ queryKey: ['all-bookings-conflicts', data.coach_id] })
+      // Invalidate unified schedule to refresh conflict detection
+      queryClient.invalidateQueries({ queryKey: ['unified-schedule', data.coach_id] })
       
       try {
         // Get coach details

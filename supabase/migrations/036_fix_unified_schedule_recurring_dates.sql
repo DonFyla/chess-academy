@@ -104,7 +104,7 @@ BEGIN
     FROM special_bookings sb
     CROSS JOIN LATERAL jsonb_array_elements(sb.session_dates) AS session
     WHERE sb.coach_id = p_coach_id
-      AND sb.status IN ('confirmed', 'payment_received', 'completed')
+      AND sb.status IN ('confirmed', 'payment_received', 'completed', 'pending_payment')
       AND (session->>'date')::DATE BETWEEN p_start_date AND v_end_date
     
     ORDER BY session_date, start_time;
