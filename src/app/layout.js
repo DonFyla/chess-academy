@@ -23,6 +23,8 @@ export default function RootLayout({ children }) {
       <body className={inter.className}>
         <Providers>
           <Breadcrumb />
+          {/* Spacer for fixed navbar + breadcrumb */}
+          <div className="h-[145px]"></div>
           {children}
           <Toaster position="top-center" />
         </Providers>
