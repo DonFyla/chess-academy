@@ -74,6 +74,26 @@ ALTER TABLE IF EXISTS coach_blocked_dates ENABLE ROW LEVEL SECURITY;
 -- 2. COACHES TABLE POLICIES
 -- ============================================
 -- Based on migrations: 011, 012
+-- Uses SECURITY DEFINER function to avoid RLS recursion
+
+-- Create function to check admin status (bypasses RLS)
+CREATE OR REPLACE FUNCTION is_current_user_admin()
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM coaches 
+    WHERE user_id = auth.uid() 
+    AND is_admin = true
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION is_current_user_admin() TO authenticated;
+GRANT EXECUTE ON FUNCTION is_current_user_admin() TO anon;
 
 -- Everyone can view coaches (needed for booking pages)
 CREATE POLICY "Coaches are viewable by everyone"
@@ -82,33 +102,27 @@ CREATE POLICY "Coaches are viewable by everyone"
     TO anon, authenticated
     USING (true);
 
--- Admins can manage all coaches
-CREATE POLICY "Admins can manage all coaches"
+-- Admins can insert coaches
+CREATE POLICY "Admins can insert coaches"
     ON coaches
-    FOR ALL
+    FOR INSERT
     TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM coaches 
-            WHERE user_id = auth.uid() 
-            AND is_admin = true
-        )
-    )
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM coaches 
-            WHERE user_id = auth.uid() 
-            AND is_admin = true
-        )
-    );
+    WITH CHECK (is_current_user_admin());
 
--- Coaches can update their own profile
-CREATE POLICY "Coaches can update their own profile"
+-- Admins can update any coach, coaches can update own profile
+CREATE POLICY "Admins and coaches can update"
     ON coaches
     FOR UPDATE
     TO authenticated
-    USING (user_id = auth.uid())
-    WITH CHECK (user_id = auth.uid());
+    USING (user_id = auth.uid() OR is_current_user_admin())
+    WITH CHECK (user_id = auth.uid() OR is_current_user_admin());
+
+-- Admins can delete coaches
+CREATE POLICY "Admins can delete coaches"
+    ON coaches
+    FOR DELETE
+    TO authenticated
+    USING (is_current_user_admin());
 
 -- ============================================
 -- 3. BOOKINGS TABLE POLICIES (Monthly recurring)
