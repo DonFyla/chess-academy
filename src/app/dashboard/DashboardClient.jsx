@@ -424,7 +424,7 @@ export default function DashboardClient() {
                   </div>
                   <div>
                     <h3 className="font-bold text-black">Elite Coaches</h3>
-                    <p className="text-sm text-gray-600">Book FIDE Masters with points (2-3 pts/class)</p>
+                    <p className="text-sm text-gray-600">Book FIDE Masters with points (2 pts/class)</p>
                   </div>
                   <ArrowRight className="w-5 h-5 text-gray-400 ml-auto" />
                 </CardContent>

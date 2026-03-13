@@ -192,7 +192,7 @@ export default function BookEliteClient() {
                   2
                 </div>
                 <h3 className="font-bold text-black mb-2">Book with Points</h3>
-                <p className="text-gray-600">Use your points to book sessions (2-3 points per class).</p>
+                <p className="text-gray-600">Use your points to book sessions (2 points per class).</p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 bg-[#5E5044] text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
@@ -208,7 +208,7 @@ export default function BookEliteClient() {
           <div className="flex flex-wrap gap-4 mb-8 justify-center">
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className="w-3 h-3 bg-purple-100 border-2 border-purple-300 rounded"></div>
-              <span>Elite Coach (2-3 points/class)</span>
+              <span>Elite Coach (2 points/class)</span>
             </div>
           </div>
 

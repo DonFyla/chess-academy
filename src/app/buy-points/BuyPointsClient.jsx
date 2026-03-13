@@ -27,16 +27,16 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-// Pricing tiers (example - can be changed)
+// Pricing tiers - 10,000 Naira per point
 const POINT_PACKAGES = [
-  { points: 1, price: 12000, label: 'Single Class' },
-  { points: 4, price: 44000, label: '4 Classes', savings: '8%' },
-  { points: 8, price: 84000, label: '8 Classes', savings: '12%', popular: true },
-  { points: 12, price: 120000, label: '12 Classes', savings: '16%' },
-  { points: 20, price: 190000, label: '20 Classes', savings: '20%' },
+  { points: 1, price: 10000, label: 'Single Class' },
+  { points: 4, price: 38000, label: '4 Classes', savings: '5%' },
+  { points: 8, price: 72000, label: '8 Classes', savings: '10%', popular: true },
+  { points: 12, price: 102000, label: '12 Classes', savings: '15%' },
+  { points: 20, price: 160000, label: '20 Classes', savings: '20%' },
 ]
 
-const PRICE_PER_POINT = 12000 // Base price for custom amount
+const PRICE_PER_POINT = 10000 // Base price for custom amount
 const WHATSAPP_LINK = process.env.NEXT_PUBLIC_WHATSAPP_LINK || 'https://wa.link/uj48gk'
 
 const BANK_DETAILS = {
@@ -235,7 +235,7 @@ export default function BuyPointsClient() {
                 <p className="text-blue-800 font-medium">How Points Work:</p>
                 <ul className="text-blue-700 text-sm mt-2 space-y-1">
                   <li>• 1 point = 1 class with a regular coach</li>
-                  <li>• Elite coaches cost 2-3 points per class</li>
+                  <li>• Elite coaches cost 2 points per class</li>
                   <li>• Book any available time slot</li>
                   <li>• Cancel up to 24 hours before for full refund</li>
                   <li>• Points valid for 1 year from purchase</li>

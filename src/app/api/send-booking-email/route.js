@@ -283,7 +283,6 @@ const emailTemplates = {
             <h3 style="margin-top: 0; color: #5E5044;">Confirmed Schedule</h3>
             <p><strong>Schedule:</strong> ${schedule}</p>
             <p><strong>Total Sessions:</strong> ${booking.sessions_per_month || 4}</p>
-            <p><strong>Amount Paid:</strong> ₦${parseInt(totalAmount).toLocaleString()}</p>
             <p><strong>First Lesson:</strong> ${booking.booking_date ? new Date(booking.booking_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'To be confirmed'}</p>
           </div>
           
