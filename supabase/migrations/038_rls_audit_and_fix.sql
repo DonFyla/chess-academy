@@ -1,11 +1,66 @@
--- RLS Policy Audit and Fixes
+-- RLS Policy Audit and Fixes - REVISED
+-- Based on analysis of all previous migrations
 -- Run this to verify and fix RLS policies for production
+
+-- ============================================
+-- HELPER: Drop all policies on a table
+-- ============================================
+DO $$
+DECLARE
+    pol record;
+BEGIN
+    -- Drop all policies on bookings
+    FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'bookings'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON bookings', pol.policyname);
+    END LOOP;
+    
+    -- Drop all policies on flexible_bookings
+    FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'flexible_bookings'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON flexible_bookings', pol.policyname);
+    END LOOP;
+    
+    -- Drop all policies on special_bookings
+    FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'special_bookings'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON special_bookings', pol.policyname);
+    END LOOP;
+    
+    -- Drop all policies on coaches
+    FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'coaches'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON coaches', pol.policyname);
+    END LOOP;
+    
+    -- Drop all policies on user_points
+    FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'user_points'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON user_points', pol.policyname);
+    END LOOP;
+    
+    -- Drop all policies on point_transactions
+    FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'point_transactions'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON point_transactions', pol.policyname);
+    END LOOP;
+    
+    -- Drop all policies on availability
+    FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'availability'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON availability', pol.policyname);
+    END LOOP;
+    
+    -- Drop all policies on coach_blocked_dates
+    FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'coach_blocked_dates'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON coach_blocked_dates', pol.policyname);
+    END LOOP;
+END $$;
 
 -- ============================================
 -- 1. VERIFY RLS IS ENABLED ON ALL TABLES
 -- ============================================
-
--- Enable RLS on all tables (idempotent - safe to run multiple times)
 ALTER TABLE IF EXISTS coaches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS availability ENABLE ROW LEVEL SECURITY;
@@ -18,25 +73,27 @@ ALTER TABLE IF EXISTS coach_blocked_dates ENABLE ROW LEVEL SECURITY;
 -- ============================================
 -- 2. COACHES TABLE POLICIES
 -- ============================================
+-- Based on migrations: 011, 012
 
--- Drop existing policies to avoid conflicts
-DROP POLICY IF EXISTS "Anyone can view coaches" ON coaches;
-DROP POLICY IF EXISTS "Admins can insert coaches" ON coaches;
-DROP POLICY IF EXISTS "Admins can update coaches" ON coaches;
-DROP POLICY IF EXISTS "Admins can delete coaches" ON coaches;
-
--- Allow anyone to view coaches (needed for booking pages)
-CREATE POLICY "Anyone can view coaches"
+-- Everyone can view coaches (needed for booking pages)
+CREATE POLICY "Coaches are viewable by everyone"
     ON coaches
     FOR SELECT
     TO anon, authenticated
     USING (true);
 
--- Only admins can modify coaches
-CREATE POLICY "Admins can insert coaches"
+-- Admins can manage all coaches
+CREATE POLICY "Admins can manage all coaches"
     ON coaches
-    FOR INSERT
+    FOR ALL
     TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM coaches 
+            WHERE user_id = auth.uid() 
+            AND is_admin = true
+        )
+    )
     WITH CHECK (
         EXISTS (
             SELECT 1 FROM coaches 
@@ -45,41 +102,28 @@ CREATE POLICY "Admins can insert coaches"
         )
     );
 
-CREATE POLICY "Admins can update coaches"
+-- Coaches can update their own profile
+CREATE POLICY "Coaches can update their own profile"
     ON coaches
     FOR UPDATE
     TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM coaches 
-            WHERE user_id = auth.uid() 
-            AND is_admin = true
-        )
-    );
+    USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
 
 -- ============================================
 -- 3. BOOKINGS TABLE POLICIES (Monthly recurring)
 -- ============================================
-
--- Drop all existing policies
-DROP POLICY IF EXISTS "Users can view their own bookings" ON bookings;
-DROP POLICY IF EXISTS "Coaches can view their assigned bookings" ON bookings;
-DROP POLICY IF EXISTS "Admins can view all bookings" ON bookings;
-DROP POLICY IF EXISTS "Anyone can create bookings" ON bookings;
-DROP POLICY IF EXISTS "Admins can update bookings" ON bookings;
-DROP POLICY IF EXISTS "bookings_insert_policy" ON bookings;
-DROP POLICY IF EXISTS "bookings_select_policy" ON bookings;
-DROP POLICY IF EXISTS "bookings_update_policy" ON bookings;
+-- Based on migrations: 003
 
 -- Anyone can create bookings (guest booking flow)
-CREATE POLICY "Anyone can create bookings"
+CREATE POLICY "Allow anonymous bookings"
     ON bookings
     FOR INSERT
     TO anon, authenticated
     WITH CHECK (true);
 
--- Users can view bookings by email (for non-logged in users)
-CREATE POLICY "Users can view their own bookings"
+-- Anyone can view bookings (for conflict detection, filtered by email for privacy)
+CREATE POLICY "Anyone can view bookings"
     ON bookings
     FOR SELECT
     TO anon, authenticated
@@ -102,30 +146,10 @@ CREATE POLICY "Users can view their own bookings"
 -- ============================================
 -- 4. FLEXIBLE_BOOKINGS (Points) TABLE POLICIES
 -- ============================================
+-- Based on migrations: 016, 018, 020, 022
 
--- Drop all existing policies
-DROP POLICY IF EXISTS "Users can view their own flexible bookings" ON flexible_bookings;
-DROP POLICY IF EXISTS "Coaches can view their own flexible bookings" ON flexible_bookings;
-DROP POLICY IF EXISTS "Admins can view all flexible bookings" ON flexible_bookings;
-DROP POLICY IF EXISTS "Anonymous users can view flexible bookings for conflict checking" ON flexible_bookings;
-DROP POLICY IF EXISTS "Authenticated users can view flexible bookings for conflict checking" ON flexible_bookings;
-DROP POLICY IF EXISTS "Anyone can view flexible bookings for conflict checking" ON flexible_bookings;
-DROP POLICY IF EXISTS "Anyone can view confirmed flexible bookings" ON flexible_bookings;
-DROP POLICY IF EXISTS "flexible_bookings_insert_policy" ON flexible_bookings;
-DROP POLICY IF EXISTS "flexible_bookings_select_policy" ON flexible_bookings;
-DROP POLICY IF EXISTS "flexible_bookings_update_policy" ON flexible_bookings;
-
--- Anyone can view confirmed bookings (for conflict detection)
-CREATE POLICY "Anyone can view confirmed flexible bookings"
-    ON flexible_bookings
-    FOR SELECT
-    TO anon, authenticated
-    USING (
-        status IN ('confirmed', 'completed', 'pending_payment', 'payment_received')
-    );
-
--- Users can view their own bookings (including pending)
-CREATE POLICY "Users can view their own flexible bookings"
+-- Users can view their own bookings
+CREATE POLICY "Users view own flexible bookings"
     ON flexible_bookings
     FOR SELECT
     TO authenticated
@@ -145,43 +169,122 @@ CREATE POLICY "Users can view their own flexible bookings"
         )
     );
 
+-- Anyone can view confirmed bookings (for conflict detection)
+CREATE POLICY "Anyone view confirmed flexible bookings"
+    ON flexible_bookings
+    FOR SELECT
+    TO anon, authenticated
+    USING (
+        status IN ('confirmed', 'completed', 'pending_payment', 'payment_received')
+    );
+
+-- Users can create their own bookings
+CREATE POLICY "Users create own flexible bookings"
+    ON flexible_bookings
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (user_id = auth.uid());
+
 -- ============================================
 -- 5. SPECIAL_BOOKINGS TABLE POLICIES
 -- ============================================
+-- Based on migrations: 015, 027, 028, 030
 
--- Drop all possible variations of existing policies
-DROP POLICY IF EXISTS "Anonymous users can create special bookings" ON special_bookings;
-DROP POLICY IF EXISTS "Anyone can create special bookings" ON special_bookings;
-DROP POLICY IF EXISTS "Anyone can view special bookings" ON special_bookings;
-DROP POLICY IF EXISTS "Admins can update special bookings" ON special_bookings;
-DROP POLICY IF EXISTS "Authenticated users can create special bookings" ON special_bookings;
-DROP POLICY IF EXISTS "special_bookings_insert_policy" ON special_bookings;
-DROP POLICY IF EXISTS "special_bookings_select_policy" ON special_bookings;
+-- Users can view their own special bookings
+CREATE POLICY "Users view own special bookings"
+    ON special_bookings
+    FOR SELECT
+    TO authenticated
+    USING (
+        student_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+        OR
+        EXISTS (
+            SELECT 1 FROM coaches 
+            WHERE coaches.id = special_bookings.coach_id 
+            AND coaches.user_id = auth.uid()
+        )
+        OR
+        EXISTS (
+            SELECT 1 FROM coaches 
+            WHERE coaches.user_id = auth.uid() 
+            AND coaches.is_admin = true
+        )
+    );
 
--- Allow anonymous users to create special bookings
+-- Coaches can view their special bookings
+CREATE POLICY "Coaches view their special bookings"
+    ON special_bookings
+    FOR SELECT
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM coaches 
+            WHERE coaches.id = special_bookings.coach_id 
+            AND coaches.user_id = auth.uid()
+        )
+    );
+
+-- Admins can view all special bookings
+CREATE POLICY "Admins view all special bookings"
+    ON special_bookings
+    FOR SELECT
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM coaches 
+            WHERE coaches.user_id = auth.uid() 
+            AND coaches.is_admin = true
+        )
+    );
+
+-- Anyone can create special bookings (anonymous booking flow)
 CREATE POLICY "Anyone can create special bookings"
     ON special_bookings
     FOR INSERT
     TO anon, authenticated
     WITH CHECK (true);
 
--- Anyone can view special bookings (for conflict detection)
-CREATE POLICY "Anyone can view special bookings"
+-- Users can update their own pending special bookings
+CREATE POLICY "Users update own pending special bookings"
     ON special_bookings
-    FOR SELECT
-    TO anon, authenticated
+    FOR UPDATE
+    TO authenticated
     USING (
-        status IN ('confirmed', 'payment_received', 'completed', 'pending_payment')
+        student_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+        AND status = 'pending_payment'
+    )
+    WITH CHECK (
+        student_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+        AND status = 'pending_payment'
+    );
+
+-- Admins can update all special bookings
+CREATE POLICY "Admins update all special bookings"
+    ON special_bookings
+    FOR UPDATE
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM coaches 
+            WHERE coaches.user_id = auth.uid() 
+            AND coaches.is_admin = true
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM coaches 
+            WHERE coaches.user_id = auth.uid() 
+            AND coaches.is_admin = true
+        )
     );
 
 -- ============================================
 -- 6. USER_POINTS TABLE POLICIES
 -- ============================================
+-- Based on migrations: 016
 
-DROP POLICY IF EXISTS "Users can view their own points" ON user_points;
-DROP POLICY IF EXISTS "Admins can view all points" ON user_points;
-
-CREATE POLICY "Users can view their own points"
+-- Users can view their own points
+CREATE POLICY "Users view own points"
     ON user_points
     FOR SELECT
     TO authenticated
@@ -196,19 +299,66 @@ CREATE POLICY "Users can view their own points"
     );
 
 -- ============================================
--- 7. AVAILABILITY TABLE POLICIES
+-- 7. POINT_TRANSACTIONS TABLE POLICIES
 -- ============================================
+-- Based on migrations: 016, 018, 019, 020
 
-DROP POLICY IF EXISTS "Anyone can view availability" ON availability;
-DROP POLICY IF EXISTS "Coaches can manage their own availability" ON availability;
+-- Users can view their own transactions
+CREATE POLICY "Users view own transactions"
+    ON point_transactions
+    FOR SELECT
+    TO authenticated
+    USING (
+        user_id = auth.uid()
+        OR
+        EXISTS (
+            SELECT 1 FROM coaches 
+            WHERE coaches.user_id = auth.uid() 
+            AND coaches.is_admin = true
+        )
+    );
 
-CREATE POLICY "Anyone can view availability"
+-- Users can create their own transactions
+CREATE POLICY "Users create own transactions"
+    ON point_transactions
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (user_id = auth.uid());
+
+-- Admins have full access
+CREATE POLICY "Admins full access transactions"
+    ON point_transactions
+    FOR ALL
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM coaches 
+            WHERE coaches.user_id = auth.uid() 
+            AND coaches.is_admin = true
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM coaches 
+            WHERE coaches.user_id = auth.uid() 
+            AND coaches.is_admin = true
+        )
+    );
+
+-- ============================================
+-- 8. AVAILABILITY TABLE POLICIES
+-- ============================================
+-- Based on migrations: 003, 016
+
+-- Anyone can view availability
+CREATE POLICY "Anyone view availability"
     ON availability
     FOR SELECT
     TO anon, authenticated
     USING (true);
 
-CREATE POLICY "Coaches can manage their own availability"
+-- Coaches can manage their own availability
+CREATE POLICY "Coaches manage own availability"
     ON availability
     FOR ALL
     TO authenticated
@@ -228,14 +378,46 @@ CREATE POLICY "Coaches can manage their own availability"
     );
 
 -- ============================================
--- 8. CREATE AUDIT LOG TABLE
+-- 9. COACH_BLOCKED_DATES TABLE POLICIES
+-- ============================================
+-- Based on migrations: 016
+
+-- Anyone can view blocked dates
+CREATE POLICY "Anyone view blocked dates"
+    ON coach_blocked_dates
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
+
+-- Coaches can manage their own blocked dates
+CREATE POLICY "Coaches manage own blocked dates"
+    ON coach_blocked_dates
+    FOR ALL
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM coaches 
+            WHERE coaches.id = coach_blocked_dates.coach_id 
+            AND coaches.user_id = auth.uid()
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM coaches 
+            WHERE coaches.id = coach_blocked_dates.coach_id 
+            AND coaches.user_id = auth.uid()
+        )
+    );
+
+-- ============================================
+-- 10. CREATE AUDIT LOG TABLE
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS audit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     table_name TEXT NOT NULL,
     record_id UUID,
-    action TEXT NOT NULL, -- INSERT, UPDATE, DELETE
+    action TEXT NOT NULL,
     old_data JSONB,
     new_data JSONB,
     user_id UUID REFERENCES auth.users(id),
@@ -247,9 +429,19 @@ CREATE TABLE IF NOT EXISTS audit_log (
 -- Enable RLS on audit log
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
+-- Drop any existing audit log policies
+DO $$
+DECLARE
+    pol record;
+BEGIN
+    FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'audit_log'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON audit_log', pol.policyname);
+    END LOOP;
+END $$;
+
 -- Only admins can view audit logs
-DROP POLICY IF EXISTS "Admins can view audit logs" ON audit_log;
-CREATE POLICY "Admins can view audit logs"
+CREATE POLICY "Admins view audit logs"
     ON audit_log
     FOR SELECT
     TO authenticated
@@ -261,12 +453,12 @@ CREATE POLICY "Admins can view audit logs"
         )
     );
 
--- Create index for performance
+-- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_audit_log_table_record ON audit_log(table_name, record_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC);
 
 -- ============================================
--- 9. AUDIT LOG TRIGGER FUNCTION
+-- 11. AUDIT LOG TRIGGER FUNCTION
 -- ============================================
 
 CREATE OR REPLACE FUNCTION log_audit_event()
@@ -275,7 +467,6 @@ DECLARE
     v_user_id UUID;
     v_user_email TEXT;
 BEGIN
-    -- Get current user info
     v_user_id := auth.uid();
     
     SELECT email INTO v_user_email
@@ -321,19 +512,9 @@ CREATE TRIGGER audit_user_points
     AFTER INSERT OR UPDATE OR DELETE ON user_points
     FOR EACH ROW EXECUTE FUNCTION log_audit_event();
 
--- ============================================
--- 10. SECURITY FUNCTIONS
--- ============================================
-
--- Function to get current IP address
-CREATE OR REPLACE FUNCTION get_current_ip()
-RETURNS TEXT AS $$
-BEGIN
-    RETURN current_setting('request.headers', true)::json->>'x-forwarded-for';
-EXCEPTION
-    WHEN OTHERS THEN
-        RETURN NULL;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
 COMMENT ON TABLE audit_log IS 'Audit trail for all booking and points transactions';
+
+-- ============================================
+-- COMPLETION STATUS
+-- ============================================
+SELECT 'RLS policies recreated successfully based on all previous migrations' as status;
