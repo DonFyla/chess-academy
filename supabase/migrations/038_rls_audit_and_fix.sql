@@ -61,11 +61,15 @@ CREATE POLICY "Admins can update coaches"
 -- 3. BOOKINGS TABLE POLICIES (Monthly recurring)
 -- ============================================
 
+-- Drop all existing policies
 DROP POLICY IF EXISTS "Users can view their own bookings" ON bookings;
 DROP POLICY IF EXISTS "Coaches can view their assigned bookings" ON bookings;
 DROP POLICY IF EXISTS "Admins can view all bookings" ON bookings;
 DROP POLICY IF EXISTS "Anyone can create bookings" ON bookings;
 DROP POLICY IF EXISTS "Admins can update bookings" ON bookings;
+DROP POLICY IF EXISTS "bookings_insert_policy" ON bookings;
+DROP POLICY IF EXISTS "bookings_select_policy" ON bookings;
+DROP POLICY IF EXISTS "bookings_update_policy" ON bookings;
 
 -- Anyone can create bookings (guest booking flow)
 CREATE POLICY "Anyone can create bookings"
@@ -99,12 +103,17 @@ CREATE POLICY "Users can view their own bookings"
 -- 4. FLEXIBLE_BOOKINGS (Points) TABLE POLICIES
 -- ============================================
 
+-- Drop all existing policies
 DROP POLICY IF EXISTS "Users can view their own flexible bookings" ON flexible_bookings;
 DROP POLICY IF EXISTS "Coaches can view their own flexible bookings" ON flexible_bookings;
 DROP POLICY IF EXISTS "Admins can view all flexible bookings" ON flexible_bookings;
 DROP POLICY IF EXISTS "Anonymous users can view flexible bookings for conflict checking" ON flexible_bookings;
 DROP POLICY IF EXISTS "Authenticated users can view flexible bookings for conflict checking" ON flexible_bookings;
 DROP POLICY IF EXISTS "Anyone can view flexible bookings for conflict checking" ON flexible_bookings;
+DROP POLICY IF EXISTS "Anyone can view confirmed flexible bookings" ON flexible_bookings;
+DROP POLICY IF EXISTS "flexible_bookings_insert_policy" ON flexible_bookings;
+DROP POLICY IF EXISTS "flexible_bookings_select_policy" ON flexible_bookings;
+DROP POLICY IF EXISTS "flexible_bookings_update_policy" ON flexible_bookings;
 
 -- Anyone can view confirmed bookings (for conflict detection)
 CREATE POLICY "Anyone can view confirmed flexible bookings"
@@ -140,9 +149,14 @@ CREATE POLICY "Users can view their own flexible bookings"
 -- 5. SPECIAL_BOOKINGS TABLE POLICIES
 -- ============================================
 
+-- Drop all possible variations of existing policies
 DROP POLICY IF EXISTS "Anonymous users can create special bookings" ON special_bookings;
+DROP POLICY IF EXISTS "Anyone can create special bookings" ON special_bookings;
 DROP POLICY IF EXISTS "Anyone can view special bookings" ON special_bookings;
 DROP POLICY IF EXISTS "Admins can update special bookings" ON special_bookings;
+DROP POLICY IF EXISTS "Authenticated users can create special bookings" ON special_bookings;
+DROP POLICY IF EXISTS "special_bookings_insert_policy" ON special_bookings;
+DROP POLICY IF EXISTS "special_bookings_select_policy" ON special_bookings;
 
 -- Allow anonymous users to create special bookings
 CREATE POLICY "Anyone can create special bookings"
