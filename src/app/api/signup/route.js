@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { checkRateLimit, isRedisConfigured } from '@/lib/redis'
+import { sanitizeSignupData, sanitizeString } from '@/lib/sanitize'
 
 // Lazy initialization of admin client (only created when needed at runtime)
 let supabaseAdmin = null
@@ -34,30 +36,7 @@ function getSupabaseAdmin() {
 
 const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY
 
-// Simple in-memory rate limiting (use Redis in production)
-const rateLimitMap = new Map()
-
-function checkRateLimit(ip, maxAttempts = 5, windowMs = 15 * 60 * 1000) {
-  const now = Date.now()
-  const attempts = rateLimitMap.get(ip)
-  
-  if (!attempts) {
-    rateLimitMap.set(ip, { count: 1, firstAttempt: now })
-    return { allowed: true }
-  }
-  
-  if (now - attempts.firstAttempt > windowMs) {
-    rateLimitMap.set(ip, { count: 1, firstAttempt: now })
-    return { allowed: true }
-  }
-  
-  if (attempts.count >= maxAttempts) {
-    return { allowed: false, retryAfter: Math.ceil((attempts.firstAttempt + windowMs - now) / 1000) }
-  }
-  
-  attempts.count++
-  return { allowed: true }
-}
+console.log('[Signup API] Redis configured:', isRedisConfigured())
 
 // Verify reCAPTCHA token
 async function verifyRecaptcha(token) {
@@ -113,21 +92,31 @@ export async function POST(request) {
                request.headers.get('x-real-ip') || 
                'unknown'
     
-    // Rate limiting
-    const rateLimit = checkRateLimit(ip)
+    // Rate limiting with Redis
+    const rateLimit = await checkRateLimit('signup', ip)
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: 'Too many attempts. Please try again later.' },
+        { error: `Too many attempts. Please try again in ${rateLimit.retryAfter || 15} minutes.` },
         { status: 429 }
       )
     }
     
     const body = await request.json()
-    const { email, password, name, phone, honeypot, recaptchaToken } = body
+    
+    // Sanitize all inputs
+    const sanitized = sanitizeSignupData({
+      email: body.email,
+      password: body.password,
+      name: body.name,
+      phone: body.phone,
+    })
+    
+    const honeypot = body.honeypot
+    const recaptchaToken = body.recaptchaToken
     
     // Honeypot check (if field is filled, it's a bot)
     if (honeypot) {
-      console.log('Bot signup attempt detected (honeypot):', email)
+      console.log('Bot signup attempt detected (honeypot)')
       // Return fake success to not alert the bot
       return NextResponse.json(
         { success: true, message: 'Account created successfully' },
@@ -136,17 +125,20 @@ export async function POST(request) {
     }
     
     // Validate required fields
-    if (!email || !password) {
+    if (!sanitized.email || !sanitized.password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
       )
     }
     
-    // Check for suspicious patterns
-    const suspiciousReason = isSuspiciousSignup(email, name)
+    // Destructure sanitized data
+    const { email, password, name, phone } = sanitized
+    
+    // Check for suspicious patterns (use original values for pattern detection)
+    const suspiciousReason = isSuspiciousSignup(body.email, body.name)
     if (suspiciousReason) {
-      console.log('Suspicious signup detected:', { email, name, reason: suspiciousReason })
+      console.log('Suspicious signup detected:', { reason: suspiciousReason })
       return NextResponse.json(
         { error: 'Invalid signup data. Please check your information and try again.' },
         { status: 400 }
