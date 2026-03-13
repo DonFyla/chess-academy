@@ -45,10 +45,10 @@ BEGIN
         EXECUTE format('DROP POLICY IF EXISTS %I ON point_transactions', pol.policyname);
     END LOOP;
     
-    -- Drop all policies on availability
-    FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'availability'
+    -- Drop all policies on availability_slots
+    FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'availability_slots'
     LOOP
-        EXECUTE format('DROP POLICY IF EXISTS %I ON availability', pol.policyname);
+        EXECUTE format('DROP POLICY IF EXISTS %I ON availability_slots', pol.policyname);
     END LOOP;
     
     -- Drop all policies on coach_blocked_dates
@@ -63,7 +63,7 @@ END $$;
 -- ============================================
 ALTER TABLE IF EXISTS coaches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS availability ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS availability_slots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS user_points ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS point_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS flexible_bookings ENABLE ROW LEVEL SECURITY;
@@ -352,27 +352,27 @@ CREATE POLICY "Admins full access transactions"
 
 -- Anyone can view availability
 CREATE POLICY "Anyone view availability"
-    ON availability
+    ON availability_slots
     FOR SELECT
     TO anon, authenticated
     USING (true);
 
 -- Coaches can manage their own availability
 CREATE POLICY "Coaches manage own availability"
-    ON availability
+    ON availability_slots
     FOR ALL
     TO authenticated
     USING (
         EXISTS (
             SELECT 1 FROM coaches 
-            WHERE coaches.id = availability.coach_id 
+            WHERE coaches.id = availability_slots.coach_id 
             AND coaches.user_id = auth.uid()
         )
     )
     WITH CHECK (
         EXISTS (
             SELECT 1 FROM coaches 
-            WHERE coaches.id = availability.coach_id 
+            WHERE coaches.id = availability_slots.coach_id 
             AND coaches.user_id = auth.uid()
         )
     );
