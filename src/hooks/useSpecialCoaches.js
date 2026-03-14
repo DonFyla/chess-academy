@@ -114,27 +114,9 @@ export function useCreateSpecialBooking() {
           return
         }
         
-        // Try multiple ways to get coach email
-        let coachEmail = null
-        
-        // Method 1: Direct email column
-        if (coach?.email) {
-          coachEmail = coach.email
-        }
-        
-        // Method 2: RPC to auth.users
-        if (!coachEmail && coach?.user_id) {
-          try {
-            const { data: userData, error: rpcError } = await supabase
-              .rpc('get_user_email', { user_id: coach.user_id })
-            
-            if (!rpcError && userData) {
-              coachEmail = userData
-            }
-          } catch (e) {
-            console.error('Could not get coach email via RPC:', e)
-          }
-        }
+        // Get coach email from coaches table only
+        // Note: RPC to auth.users removed due to permission issues
+        const coachEmail = coach?.email || null
         
         const bookingWithCoach = { 
           ...data, 
