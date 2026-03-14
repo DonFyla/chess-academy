@@ -217,6 +217,20 @@ export function useConfirmSpecialBooking() {
         } catch (e) {
           console.error('❌ Failed to send student confirmation email:', e)
         }
+        
+        // Email to coach - booking confirmed
+        if (coach?.email) {
+          try {
+            await sendSpecialBookingEmail({
+              booking: bookingWithCoach,
+              type: 'coachBookingConfirmed',
+              recipient: coach.email
+            })
+            console.log('✅ Special booking confirmation email sent to coach:', coach.email)
+          } catch (e) {
+            console.error('❌ Failed to send coach confirmation email:', e)
+          }
+        }
       } catch (emailError) {
         console.error('Payment confirmation email failed:', emailError)
       }
