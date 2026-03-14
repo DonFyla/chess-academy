@@ -141,6 +141,36 @@ export default function BookWithPointsClient() {
           </div>
         </div>
 
+        {/* How It Works */}
+        <div className="bg-white py-12 border-b">
+          <div className="container mx-auto px-4">
+            <h2 className="text-2xl font-bold text-black text-center mb-8">How Flexible Booking Works</h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-[#5E5044] text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                  1
+                </div>
+                <h3 className="font-bold text-black mb-2">Buy Points</h3>
+                <p className="text-gray-600">Purchase points that are valid for one year. Any amount you want.</p>
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-[#5E5044] text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                  2
+                </div>
+                <h3 className="font-bold text-black mb-2">Pick Your Schedule</h3>
+                <p className="text-gray-600">Choose any available time slot from the coach&apos;s schedule. No recurring commitment.</p>
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-[#5E5044] text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                  3
+                </div>
+                <h3 className="font-bold text-black mb-2">Cancel Anytime</h3>
+                <p className="text-gray-600">Cancel up to 24 hours before for a full point refund.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="container mx-auto px-4 py-8">
           {/* Legend */}
           <div className="flex flex-wrap gap-4 mb-8">
@@ -172,36 +202,6 @@ export default function BookWithPointsClient() {
               ))}
             </div>
           )}
-        </div>
-        
-        {/* How It Works */}
-        <div className="bg-white py-12 border-t">
-          <div className="container mx-auto px-4">
-            <h2 className="text-2xl font-bold text-black text-center mb-8">How Flexible Booking Works</h2>
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-[#5E5044] text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                  1
-                </div>
-                <h3 className="font-bold text-black mb-2">Buy Points</h3>
-                <p className="text-gray-600">Purchase points that are valid for one year. Any amount you want.</p>
-              </div>
-              <div className="text-center">
-                <div className="w-16 h-16 bg-[#5E5044] text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                  2
-                </div>
-                <h3 className="font-bold text-black mb-2">Pick Your Schedule</h3>
-                <p className="text-gray-600">Choose any available time slot from the coach&apos;s schedule. No recurring commitment.</p>
-              </div>
-              <div className="text-center">
-                <div className="w-16 h-16 bg-[#5E5044] text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                  3
-                </div>
-                <h3 className="font-bold text-black mb-2">Cancel Anytime</h3>
-                <p className="text-gray-600">Cancel up to 24 hours before for a full point refund.</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
       <Footer />
