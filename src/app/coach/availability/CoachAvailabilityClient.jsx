@@ -39,13 +39,16 @@ export default function CoachAvailabilityClient() {
   const [expandedBooking, setExpandedBooking] = useState(null)
   const [activeTab, setActiveTab] = useState('schedule')
   
-  // Profile editing state
+  // Profile editing state - includes ALL fields admin can fill
   const [profileForm, setProfileForm] = useState({
     name: '',
+    email: '',
     specialization: '',
     bio: '',
     achievements: '',
-    photo_url: ''
+    photo_url: '',
+    rank_title: '',
+    special_bio: ''
   })
   const [savingProfile, setSavingProfile] = useState(false)
 
@@ -61,15 +64,18 @@ export default function CoachAvailabilityClient() {
         setCoach(currentCoach)
         setMeetingLink(currentCoach.meeting_link || '')
         
-        // Set profile form with current coach data
+        // Set profile form with ALL current coach data
         setProfileForm({
           name: currentCoach.name || '',
+          email: currentCoach.email || '',
           specialization: currentCoach.specialization || '',
           bio: currentCoach.bio || '',
           achievements: Array.isArray(currentCoach.achievements) 
             ? currentCoach.achievements.join(', ') 
             : currentCoach.achievements || '',
-          photo_url: currentCoach.photo_url || ''
+          photo_url: currentCoach.photo_url || '',
+          rank_title: currentCoach.rank_title || '',
+          special_bio: currentCoach.special_bio || ''
         })
       } catch (error) {
         toast.error('Failed to load coach data')
@@ -92,30 +98,41 @@ export default function CoachAvailabilityClient() {
         .map(a => a.trim())
         .filter(a => a.length > 0)
       
-      const { error } = await supabase
+      // Prepare update data with ALL coach fields
+      const updateData = {
+        name: profileForm.name.trim(),
+        email: profileForm.email?.trim() || null,
+        specialization: profileForm.specialization?.trim() || null,
+        bio: profileForm.bio?.trim() || null,
+        achievements: achievementsArray.length > 0 ? achievementsArray : null,
+        photo_url: profileForm.photo_url?.trim() || null,
+        rank_title: profileForm.rank_title?.trim() || null,
+        special_bio: profileForm.special_bio?.trim() || null,
+        updated_at: new Date().toISOString()
+      }
+      
+      console.log('Updating coach profile:', { coachId: coach.id, updateData })
+      
+      const { data, error } = await supabase
         .from('coaches')
-        .update({
-          name: profileForm.name.trim(),
-          specialization: profileForm.specialization.trim() || null,
-          bio: profileForm.bio.trim() || null,
-          achievements: achievementsArray.length > 0 ? achievementsArray : null,
-          photo_url: profileForm.photo_url.trim() || null,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', coach.id)
+        .select()
+        .single()
       
-      if (error) throw error
+      if (error) {
+        console.error('Supabase update error:', error)
+        throw new Error(error.message || 'Failed to update profile')
+      }
       
+      console.log('Profile updated successfully:', data)
       toast.success('Profile updated successfully!')
-      // Update local coach data
-      setCoach({ 
-        ...coach, 
-        ...profileForm,
-        achievements: achievementsArray
-      })
+      
+      // Update local coach data with returned data
+      setCoach(data)
     } catch (error) {
       console.error('Error saving profile:', error)
-      toast.error('Failed to save profile')
+      toast.error('Failed to save profile: ' + (error.message || 'Unknown error'))
     } finally {
       setSavingProfile(false)
     }
@@ -764,7 +781,48 @@ export default function CoachAvailabilityClient() {
                         </div>
                       )}
                       
-                      {/* Save Button */}
+                      {/* Email for notifications */}
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="text-black">Email for Notifications</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={profileForm.email}
+                          onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                          placeholder="coach@example.com"
+                          className="bg-white"
+                        />
+                        <p className="text-xs text-gray-500">Used to send booking notifications</p>
+                      </div>
+                      
+                      {/* Rank Title (for elite coaches) */}
+                      <div className="space-y-2">
+                        <Label htmlFor="rank_title" className="text-black">Rank / Title</Label>
+                        <Input
+                          id="rank_title"
+                          value={profileForm.rank_title}
+                          onChange={(e) => setProfileForm({ ...profileForm, rank_title: e.target.value })}
+                          placeholder="e.g., FIDE Master, National Champion, Nigeria's #1"
+                          className="bg-white"
+                        />
+                        <p className="text-xs text-gray-500">Your chess title or ranking (shown on elite coach profiles)</p>
+                      </div>
+                      
+                      {/* Special Bio (for elite coaches) */}
+                      <div className="space-y-2">
+                        <Label htmlFor="special_bio" className="text-black">Extended Bio (Elite Coaches)</Label>
+                        <textarea
+                          id="special_bio"
+                          value={profileForm.special_bio}
+                          onChange={(e) => setProfileForm({ ...profileForm, special_bio: e.target.value })}
+                          placeholder="Detailed biography for your elite coach profile page..."
+                          rows={4}
+                          className="w-full px-3 py-2 border rounded-lg bg-white text-black"
+                        />
+                        <p className="text-xs text-gray-500">Extended bio shown on the special coaches booking page</p>
+                      </div>
+                      
+                      {/* Save Button -->
                       <div className="pt-4">
                         <Button 
                           type="submit"
