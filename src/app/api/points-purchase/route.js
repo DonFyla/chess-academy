@@ -291,6 +291,55 @@ const emailTemplates = {
         </div>
       `
     }
+  },
+
+  coachCancellationNotification: (data) => {
+    const sessionDate = new Date(data.session_date).toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
+    
+    return {
+      subject: `Booking Cancelled - ${data.student_name}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #FFEBEE; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+            <h2 style="color: #C62828; margin: 0;">⚠️ Class Cancelled</h2>
+          </div>
+          
+          <p>Hello ${data.coach_name},</p>
+          <p>A student has cancelled their class with you. The time slot is now available for other students to book.</p>
+          
+          <div style="background: #F5EFE7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #5E5044;">Cancelled Class Details</h3>
+            <p><strong>Student:</strong> ${data.student_name}</p>
+            <p><strong>Date:</strong> ${sessionDate}</p>
+            <p><strong>Time:</strong> ${data.start_time} - ${data.end_time}</p>
+            <p><strong>Cancelled At:</strong> ${new Date().toLocaleDateString('en-US', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}</p>
+          </div>
+          
+          <div style="background: #E8F5E9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #2E7D32;">
+              <strong>ℹ️ Note:</strong> This time slot is now available for other students to book.
+            </p>
+          </div>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            Moving Train Online Chess Academy
+          </p>
+        </div>
+      `
+    }
   }
 }
 
@@ -378,6 +427,43 @@ export async function POST(request) {
       }
       
       return NextResponse.json({ success: true, data: results })
+    }
+    
+    // For coach cancellation notification, send to coach specifically
+    if (type === 'coachCancellationNotification') {
+      const { subject, html } = template(data)
+      
+      if (!data.coach_email) {
+        return NextResponse.json(
+          { error: 'Coach email is required' },
+          { status: 400 }
+        )
+      }
+      
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${resendKey}`,
+        },
+        body: JSON.stringify({
+          from: 'Moving Train Chess Academy <bookings@themovingtrain.org>',
+          to: data.coach_email,
+          subject,
+          html,
+        }),
+      })
+      
+      if (!res.ok) {
+        const error = await res.json()
+        return NextResponse.json(
+          { error: 'Failed to send email', details: error },
+          { status: 500 }
+        )
+      }
+      
+      const result = await res.json()
+      return NextResponse.json({ success: true, data: result })
     }
     
     // For other email types, use single recipient

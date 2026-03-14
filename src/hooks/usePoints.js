@@ -165,7 +165,7 @@ export function useCancelFlexibleBooking() {
         .from('flexible_bookings')
         .select(`
           *,
-          coaches(name)
+          coaches(name, email)
         `)
         .eq('id', bookingId)
         .eq('user_id', userId)
@@ -190,7 +190,7 @@ export function useCancelFlexibleBooking() {
         throw new Error(error.message)
       }
       
-      // Send refund email
+      // Send refund email to student
       try {
         await fetch('/api/points-purchase', {
           method: 'POST',
@@ -211,6 +211,29 @@ export function useCancelFlexibleBooking() {
         })
       } catch (e) {
         console.error('Failed to send refund email:', e)
+      }
+      
+      // Send cancellation notification to coach
+      if (booking.coaches?.email) {
+        try {
+          await fetch('/api/points-purchase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'coachCancellationNotification',
+              data: {
+                student_name: userName || 'Student',
+                coach_name: booking.coaches?.name || 'Coach',
+                coach_email: booking.coaches?.email,
+                session_date: booking.session_date,
+                start_time: booking.start_time,
+                end_time: booking.end_time,
+              }
+            })
+          })
+        } catch (e) {
+          console.error('Failed to send coach cancellation email:', e)
+        }
       }
       
       return { success: true, refunded: data.refund_amount, newBalance: data.new_balance }
