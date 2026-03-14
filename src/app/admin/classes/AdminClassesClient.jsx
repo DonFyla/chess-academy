@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { useCoaches } from '@/hooks/useCoaches'
+import { useAllCoaches } from '@/hooks/useCoaches'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -18,7 +18,7 @@ function parseDateString(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number)
   return new Date(year, month - 1, day) // month is 0-indexed
 }
-import { Calendar, Clock, User, MapPin, Filter } from 'lucide-react'
+import { Calendar, Clock, User, MapPin, Filter, Coins, Crown } from 'lucide-react'
 
 const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -38,7 +38,7 @@ export default function AdminClassesClient() {
   const [classes, setClasses] = useState([])
   const [selectedCoach, setSelectedCoach] = useState('all')
   const [selectedWeek, setSelectedWeek] = useState(() => format(new Date(), 'yyyy-MM-dd'))
-  const { data: coaches, isLoading: loadingCoaches } = useCoaches()
+  const { data: coaches, isLoading: loadingCoaches } = useAllCoaches()
 
   // Check admin auth
   useEffect(() => {
@@ -83,13 +83,24 @@ export default function AdminClassesClient() {
   const fetchClasses = async () => {
     try {
       // Calculate week range - normalize to start of day for accurate comparison
-      const weekStart = startOfDay(startOfWeek(parseISO(selectedWeek), { weekStartsOn: 0 }))
-      const weekEnd = startOfDay(addDays(weekStart, 6))
+      let weekStart, weekEnd
+      try {
+        weekStart = startOfDay(startOfWeek(parseISO(selectedWeek), { weekStartsOn: 0 }))
+        weekEnd = startOfDay(addDays(weekStart, 6))
+      } catch (dateError) {
+        console.error('Date parsing error:', dateError, 'selectedWeek:', selectedWeek)
+        // Fallback to current week
+        weekStart = startOfDay(startOfWeek(new Date(), { weekStartsOn: 0 }))
+        weekEnd = startOfDay(addDays(weekStart, 6))
+      }
       
-      console.log('Fetching classes for week:', format(weekStart, 'yyyy-MM-dd'), 'to', format(weekEnd, 'yyyy-MM-dd'))
+      const startDateStr = format(weekStart, 'yyyy-MM-dd')
+      const endDateStr = format(weekEnd, 'yyyy-MM-dd')
+      
+      console.log('Fetching classes for week:', startDateStr, 'to', endDateStr)
 
-      // Fetch all confirmed bookings (we'll filter by recurring dates in JS)
-      let query = supabase
+      // Fetch regular confirmed bookings
+      let bookingsQuery = supabase
         .from('bookings')
         .select(`
           *,
@@ -97,21 +108,113 @@ export default function AdminClassesClient() {
         `)
         .eq('status', 'confirmed')
 
+      // Fetch flexible point bookings
+      console.log('Building flexible query with dates:', startDateStr, endDateStr)
+      
+      let flexibleQuery = supabase
+        .from('flexible_bookings')
+        .select(`
+          *,
+          coaches (name, email)
+        `)
+        .gte('session_date', startDateStr)
+        .lte('session_date', endDateStr)
+      
+      // Fetch special coach bookings
+      let specialQuery = supabase
+        .from('special_bookings')
+        .select(`
+          *,
+          coaches (name, email)
+        `)
+        .in('status', ['confirmed', 'pending_payment'])
+      
+      console.log('Flexible and special queries built')
+
       // Filter by coach if selected
       if (selectedCoach && selectedCoach !== 'all') {
-        query = query.eq('coach_id', selectedCoach)
+        bookingsQuery = bookingsQuery.eq('coach_id', selectedCoach)
+        flexibleQuery = flexibleQuery.eq('coach_id', selectedCoach)
+        specialQuery = specialQuery.eq('coach_id', selectedCoach)
       }
 
-      const { data, error } = await query
-
-      if (error) throw error
+      // Execute all queries in parallel
+      console.log('Executing queries...')
+      let bookingsResult, flexibleResult, specialResult
+      try {
+        const [bookingsRes, flexibleRes, specialRes] = await Promise.all([
+          bookingsQuery,
+          flexibleQuery,
+          specialQuery
+        ])
+        
+        // Supabase returns { data, error } object
+        bookingsResult = bookingsRes
+        flexibleResult = flexibleRes
+        specialResult = specialRes
+        
+        console.log('Query results received:', {
+          bookingsResHasData: 'data' in bookingsRes,
+          flexibleResHasData: 'data' in flexibleRes,
+          specialResHasData: 'data' in specialRes
+        })
+      } catch (promiseError) {
+        console.error('Promise.all error:', promiseError)
+        throw promiseError
+      }
       
-      console.log('Fetched bookings:', data?.length, data)
+      console.log('Raw results:', { 
+        bookingsResult: bookingsResult ? 'OK' : 'NULL', 
+        flexibleResult: flexibleResult ? 'OK' : 'NULL',
+        bookingsType: typeof bookingsResult,
+        flexibleType: typeof flexibleResult
+      })
+      
+      // Log full results for debugging
+      console.log('Full bookings result:', JSON.stringify(bookingsResult, null, 2))
+      console.log('Full flexible result:', JSON.stringify(flexibleResult, null, 2))
+      
+      const { data: bookingsData, error: bookingsError } = bookingsResult || {}
+      const { data: flexibleData, error: flexibleError } = flexibleResult || {}
+      const { data: specialData, error: specialError } = specialResult || {}
+
+      console.log('Destructured:', {
+        bookingsDataExists: !!bookingsData,
+        bookingsDataLength: bookingsData?.length,
+        bookingsError: bookingsError,
+        bookingsErrorType: typeof bookingsError,
+        flexibleDataExists: !!flexibleData,
+        flexibleDataLength: flexibleData?.length,
+        flexibleError: flexibleError,
+        flexibleErrorType: typeof flexibleError,
+        flexibleErrorKeys: flexibleError ? Object.keys(flexibleError) : 'N/A'
+      })
+
+      // Only throw if there's an actual error (with message or code)
+      if (bookingsError && (bookingsError.message || bookingsError.code)) {
+        console.error('Bookings error:', bookingsError)
+        throw new Error(bookingsError.message || 'Bookings query failed')
+      }
+      
+      // Log flexible error but don't throw - use empty array as fallback
+      if (flexibleError) {
+        console.error('Flexible bookings error (non-fatal):', flexibleError)
+        console.log('Continuing with empty flexible bookings')
+      }
+      
+      // Log special bookings error but don't throw
+      if (specialError) {
+        console.error('Special bookings error (non-fatal):', specialError)
+        console.log('Continuing with empty special bookings')
+      }
+      
+      console.log('Fetched bookings:', bookingsData?.length, 'Flexible:', flexibleData?.length, 'Special:', specialData?.length)
 
       // Expand bookings to include all recurring dates
       const expandedClasses = []
       
-      ;(data || []).forEach(booking => {
+      // Process regular bookings
+      ;(bookingsData || []).forEach(booking => {
         console.log('Processing booking:', booking.id, 'recurring_dates:', booking.recurring_dates)
         
         // Check if booking has recurring_dates
@@ -157,6 +260,83 @@ export default function AdminClassesClient() {
         }
       })
       
+      // Process special bookings - similar to regular bookings with session_dates
+      console.log('Processing special bookings:', specialData?.length)
+      ;(specialData || []).forEach(booking => {
+        console.log('Processing special booking:', booking.id, 'session_dates:', booking.session_dates)
+        
+        // Special bookings have session_dates array
+        if (booking.session_dates && Array.isArray(booking.session_dates) && booking.session_dates.length > 0) {
+          booking.session_dates.forEach((session, idx) => {
+            console.log(`  Special Session ${idx}:`, session)
+            if (session.date) {
+              const sessionDate = startOfDay(parseDateString(session.date))
+              const isInWeek = isWithinInterval(sessionDate, { start: weekStart, end: weekEnd })
+              
+              if (isInWeek) {
+                console.log('  -> ADDED special to expandedClasses')
+                expandedClasses.push({
+                  ...booking,
+                  session_date: session.date,
+                  session_start_time: session.start_time,
+                  session_end_time: session.end_time,
+                  _isSpecial: true,
+                  student_name: booking.student_name,
+                  student_email: booking.student_email
+                })
+              }
+            }
+          })
+        }
+      })
+      
+      // Add flexible point bookings
+      console.log('Processing flexible bookings:', flexibleData?.length)
+      
+      // Get unique user IDs from flexible bookings
+      const userIds = [...new Set((flexibleData || []).map(b => b.user_id).filter(Boolean))]
+      console.log('User IDs to fetch:', userIds)
+      
+      // Fetch user details if we have user IDs
+      let userMap = {}
+      if (userIds.length > 0) {
+        try {
+          const { data: userData, error: userError } = await supabase
+            .rpc('get_user_info', { user_ids: userIds })
+          
+          if (userError) {
+            console.error('Error fetching user info:', userError)
+          } else {
+            console.log('Fetched user data:', userData)
+            // Create a map of user_id -> user info
+            userData?.forEach(user => {
+              userMap[user.id] = user
+            })
+          }
+        } catch (userFetchError) {
+          console.error('Failed to fetch user info:', userFetchError)
+        }
+      }
+      
+      ;(flexibleData || []).forEach(booking => {
+        const userInfo = userMap[booking.user_id]
+        console.log('Flexible booking:', booking.id, {
+          coach: booking.coaches,
+          user_id: booking.user_id,
+          userInfo
+        })
+        expandedClasses.push({
+          ...booking,
+          session_date: booking.session_date,
+          session_start_time: booking.start_time,
+          session_end_time: booking.end_time,
+          _isFlexible: true,
+          student_name: userInfo?.full_name || userInfo?.email || 'Student ID: ' + (booking.user_id?.slice(0, 8) || 'Unknown'),
+          student_email: userInfo?.email || '',
+          coaches: booking.coaches // Coach data from join
+        })
+      })
+      
       console.log('Total expanded classes:', expandedClasses.length)
 
       // Sort by date and time
@@ -187,6 +367,11 @@ export default function AdminClassesClient() {
       setClasses(groupedByDay)
     } catch (error) {
       console.error('Error fetching classes:', error)
+      console.error('Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name
+      })
     }
   }
 
@@ -327,6 +512,18 @@ export default function AdminClassesClient() {
                           </div>
                           
                           <div className="flex items-center gap-2">
+                            {booking._isSpecial && (
+                              <Badge className="text-xs bg-purple-600 text-white">
+                                <Crown className="w-3 h-3 mr-1" />
+                                Special
+                              </Badge>
+                            )}
+                            {booking._isFlexible && (
+                              <Badge className="text-xs bg-[#5E5044] text-white">
+                                <Coins className="w-3 h-3 mr-1" />
+                                {booking.points_used} pts
+                              </Badge>
+                            )}
                             {booking.booking_mode === 'double' && (
                               <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
                                 2x/week

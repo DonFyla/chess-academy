@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import Breadcrumb from "./Breadcrumb";
 
 import logo from "../../public/images/others/logo.svg";
 
@@ -42,6 +43,10 @@ function Navbar() {
 
   // Add role-specific links
   const tabs = [...baseTabs];
+  
+  if (user) {
+    tabs.push({ link: "/dashboard", name: "Dashboard" });
+  }
   
   if (isAdmin()) {
     tabs.push({ link: "/admin/schedule", name: "Admin" });
@@ -90,9 +95,15 @@ function Navbar() {
         <div className="hidden md:flex items-center gap-3">
           {user ? (
             <>
-              <span className="text-sm text-gray-600">
-                {user.user_metadata?.full_name || user.email}
-              </span>
+              <Link
+                href="/dashboard"
+                className="px-4 py-3 bg-[#5E5044] text-white rounded-full hover:bg-[#4a3f35] transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                My Dashboard
+              </Link>
               <button
                 onClick={handleSignOut}
                 className="px-4 py-3 border-[#5E5044] border text-[#5E5044] rounded-full hover:bg-[#5E5044] hover:text-white transition-colors"
@@ -129,6 +140,9 @@ function Navbar() {
           </button>
         </div>
       </main>
+
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb />
 
       <aside>
         <div
@@ -170,15 +184,24 @@ function Navbar() {
               
               {/* Mobile auth buttons */}
               {user ? (
-                <button
-                  onClick={() => {
-                    handleSignOut();
-                    setOpen(false);
-                  }}
-                  className="px-4 py-2 bg-[#5E5044] text-white rounded-full"
-                >
-                  Sign Out
-                </button>
+                <>
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setOpen(false)}
+                    className="px-4 py-2 bg-[#5E5044] text-white rounded-full"
+                  >
+                    My Dashboard
+                  </Link>
+                  <button
+                    onClick={() => {
+                      handleSignOut();
+                      setOpen(false);
+                    }}
+                    className="px-4 py-2 border-[#5E5044] border text-[#5E5044] rounded-full"
+                  >
+                    Sign Out
+                  </button>
+                </>
               ) : (
                 <>
                   <Link

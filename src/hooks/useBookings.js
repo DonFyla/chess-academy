@@ -92,6 +92,9 @@ export function useCreateBooking() {
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['bookings', data.coach_id] })
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      // Invalidate unified schedule to refresh conflict detection
+      queryClient.invalidateQueries({ queryKey: ['unified-schedule', data.coach_id] })
+      queryClient.invalidateQueries({ queryKey: ['all-bookings-conflicts', data.coach_id] })
       
       try {
         // Get coach details - try all possible columns

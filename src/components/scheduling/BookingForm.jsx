@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format, addWeeks, startOfWeek, addDays } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { DAYS_OF_WEEK, COURSE_TYPES } from '@/lib/scheduling-types'
 import { useCreateBooking } from '@/hooks/useBookings'
+import { useAuth } from '@/contexts/AuthContext'
+import { useUnifiedSchedule } from '@/hooks/useUnifiedSchedule'
 import { toast } from 'sonner'
 
 function formatTime(time) {
@@ -21,6 +23,9 @@ function formatTime(time) {
 }
 
 export default function BookingForm({ coachId, availability, existingBookings, coachName }) {
+  // Fetch unified schedule to check conflicts across ALL booking types
+  const { data: unifiedSchedule = [] } = useUnifiedSchedule(coachId)
+  const { user } = useAuth()
   const [bookingMode, setBookingMode] = useState('single') // 'single' (4 sessions) or 'double' (8 sessions)
   
   // Selected days and times (recurring weekly)
@@ -29,12 +34,21 @@ export default function BookingForm({ coachId, availability, existingBookings, c
   const [selectedDay2, setSelectedDay2] = useState(null)
   const [selectedSlot2, setSelectedSlot2] = useState(null)
   
-  // Student info
+  // Student info - auto-populate from user profile
   const [studentName, setStudentName] = useState('')
   const [studentEmail, setStudentEmail] = useState('')
   const [studentPhone, setStudentPhone] = useState('')
   const [courseType, setCourseType] = useState('')
   const [notes, setNotes] = useState('')
+  
+  // Auto-populate form with user data when available
+  useEffect(() => {
+    if (user) {
+      setStudentName(user.user_metadata?.full_name || user.user_metadata?.name || '')
+      setStudentEmail(user.email || '')
+      setStudentPhone(user.user_metadata?.phone || user.user_metadata?.phone_number || '')
+    }
+  }, [user])
   
   const createBooking = useCreateBooking()
 
@@ -51,10 +65,12 @@ export default function BookingForm({ coachId, availability, existingBookings, c
   const slotsForDay2 = getSlotsForDay(selectedDay2)
 
   // Check if a specific time slot conflicts with an existing booking
+  // UPDATED: Now checks against ALL booking types (monthly, points, special)
   const isSlotBooked = (dayOfWeek, slot) => {
     if (!slot) return false
     
-    return existingBookings.some(
+    // Check 1: Monthly recurring bookings (from existingBookings prop)
+    const monthlyConflict = existingBookings.some(
       (b) =>
         b.recurring_days &&
         b.recurring_days.includes(dayOfWeek) &&
@@ -64,6 +80,27 @@ export default function BookingForm({ coachId, availability, existingBookings, c
         b.start_time < slot.end_time &&
         b.end_time > slot.start_time
     )
+    
+    if (monthlyConflict) return true
+    
+    // Check 2: Point-based and Special bookings (from unified schedule)
+    // These have specific dates, so we need to check if any fall on this day of week
+    const unifiedConflict = unifiedSchedule.some((b) => {
+      // Handle both date formats
+      const sessionDate = b.session_date ? new Date(b.session_date) : null
+      if (!sessionDate || isNaN(sessionDate.getTime())) return false
+      
+      const bookingDayOfWeek = sessionDate.getDay()
+      
+      return (
+        bookingDayOfWeek === dayOfWeek &&
+        // Check for time overlap
+        b.start_time < slot.end_time &&
+        b.end_time > slot.start_time
+      )
+    })
+    
+    return unifiedConflict
   }
 
   // Check if a day has ANY available slots (used to disable days with no free slots)
@@ -220,7 +257,7 @@ export default function BookingForm({ coachId, availability, existingBookings, c
             </Button>
           </div>
           <div className="text-sm text-gray-600 mt-3 space-y-1">
-            <p><strong>₦15,000</strong> per session</p>
+            <p><strong>₦10,000</strong> per session</p>
             {bookingMode === 'single' ? (
               <p>Total: <strong>₦40,000</strong> for 4 sessions</p>
             ) : (
@@ -391,6 +428,7 @@ export default function BookingForm({ coachId, availability, existingBookings, c
             <CardTitle className="text-lg text-black">
               {bookingMode === 'single' ? '2' : '3'}. Your Information
             </CardTitle>
+            <p className="text-sm text-gray-500">Pre-filled from your profile</p>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Booking Summary */}
@@ -419,9 +457,9 @@ export default function BookingForm({ coachId, availability, existingBookings, c
                   id="name"
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
-                  placeholder="John Doe"
+                  placeholder="Your name from profile"
                   required
-                  className="border-gray-300"
+                  className="bg-gray-50"
                 />
               </div>
               <div className="space-y-2">
@@ -431,9 +469,9 @@ export default function BookingForm({ coachId, availability, existingBookings, c
                   type="email"
                   value={studentEmail}
                   onChange={(e) => setStudentEmail(e.target.value)}
-                  placeholder="john@example.com"
+                  placeholder="Your email from profile"
                   required
-                  className="border-gray-300"
+                  className="bg-gray-50"
                 />
               </div>
             </div>
@@ -446,8 +484,8 @@ export default function BookingForm({ coachId, availability, existingBookings, c
                   type="tel"
                   value={studentPhone}
                   onChange={(e) => setStudentPhone(e.target.value)}
-                  placeholder="+234..."
-                  className="border-gray-300"
+                  placeholder={studentPhone ? '' : 'Add phone to your profile'}
+                  className="bg-gray-50"
                 />
               </div>
               <div className="space-y-2">

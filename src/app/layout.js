@@ -5,6 +5,7 @@ import Providers from "@/components/Providers";
 import { Toaster } from "@/components/ui/sonner";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import { defaultMetadata } from "@/lib/metadata";
+import "@/lib/debug"; // Debug utilities - remove in production
 
 const inter = Inter({ subsets: ["latin"] });
 

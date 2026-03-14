@@ -12,15 +12,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, Clock } from 'lucide-react'
 
 export default function BookCoachClient({ coachId }) {
-  // Debug logging
-  console.log('BookCoachClient received coachId:', coachId)
-  
   const { data: coach, isLoading: loadingCoach, error } = useCoach(coachId)
   const { data: availability = [], isLoading: loadingAvailability } = useCoachAvailability(coachId)
   const { data: bookings = [] } = useCoachBookings(coachId)
-
-  // Debug logging
-  console.log('useCoach result:', { coach, loadingCoach, error })
 
   if (loadingCoach) {
     return (

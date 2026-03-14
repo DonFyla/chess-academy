@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server'
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY
-const WHATSAPP_LINK = process.env.NEXT_PUBLIC_WHATSAPP_LINK || 'https://wa.link/uj48gk'
-
 // Bank account details for payment
 const BANK_DETAILS = {
-  bankName: 'Guarantee Trust Bank(GTB)',
-  accountNumber: '0449558330',
-  accountName: 'Moving Train Chess Academy Ltd',
+  bankName: 'GT Bank',
+  accountNumber: '0878016456',
+  accountName: 'The Moving Train Educational Services Ltd',
 }
 
 const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -97,7 +94,7 @@ const emailTemplates = {
             </ol>
             
             <div style="text-align: center; margin: 25px 0;">
-              <a href="${WHATSAPP_LINK}" 
+              <a href="${process.env.NEXT_PUBLIC_WHATSAPP_LINK || 'https://wa.link/uj48gk'}" 
                  style="display: inline-block; background: #25D366; color: white; padding: 15px 40px; 
                         text-decoration: none; border-radius: 25px; font-weight: bold;">
                 📤 Send Payment Receipt via WhatsApp
@@ -155,7 +152,6 @@ const emailTemplates = {
             <h3 style="margin-top: 0; color: #5E5044;">Schedule</h3>
             <p><strong>Schedule:</strong> ${schedule}</p>
             <p><strong>Total Sessions:</strong> ${booking.sessions_per_month || 4}</p>
-            <p><strong>Amount:</strong> ₦${parseInt(totalAmount).toLocaleString()}</p>
             <p><strong>Reference:</strong> ${bookingRef}</p>
           </div>
           
@@ -286,7 +282,6 @@ const emailTemplates = {
             <h3 style="margin-top: 0; color: #5E5044;">Confirmed Schedule</h3>
             <p><strong>Schedule:</strong> ${schedule}</p>
             <p><strong>Total Sessions:</strong> ${booking.sessions_per_month || 4}</p>
-            <p><strong>Amount Paid:</strong> ₦${parseInt(totalAmount).toLocaleString()}</p>
             <p><strong>First Lesson:</strong> ${booking.booking_date ? new Date(booking.booking_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'To be confirmed'}</p>
           </div>
           
@@ -354,7 +349,9 @@ export async function POST(request) {
   try {
     const { type, booking, recipient } = await request.json()
 
-    if (!RESEND_API_KEY) {
+    const resendKey = process.env.RESEND_API_KEY
+    
+    if (!resendKey) {
       console.error('RESEND_API_KEY is not configured')
       return NextResponse.json(
         { error: 'Email service not configured' },
@@ -397,7 +394,7 @@ export async function POST(request) {
       method: 'POST',
     headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Authorization': `Bearer ${resendKey}`,
       },
       body: JSON.stringify({
         from: 'Moving Train Chess Academy <bookings@themovingtrain.org>',

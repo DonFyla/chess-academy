@@ -1,10 +1,13 @@
 'use client'
 
+import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CoachCard from '@/components/scheduling/CoachCard'
 import { useCoaches } from '@/hooks/useCoaches'
-import { Users } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Users, Crown, Star, ArrowRight } from 'lucide-react'
 
 export default function BookClient() {
   const { data: coaches, isLoading, error } = useCoaches()
@@ -23,6 +26,34 @@ export default function BookClient() {
         </header>
 
         <main className="container mx-auto px-4 py-8">
+          {/* Special Coaches Banner */}
+          <Card className="mb-8 bg-gradient-to-r from-[#5E5044] to-[#7a6b5c] text-white overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Crown className="w-5 h-5 text-yellow-400" />
+                    <span className="text-yellow-400 font-semibold">Elite Coaching</span>
+                  </div>
+                  <h2 className="text-2xl font-bold mb-2">
+                    Learn from Nigeria&apos;s #1 Chess Masters
+                  </h2>
+                  <p className="text-gray-200">
+                    Book one-on-one sessions with FIDE Masters and National Champions.
+                    Personalized training for serious players.
+                  </p>
+                </div>
+                <Link href="/special-coaches">
+                  <Button className="bg-white text-[#5E5044] hover:bg-gray-100 whitespace-nowrap">
+                    <Star className="w-4 h-4 mr-2" />
+                    View Elite Coaches
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-2 text-black">Find Your Coach</h2>
             <p className="text-gray-600">

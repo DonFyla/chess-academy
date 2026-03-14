@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { useCoaches, useCreateCoach, useDeleteCoach } from '@/hooks/useCoaches'
+import { useAllCoaches, useCreateCoach, useDeleteCoach } from '@/hooks/useCoaches'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -36,7 +36,7 @@ export default function AdminCoachesClient() {
     user_id: ''
   })
 
-  const { data: coaches, isLoading: loadingCoaches } = useCoaches()
+  const { data: coaches, isLoading: loadingCoaches } = useAllCoaches()
   const createCoach = useCreateCoach()
   const deleteCoach = useDeleteCoach()
 
@@ -338,6 +338,7 @@ export default function AdminCoachesClient() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Name</TableHead>
+                          <TableHead>Type</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Linked User</TableHead>
                           <TableHead>Specialization</TableHead>
@@ -350,6 +351,18 @@ export default function AdminCoachesClient() {
                           <TableRow key={coach.id}>
                             <TableCell>
                               <div className="font-medium text-black">{coach.name}</div>
+                            </TableCell>
+                            <TableCell>
+                              {coach.is_special ? (
+                                <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                                  <Crown className="w-3 h-3 mr-1" />
+                                  Elite
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-gray-600">
+                                  Regular
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell>
                               {coach.email ? (
