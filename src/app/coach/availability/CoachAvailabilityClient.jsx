@@ -14,8 +14,11 @@ import { useCoachBlockedDates, useBlockCoachDate, useUnblockCoachDate } from '@/
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format, addDays } from 'date-fns'
-import { Clock, Calendar, ArrowLeft, Video, Save, Coins, Ban, X } from 'lucide-react'
+import { Clock, Calendar, ArrowLeft, Video, Save, Coins, Ban, X, User } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase, getCurrentCoach } from '@/lib/supabase'
 
@@ -34,6 +37,17 @@ export default function CoachAvailabilityClient() {
   const [meetingLink, setMeetingLink] = useState('')
   const [savingLink, setSavingLink] = useState(false)
   const [expandedBooking, setExpandedBooking] = useState(null)
+  const [activeTab, setActiveTab] = useState('schedule')
+  
+  // Profile editing state
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    specialization: '',
+    bio: '',
+    achievements: '',
+    photo_url: ''
+  })
+  const [savingProfile, setSavingProfile] = useState(false)
 
   useEffect(() => {
     async function loadCoach() {
@@ -46,6 +60,17 @@ export default function CoachAvailabilityClient() {
         }
         setCoach(currentCoach)
         setMeetingLink(currentCoach.meeting_link || '')
+        
+        // Set profile form with current coach data
+        setProfileForm({
+          name: currentCoach.name || '',
+          specialization: currentCoach.specialization || '',
+          bio: currentCoach.bio || '',
+          achievements: Array.isArray(currentCoach.achievements) 
+            ? currentCoach.achievements.join(', ') 
+            : currentCoach.achievements || '',
+          photo_url: currentCoach.photo_url || ''
+        })
       } catch (error) {
         toast.error('Failed to load coach data')
       } finally {
@@ -54,6 +79,47 @@ export default function CoachAvailabilityClient() {
     }
     loadCoach()
   }, [router])
+  
+  const handleSaveProfile = async (e) => {
+    e.preventDefault()
+    if (!coach) return
+    
+    setSavingProfile(true)
+    try {
+      // Convert achievements string to array
+      const achievementsArray = profileForm.achievements
+        .split(',')
+        .map(a => a.trim())
+        .filter(a => a.length > 0)
+      
+      const { error } = await supabase
+        .from('coaches')
+        .update({
+          name: profileForm.name.trim(),
+          specialization: profileForm.specialization.trim() || null,
+          bio: profileForm.bio.trim() || null,
+          achievements: achievementsArray.length > 0 ? achievementsArray : null,
+          photo_url: profileForm.photo_url.trim() || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', coach.id)
+      
+      if (error) throw error
+      
+      toast.success('Profile updated successfully!')
+      // Update local coach data
+      setCoach({ 
+        ...coach, 
+        ...profileForm,
+        achievements: achievementsArray
+      })
+    } catch (error) {
+      console.error('Error saving profile:', error)
+      toast.error('Failed to save profile')
+    } finally {
+      setSavingProfile(false)
+    }
+  }
 
   const { data: availability = [], isLoading: loadingAvailability } = useCoachAvailability(coach?.id)
   const { data: bookings = [], isLoading: loadingBookings } = useCoachBookings(coach?.id)
@@ -217,35 +283,50 @@ export default function CoachAvailabilityClient() {
             <h1 className="text-3xl font-bold text-black">Coach Dashboard</h1>
             <span className="text-gray-600">Welcome, {coach.name}</span>
           </div>
-
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Left Column: Meeting Link + Upcoming Bookings */}
-            <div className="space-y-8">
-              {/* Meeting Link */}
-              <Card className="bg-white">
-                <CardHeader>
-                  <CardTitle className="text-black flex items-center gap-2">
-                    <Video className="h-5 w-5" />
-                    My Meeting Link
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-gray-600">
-                    Set your Zoom or Google Meet link. This will be automatically sent to students when their payment is confirmed.
-                  </p>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Meeting URL</label>
-                    <input
-                      type="url"
-                      value={meetingLink}
-                      onChange={(e) => setMeetingLink(e.target.value)}
-                      placeholder="https://zoom.us/j/123456789"
-                      className="w-full px-3 py-2 border rounded-lg bg-white"
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleSaveMeetingLink}
-                    disabled={savingLink}
+          
+          {/* Tabs for Schedule and Profile */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="schedule" className="data-[state=active]:bg-[#5E5044] data-[state=active]:text-white">
+                <Calendar className="w-4 h-4 mr-2" />
+                My Schedule
+              </TabsTrigger>
+              <TabsTrigger value="profile" className="data-[state=active]:bg-[#5E5044] data-[state=active]:text-white">
+                <User className="w-4 h-4 mr-2" />
+                My Profile
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* Schedule Tab */}
+            <TabsContent value="schedule">
+              <div className="grid lg:grid-cols-2 gap-8">
+                {/* Left Column: Meeting Link + Upcoming Bookings */}
+                <div className="space-y-8">
+                  {/* Meeting Link */}
+                  <Card className="bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-black flex items-center gap-2">
+                        <Video className="h-5 w-5" />
+                        My Meeting Link
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-gray-600">
+                        Set your Zoom or Google Meet link. This will be automatically sent to students when their payment is confirmed.
+                      </p>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Meeting URL</label>
+                        <input
+                          type="url"
+                          value={meetingLink}
+                          onChange={(e) => setMeetingLink(e.target.value)}
+                          placeholder="https://zoom.us/j/123456789"
+                          className="w-full px-3 py-2 border rounded-lg bg-white"
+                        />
+                      </div>
+                      <Button 
+                        onClick={handleSaveMeetingLink}
+                        disabled={savingLink}
                     className="bg-[#5E5044] hover:bg-[#4a3f35]"
                   >
                     <Save className="mr-2 h-4 w-4" />
@@ -586,6 +667,120 @@ export default function CoachAvailabilityClient() {
               </Card>
             </div>
           </div>
+            </TabsContent>
+            
+            {/* Profile Tab */}
+            <TabsContent value="profile">
+              <div className="max-w-2xl mx-auto">
+                <Card className="bg-white">
+                  <CardHeader>
+                    <CardTitle className="text-black flex items-center gap-2">
+                      <User className="h-5 w-5" />
+                      Edit My Profile
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleSaveProfile} className="space-y-6">
+                      {/* Name */}
+                      <div className="space-y-2">
+                        <Label htmlFor="name" className="text-black">Full Name *</Label>
+                        <Input
+                          id="name"
+                          value={profileForm.name}
+                          onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                          placeholder="Your full name"
+                          required
+                          className="bg-white"
+                        />
+                      </div>
+                      
+                      {/* Specialization */}
+                      <div className="space-y-2">
+                        <Label htmlFor="specialization" className="text-black">Specialization</Label>
+                        <Input
+                          id="specialization"
+                          value={profileForm.specialization}
+                          onChange={(e) => setProfileForm({ ...profileForm, specialization: e.target.value })}
+                          placeholder="e.g., Beginner Training, Opening Theory, Endgame Mastery"
+                          className="bg-white"
+                        />
+                      </div>
+                      
+                      {/* Bio */}
+                      <div className="space-y-2">
+                        <Label htmlFor="bio" className="text-black">Bio</Label>
+                        <textarea
+                          id="bio"
+                          value={profileForm.bio}
+                          onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                          placeholder="Tell students about yourself, your teaching style, and experience..."
+                          rows={4}
+                          className="w-full px-3 py-2 border rounded-lg bg-white text-black"
+                        />
+                      </div>
+                      
+                      {/* Achievements */}
+                      <div className="space-y-2">
+                        <Label htmlFor="achievements" className="text-black">Achievements</Label>
+                        <Input
+                          id="achievements"
+                          value={profileForm.achievements}
+                          onChange={(e) => setProfileForm({ ...profileForm, achievements: e.target.value })}
+                          placeholder="e.g., FIDE Master, National Champion, 2000+ Elo (comma separated)"
+                          className="bg-white"
+                        />
+                        <p className="text-xs text-gray-500">Separate multiple achievements with commas</p>
+                      </div>
+                      
+                      {/* Photo URL */}
+                      <div className="space-y-2">
+                        <Label htmlFor="photo_url" className="text-black">Profile Photo URL</Label>
+                        <Input
+                          id="photo_url"
+                          type="url"
+                          value={profileForm.photo_url}
+                          onChange={(e) => setProfileForm({ ...profileForm, photo_url: e.target.value })}
+                          placeholder="https://example.com/your-photo.jpg"
+                          className="bg-white"
+                        />
+                        <p className="text-xs text-gray-500">Provide a direct link to your profile photo</p>
+                      </div>
+                      
+                      {/* Preview */}
+                      {profileForm.photo_url && (
+                        <div className="space-y-2">
+                          <Label className="text-black">Photo Preview</Label>
+                          <div className="w-32 h-32 rounded-lg overflow-hidden border">
+                            <img 
+                              src={profileForm.photo_url} 
+                              alt="Profile preview"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.src = ''
+                                e.target.style.display = 'none'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Save Button */}
+                      <div className="pt-4">
+                        <Button 
+                          type="submit"
+                          disabled={savingProfile}
+                          className="w-full bg-[#5E5044] hover:bg-[#4a3f35]"
+                        >
+                          <Save className="w-4 h-4 mr-2" />
+                          {savingProfile ? 'Saving...' : 'Save Profile Changes'}
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
         </main>
       </div>
       <Footer />

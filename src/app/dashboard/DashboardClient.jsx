@@ -236,8 +236,15 @@ function TransactionItem({ transaction }) {
 
 export default function DashboardClient() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, isCoach } = useAuth()
   const [activeTab, setActiveTab] = useState('upcoming')
+  
+  // Redirect coaches to their schedule page
+  useEffect(() => {
+    if (!authLoading && user && isCoach()) {
+      router.push('/coach/availability')
+    }
+  }, [user, authLoading, isCoach, router])
   
   const { data: points, isLoading: pointsLoading } = useUserPoints(user?.id)
   const { data: transactions, isLoading: txLoading } = usePointTransactions(user?.id)
