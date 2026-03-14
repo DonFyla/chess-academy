@@ -152,7 +152,6 @@ const emailTemplates = {
             <h3 style="margin-top: 0; color: #5E5044;">Schedule</h3>
             <p><strong>Schedule:</strong> ${schedule}</p>
             <p><strong>Total Sessions:</strong> ${booking.sessions_per_month || 4}</p>
-            <p><strong>Amount:</strong> ₦${parseInt(totalAmount).toLocaleString()}</p>
             <p><strong>Reference:</strong> ${bookingRef}</p>
           </div>
           
