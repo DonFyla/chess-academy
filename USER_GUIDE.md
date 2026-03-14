@@ -179,6 +179,7 @@ Points are the currency used to book chess classes:
 4. Confirm cancellation
 5. **Important:** Must cancel at least 24 hours before class for full refund
 6. Points are refunded immediately
+7. **Coach is automatically notified** of the cancellation
 
 #### What You Can See
 - Coach name and specialization
