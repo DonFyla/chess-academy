@@ -204,6 +204,44 @@ const emailTemplates = {
         </div>
       `
     }
+  },
+  
+  coachBookingConfirmed: (booking) => {
+    const sessionDatesHtml = formatSessionDates(booking.session_dates)
+    const bookingRef = booking.id?.slice(0, 8).toUpperCase() || 'PENDING'
+    
+    return {
+      subject: `✅ Booking Confirmed - ${booking.student_name} (Payment Received)`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #5E5044;">Booking Payment Confirmed!</h2>
+          <p>Hello ${booking.coach_name},</p>
+          <p>Great news! Payment has been received and the following booking is now <strong>CONFIRMED</strong>.</p>
+          
+          <div style="background: #E8F5E9; border: 2px solid #4CAF50; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #2E7D32;">✅ Confirmed Student Details</h3>
+            <p><strong>Name:</strong> ${booking.student_name}</p>
+            <p><strong>Email:</strong> ${booking.student_email}</p>
+            <p><strong>Phone:</strong> ${booking.student_phone || 'Not provided'}</p>
+            <p><strong>Total Sessions:</strong> ${booking.total_sessions}</p>
+            <p><strong>Scheduled Dates:</strong><br>${sessionDatesHtml}</p>
+            ${booking.is_recurring ? `<p><strong>Type:</strong> Recurring weekly</p>` : ''}
+            <p><strong>Booking Reference:</strong> ${bookingRef}</p>
+          </div>
+          
+          <div style="background: #E3F2FD; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #1565C0;">
+              <strong>Next Steps:</strong> Please reach out to the student to coordinate session details and share your meeting link if needed.
+            </p>
+          </div>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            Moving Train Online Chess Academy
+          </p>
+        </div>
+      `
+    }
   }
 }
 
