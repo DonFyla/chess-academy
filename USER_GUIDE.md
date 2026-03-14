@@ -19,11 +19,20 @@ Complete documentation for Students, Coaches, and Administrators.
 ## Quick Start
 
 ### For Students
+
+#### Option A: With Account (Flexible Booking with Points)
 1. **Sign up** at `/signup` with your email
 2. **Confirm your email** (check spam folder)
 3. **Buy points** at `/buy-points` (₦10,000 per point)
 4. **Book a coach** at `/book-with-points` or `/book-elite`
 5. **Check your dashboard** at `/dashboard` for bookings
+
+#### Option B: Without Account (Monthly Subscription)
+1. **Go directly** to `/book` - no signup needed!
+2. **Choose a coach** and select weekly schedule
+3. **Pay ₦40,000** (4 classes) or ₦76,000 (8 classes)
+4. **WhatsApp receipt** to confirm
+5. **Start learning** - receive email with meeting links
 
 ### For Coaches
 1. **Contact admin** to get coach account created
@@ -124,18 +133,35 @@ Points are the currency used to book chess classes:
 5. Each session costs 2 points
 6. Complete booking
 
-#### Option 3: Monthly Subscription (₦40,000/month)
+#### Option 3: Monthly Subscription - No Account Needed! (₦40,000/month)
 
-1. Go to `/book` (without logging in or with no points)
-2. Select "Book a Session" from main menu
-3. Choose a coach
-4. Select:
+**Best for:** Students who want a fixed schedule and don't want to manage points
+
+**Key Benefits:**
+- ✅ No account creation required
+- ✅ No login needed
+- ✅ Fixed weekly schedule (same day/time each week)
+- ✅ Bank transfer payment
+
+**How to Book:**
+1. Go to `/book` - no need to log in!
+2. Click "Book a Session" from the main menu
+3. Browse and select a coach
+4. Choose your schedule:
    - **Once a week:** 4 sessions/month for ₦40,000
    - **Twice a week:** 8 sessions/month for ₦76,000 (5% discount)
-5. Fill in your details
-6. Make bank transfer
-7. WhatsApp receipt to confirm
-8. Admin will confirm and activate your subscription
+5. Enter your details (name, email, phone)
+6. Complete booking form
+7. Make bank transfer to GT Bank: 0878016456
+8. Send payment receipt via WhatsApp
+9. Admin confirms payment and activates your subscription
+10. Receive confirmation email with meeting links
+
+**Important Notes:**
+- You'll use your **email** to identify yourself (not a login)
+- Classes are on the same day/time each week
+- Payment must be made monthly to continue
+- Cancellations: Contact admin via WhatsApp
 
 ---
 
@@ -378,28 +404,42 @@ Admin panel includes:
 
 ## Booking System Explained
 
-### Three Types of Bookings
+### Three Types of Bookings - Which is Right for You?
 
-#### 1. Point-Based Booking (Registered Users)
-- **Who:** Students with accounts
-- **Payment:** Points (₦10,000/point)
+| Feature | Point-Based | Monthly Subscription | Special Coaching |
+|---------|-------------|---------------------|------------------|
+| **Account Required** | ✅ Yes | ❌ No | ❌ No |
+| **Login Needed** | ✅ Yes | ❌ No | ❌ No |
+| **Payment Method** | Points | Bank Transfer | Bank Transfer |
+| **Cost** | ₦10,000/point | ₦40K-76K/month | ₦15K/session |
+| **Flexibility** | Any slot | Fixed weekly | Any slot |
+| **Coach Type** | Any | Regular | Elite Only |
+| **Best For** | Flexible learners | Regular students | Serious players |
+
+---
+
+#### 1. Point-Based Booking (Account Required)
+- **Who:** Students with registered accounts
+- **Payment:** Points (₦10,000 per point)
 - **Cost:** 1 point (regular) or 2 points (elite) per class
-- **Flexibility:** Book any available slot
-- **Cancellation:** Full refund if >24h notice
+- **Flexibility:** Book any available slot, any coach
+- **Cancellation:** Full refund if cancelled >24h before class
+- **Requires:** Login and points balance
 
-#### 2. Monthly Subscription (Bank Transfer)
-- **Who:** Any student (registered or guest)
+#### 2. Monthly Subscription (NO Account Needed!) ⭐
+- **Who:** Any student - **no account or login required!**
 - **Payment:** Bank transfer
-- **Cost:** ₦40,000 (4 classes) or ₦76,000 (8 classes)
-- **Schedule:** Fixed weekly schedule
-- **Commitment:** Monthly recurring
+- **Cost:** ₦40,000 (4 classes/month) or ₦76,000 (8 classes/month)
+- **Schedule:** Fixed weekly schedule (same day/time each week)
+- **Booking:** Just enter your email on the booking form
+- **Best For:** Students who want consistency without managing points
 
-#### 3. Special Coaching (Elite Coaches)
-- **Who:** Any student
+#### 3. Special Coaching - Elite Coaches (NO Account Needed!)
+- **Who:** Any student - **no account or login required!**
 - **Payment:** Bank transfer
-- **Cost:** ₦15,000 per session
-- **Target:** FIDE Masters for serious students
-- **Booking:** Via special booking form
+- **Cost:** ₦15,000 per session with FIDE Masters
+- **Target:** Serious students, executives, gifted children
+- **Booking:** Direct booking form at `/special-coaches`
 
 ---
 
