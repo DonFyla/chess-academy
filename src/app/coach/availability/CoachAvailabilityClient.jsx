@@ -18,9 +18,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format, addDays } from 'date-fns'
-import { Clock, Calendar, ArrowLeft, Video, Save, Coins, Ban, X, User, Crown } from 'lucide-react'
+import { Clock, Calendar, ArrowLeft, Video, Save, Coins, Ban, X, User, Crown, Upload, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase, getCurrentCoach } from '@/lib/supabase'
+import { useStorageUpload } from '@/hooks/useStorage'
 
 function formatTime(time) {
   const [hours, minutes] = time.split(':')
@@ -51,6 +52,10 @@ export default function CoachAvailabilityClient() {
     special_bio: ''
   })
   const [savingProfile, setSavingProfile] = useState(false)
+  
+  // File upload state
+  const { uploadFile, uploading: uploadingImage, progress } = useStorageUpload()
+  const [selectedFile, setSelectedFile] = useState(null)
 
   useEffect(() => {
     async function loadCoach() {
@@ -753,18 +758,88 @@ export default function CoachAvailabilityClient() {
                         <p className="text-xs text-gray-500">Separate multiple achievements with commas</p>
                       </div>
                       
-                      {/* Photo URL */}
-                      <div className="space-y-2">
-                        <Label htmlFor="photo_url" className="text-black">Profile Photo URL</Label>
-                        <Input
-                          id="photo_url"
-                          type="url"
-                          value={profileForm.photo_url}
-                          onChange={(e) => setProfileForm({ ...profileForm, photo_url: e.target.value })}
-                          placeholder="https://example.com/your-photo.jpg"
-                          className="bg-white"
-                        />
-                        <p className="text-xs text-gray-500">Provide a direct link to your profile photo</p>
+                      {/* Profile Photo - URL or Upload */}
+                      <div className="space-y-4">
+                        <Label className="text-black">Profile Photo</Label>
+                        
+                        {/* Tabs for URL vs Upload */}
+                        <div className="flex gap-4 border-b">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFile(null)}
+                            className={`pb-2 px-1 text-sm font-medium ${!selectedFile ? 'border-b-2 border-[#5E5044] text-[#5E5044]' : 'text-gray-500'}`}
+                          >
+                            Photo URL
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setProfileForm({ ...profileForm, photo_url: '' })}
+                            className={`pb-2 px-1 text-sm font-medium ${selectedFile || (profileForm.photo_url === '' && !selectedFile === false) ? 'border-b-2 border-[#5E5044] text-[#5E5044]' : 'text-gray-500'}`}
+                          >
+                            Upload from Device
+                          </button>
+                        </div>
+                        
+                        {/* URL Input */}
+                        {!selectedFile && (
+                          <div className="space-y-2">
+                            <Input
+                              id="photo_url"
+                              type="url"
+                              value={profileForm.photo_url}
+                              onChange={(e) => setProfileForm({ ...profileForm, photo_url: e.target.value })}
+                              placeholder="https://example.com/your-photo.jpg"
+                              className="bg-white"
+                            />
+                            <p className="text-xs text-gray-500">Paste a link to your photo (Dropbox, Google Drive, etc.)</p>
+                          </div>
+                        )}
+                        
+                        {/* File Upload */}
+                        <div className="space-y-2">
+                          <input
+                            type="file"
+                            id="photo_upload"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+                              
+                              try {
+                                const { url } = await uploadFile({
+                                  file,
+                                  folder: coach?.user_id || 'unlinked',
+                                  onProgress: (percent) => {
+                                    console.log(`Upload progress: ${percent}%`)
+                                  }
+                                })
+                                setProfileForm({ ...profileForm, photo_url: url })
+                                setSelectedFile(file)
+                                toast.success('Photo uploaded!')
+                              } catch (error) {
+                                console.error('Upload failed:', error)
+                              }
+                            }}
+                            className="hidden"
+                          />
+                          <label
+                            htmlFor="photo_upload"
+                            className="flex items-center justify-center gap-2 w-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-[#5E5044] hover:bg-[#F5EFE7] transition-colors"
+                          >
+                            {uploadingImage ? (
+                              <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>Uploading... {progress}%</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-5 h-5" />
+                                <span>Click to upload photo</span>
+                              </>
+                            )}
+                          </label>
+                          <p className="text-xs text-gray-500 text-center">Max 5MB. JPEG, PNG, GIF, WebP</p>
+                        </div>
                       </div>
                       
                       {/* Preview */}
