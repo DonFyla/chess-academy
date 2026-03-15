@@ -697,6 +697,11 @@ export default function CoachAvailabilityClient() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
+                    {!coach ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="animate-pulse text-gray-500">Loading profile...</div>
+                      </div>
+                    ) : (
                     <form onSubmit={handleSaveProfile} className="space-y-6">
                       {/* Name */}
                       <div className="space-y-2">
@@ -849,6 +854,7 @@ export default function CoachAvailabilityClient() {
                         </Button>
                       </div>
                     </form>
+                    )}
                   </CardContent>
                 </Card>
               </div>
