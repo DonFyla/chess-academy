@@ -66,6 +66,14 @@ function SpecialCoachCard({ coach, index }) {
       </div>
       
       <CardContent className="p-6">
+        {/* Rank Title */}
+        {coach.rank_title && (
+          <Badge className="mb-3 bg-[#5E5044] text-white">
+            <Crown className="w-3 h-3 mr-1" />
+            {coach.rank_title}
+          </Badge>
+        )}
+        
         {/* Name */}
         <h2 className="text-2xl font-bold text-black mb-2">{coach.name}</h2>
         
