@@ -156,6 +156,25 @@ export default function AdminCoachesClient() {
     }
   }
 
+  const handleToggleElite = async (coach) => {
+    try {
+      const { error } = await supabase
+        .from('coaches')
+        .update({ 
+          is_special: !coach.is_special,
+          points_cost: !coach.is_special ? 2 : 1  // Elite coaches cost 2 points, regular cost 1
+        })
+        .eq('id', coach.id)
+      
+      if (error) throw error
+      toast.success(`${coach.name} is now ${!coach.is_special ? 'an Elite coach' : 'a Regular coach'}`)
+      window.location.reload()
+    } catch (error) {
+      console.error('Toggle elite error:', error)
+      toast.error('Failed to update elite status')
+    }
+  }
+
   const handleLinkUser = async (coach, userId) => {
     console.log('Linking coach:', coach.id, 'to user:', userId)
     
@@ -420,7 +439,7 @@ export default function AdminCoachesClient() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <div className="flex gap-2">
+                              <div className="flex flex-wrap gap-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -428,6 +447,18 @@ export default function AdminCoachesClient() {
                                   className={coach.is_admin ? "text-red-600" : "text-purple-600"}
                                 >
                                   {coach.is_admin ? 'Remove Admin' : 'Make Admin'}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleToggleElite(coach)}
+                                  className={coach.is_special ? "text-orange-600" : "text-purple-600"}
+                                >
+                                  {coach.is_special ? (
+                                    <><Crown className="h-3 w-3 mr-1" /> Remove Elite</>
+                                  ) : (
+                                    <><Crown className="h-3 w-3 mr-1" /> Make Elite</>
+                                  )}
                                 </Button>
                                 <Button
                                   size="sm"
