@@ -822,7 +822,7 @@ export default function CoachAvailabilityClient() {
                         <p className="text-xs text-gray-500">Extended bio shown on the special coaches booking page</p>
                       </div>
                       
-                      {/* Save Button -->
+                      {/* Save Button */}
                       <div className="pt-4">
                         <Button 
                           type="submit"
