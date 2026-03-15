@@ -22,7 +22,7 @@ function SpecialCoachCard({ coach, index }) {
     <Card className={`overflow-hidden transition-all duration-300 hover:shadow-xl ${
       isTopThree ? 'border-2 border-[#5E5044]' : ''
     }`}>
-      {/* Photo -->
+      {/* Photo */}
       <div className="relative h-64 bg-[#F5EFE7]">
         {coach.photo_url ? (
           <img
