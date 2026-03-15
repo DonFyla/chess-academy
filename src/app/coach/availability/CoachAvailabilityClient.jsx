@@ -107,8 +107,7 @@ export default function CoachAvailabilityClient() {
         achievements: achievementsArray.length > 0 ? achievementsArray : null,
         photo_url: profileForm.photo_url?.trim() || null,
         rank_title: profileForm.rank_title?.trim() || null,
-        special_bio: profileForm.special_bio?.trim() || null,
-        updated_at: new Date().toISOString()
+        special_bio: profileForm.special_bio?.trim() || null
       }
       
       console.log('Updating coach profile:', { coachId: coach.id, updateData })
