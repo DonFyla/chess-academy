@@ -14,10 +14,14 @@ import { useCoachBlockedDates, useBlockCoachDate, useUnblockCoachDate } from '@/
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format, addDays } from 'date-fns'
-import { Clock, Calendar, ArrowLeft, Video, Save, Coins, Ban, X } from 'lucide-react'
+import { Clock, Calendar, ArrowLeft, Video, Save, Coins, Ban, X, User, Crown, Upload, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase, getCurrentCoach } from '@/lib/supabase'
+import { useStorageUpload } from '@/hooks/useStorage'
 
 function formatTime(time) {
   const [hours, minutes] = time.split(':')
@@ -34,6 +38,24 @@ export default function CoachAvailabilityClient() {
   const [meetingLink, setMeetingLink] = useState('')
   const [savingLink, setSavingLink] = useState(false)
   const [expandedBooking, setExpandedBooking] = useState(null)
+  const [activeTab, setActiveTab] = useState('schedule')
+  
+  // Profile editing state - includes ALL fields admin can fill
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    email: '',
+    specialization: '',
+    bio: '',
+    achievements: '',
+    photo_url: '',
+    rank_title: '',
+    special_bio: ''
+  })
+  const [savingProfile, setSavingProfile] = useState(false)
+  
+  // File upload state
+  const { uploadFile, uploading: uploadingImage, progress } = useStorageUpload()
+  const [selectedFile, setSelectedFile] = useState(null)
 
   useEffect(() => {
     async function loadCoach() {
@@ -46,6 +68,20 @@ export default function CoachAvailabilityClient() {
         }
         setCoach(currentCoach)
         setMeetingLink(currentCoach.meeting_link || '')
+        
+        // Set profile form with ALL current coach data
+        setProfileForm({
+          name: currentCoach.name || '',
+          email: currentCoach.email || '',
+          specialization: currentCoach.specialization || '',
+          bio: currentCoach.bio || '',
+          achievements: Array.isArray(currentCoach.achievements) 
+            ? currentCoach.achievements.join(', ') 
+            : currentCoach.achievements || '',
+          photo_url: currentCoach.photo_url || '',
+          rank_title: currentCoach.rank_title || '',
+          special_bio: currentCoach.special_bio || ''
+        })
       } catch (error) {
         toast.error('Failed to load coach data')
       } finally {
@@ -54,6 +90,57 @@ export default function CoachAvailabilityClient() {
     }
     loadCoach()
   }, [router])
+  
+  const handleSaveProfile = async (e) => {
+    e.preventDefault()
+    if (!coach) return
+    
+    setSavingProfile(true)
+    try {
+      // Convert achievements string to array
+      const achievementsArray = profileForm.achievements
+        .split(',')
+        .map(a => a.trim())
+        .filter(a => a.length > 0)
+      
+      // Prepare update data with ALL coach fields
+      const updateData = {
+        name: profileForm.name.trim(),
+        email: profileForm.email?.trim() || null,
+        specialization: profileForm.specialization?.trim() || null,
+        bio: profileForm.bio?.trim() || null,
+        achievements: achievementsArray.length > 0 ? achievementsArray : null,
+        photo_url: profileForm.photo_url?.trim() || null,
+        rank_title: profileForm.rank_title?.trim() || null,
+        special_bio: profileForm.special_bio?.trim() || null
+      }
+      
+      console.log('Updating coach profile:', { coachId: coach.id, updateData })
+      
+      const { data, error } = await supabase
+        .from('coaches')
+        .update(updateData)
+        .eq('id', coach.id)
+        .select()
+        .single()
+      
+      if (error) {
+        console.error('Supabase update error:', error)
+        throw new Error(error.message || 'Failed to update profile')
+      }
+      
+      console.log('Profile updated successfully:', data)
+      toast.success('Profile updated successfully!')
+      
+      // Update local coach data with returned data
+      setCoach(data)
+    } catch (error) {
+      console.error('Error saving profile:', error)
+      toast.error('Failed to save profile: ' + (error.message || 'Unknown error'))
+    } finally {
+      setSavingProfile(false)
+    }
+  }
 
   const { data: availability = [], isLoading: loadingAvailability } = useCoachAvailability(coach?.id)
   const { data: bookings = [], isLoading: loadingBookings } = useCoachBookings(coach?.id)
@@ -217,35 +304,50 @@ export default function CoachAvailabilityClient() {
             <h1 className="text-3xl font-bold text-black">Coach Dashboard</h1>
             <span className="text-gray-600">Welcome, {coach.name}</span>
           </div>
-
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Left Column: Meeting Link + Upcoming Bookings */}
-            <div className="space-y-8">
-              {/* Meeting Link */}
-              <Card className="bg-white">
-                <CardHeader>
-                  <CardTitle className="text-black flex items-center gap-2">
-                    <Video className="h-5 w-5" />
-                    My Meeting Link
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-gray-600">
-                    Set your Zoom or Google Meet link. This will be automatically sent to students when their payment is confirmed.
-                  </p>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Meeting URL</label>
-                    <input
-                      type="url"
-                      value={meetingLink}
-                      onChange={(e) => setMeetingLink(e.target.value)}
-                      placeholder="https://zoom.us/j/123456789"
-                      className="w-full px-3 py-2 border rounded-lg bg-white"
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleSaveMeetingLink}
-                    disabled={savingLink}
+          
+          {/* Tabs for Schedule and Profile */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="schedule" className="data-[state=active]:bg-[#5E5044] data-[state=active]:text-white">
+                <Calendar className="w-4 h-4 mr-2" />
+                My Schedule
+              </TabsTrigger>
+              <TabsTrigger value="profile" className="data-[state=active]:bg-[#5E5044] data-[state=active]:text-white">
+                <User className="w-4 h-4 mr-2" />
+                My Profile
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* Schedule Tab */}
+            <TabsContent value="schedule">
+              <div className="grid lg:grid-cols-2 gap-8">
+                {/* Left Column: Meeting Link + Upcoming Bookings */}
+                <div className="space-y-8">
+                  {/* Meeting Link */}
+                  <Card className="bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-black flex items-center gap-2">
+                        <Video className="h-5 w-5" />
+                        My Meeting Link
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-gray-600">
+                        Set your Zoom or Google Meet link. This will be automatically sent to students when their payment is confirmed.
+                      </p>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Meeting URL</label>
+                        <input
+                          type="url"
+                          value={meetingLink}
+                          onChange={(e) => setMeetingLink(e.target.value)}
+                          placeholder="https://zoom.us/j/123456789"
+                          className="w-full px-3 py-2 border rounded-lg bg-white"
+                        />
+                      </div>
+                      <Button 
+                        onClick={handleSaveMeetingLink}
+                        disabled={savingLink}
                     className="bg-[#5E5044] hover:bg-[#4a3f35]"
                   >
                     <Save className="mr-2 h-4 w-4" />
@@ -586,6 +688,252 @@ export default function CoachAvailabilityClient() {
               </Card>
             </div>
           </div>
+            </TabsContent>
+            
+            {/* Profile Tab */}
+            <TabsContent value="profile">
+              <div className="max-w-2xl mx-auto">
+                <Card className="bg-white">
+                  <CardHeader>
+                    <CardTitle className="text-black flex items-center gap-2">
+                      <User className="h-5 w-5" />
+                      Edit My Profile
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!coach ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="animate-pulse text-gray-500">Loading profile...</div>
+                      </div>
+                    ) : (
+                    <form onSubmit={handleSaveProfile} className="space-y-6">
+                      {/* Name */}
+                      <div className="space-y-2">
+                        <Label htmlFor="name" className="text-black">Full Name *</Label>
+                        <Input
+                          id="name"
+                          value={profileForm.name}
+                          onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                          placeholder="Your full name"
+                          required
+                          className="bg-white"
+                        />
+                      </div>
+                      
+                      {/* Specialization */}
+                      <div className="space-y-2">
+                        <Label htmlFor="specialization" className="text-black">Specialization</Label>
+                        <Input
+                          id="specialization"
+                          value={profileForm.specialization}
+                          onChange={(e) => setProfileForm({ ...profileForm, specialization: e.target.value })}
+                          placeholder="e.g., Beginner Training, Opening Theory, Endgame Mastery"
+                          className="bg-white"
+                        />
+                      </div>
+                      
+                      {/* Bio */}
+                      <div className="space-y-2">
+                        <Label htmlFor="bio" className="text-black">Bio</Label>
+                        <textarea
+                          id="bio"
+                          value={profileForm.bio}
+                          onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                          placeholder="Tell students about yourself, your teaching style, and experience..."
+                          rows={4}
+                          className="w-full px-3 py-2 border rounded-lg bg-white text-black"
+                        />
+                      </div>
+                      
+                      {/* Achievements */}
+                      <div className="space-y-2">
+                        <Label htmlFor="achievements" className="text-black">Achievements</Label>
+                        <Input
+                          id="achievements"
+                          value={profileForm.achievements}
+                          onChange={(e) => setProfileForm({ ...profileForm, achievements: e.target.value })}
+                          placeholder="e.g., FIDE Master, National Champion, 2000+ Elo (comma separated)"
+                          className="bg-white"
+                        />
+                        <p className="text-xs text-gray-500">Separate multiple achievements with commas</p>
+                      </div>
+                      
+                      {/* Profile Photo - URL or Upload */}
+                      <div className="space-y-4">
+                        <Label className="text-black">Profile Photo</Label>
+                        
+                        {/* Tabs for URL vs Upload */}
+                        <div className="flex gap-4 border-b">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFile(null)}
+                            className={`pb-2 px-1 text-sm font-medium ${!selectedFile ? 'border-b-2 border-[#5E5044] text-[#5E5044]' : 'text-gray-500'}`}
+                          >
+                            Photo URL
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setProfileForm({ ...profileForm, photo_url: '' })}
+                            className={`pb-2 px-1 text-sm font-medium ${selectedFile || (profileForm.photo_url === '' && !selectedFile === false) ? 'border-b-2 border-[#5E5044] text-[#5E5044]' : 'text-gray-500'}`}
+                          >
+                            Upload from Device
+                          </button>
+                        </div>
+                        
+                        {/* URL Input */}
+                        {!selectedFile && (
+                          <div className="space-y-2">
+                            <Input
+                              id="photo_url"
+                              type="url"
+                              value={profileForm.photo_url}
+                              onChange={(e) => setProfileForm({ ...profileForm, photo_url: e.target.value })}
+                              placeholder="https://example.com/your-photo.jpg"
+                              className="bg-white"
+                            />
+                            <p className="text-xs text-gray-500">Paste a link to your photo (Dropbox, Google Drive, etc.)</p>
+                          </div>
+                        )}
+                        
+                        {/* File Upload */}
+                        <div className="space-y-2">
+                          <input
+                            type="file"
+                            id="photo_upload"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+                              
+                              try {
+                                const { url } = await uploadFile({
+                                  file,
+                                  folder: coach?.user_id || 'unlinked',
+                                  onProgress: (percent) => {
+                                    console.log(`Upload progress: ${percent}%`)
+                                  }
+                                })
+                                setProfileForm({ ...profileForm, photo_url: url })
+                                setSelectedFile(file)
+                                toast.success('Photo uploaded!')
+                              } catch (error) {
+                                console.error('Upload failed:', error)
+                              }
+                            }}
+                            className="hidden"
+                          />
+                          <label
+                            htmlFor="photo_upload"
+                            className="flex items-center justify-center gap-2 w-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-[#5E5044] hover:bg-[#F5EFE7] transition-colors"
+                          >
+                            {uploadingImage ? (
+                              <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>Uploading... {progress}%</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-5 h-5" />
+                                <span>Click to upload photo</span>
+                              </>
+                            )}
+                          </label>
+                          <p className="text-xs text-gray-500 text-center">Max 5MB. JPEG, PNG, GIF, WebP</p>
+                        </div>
+                      </div>
+                      
+                      {/* Preview */}
+                      {profileForm.photo_url && (
+                        <div className="space-y-2">
+                          <Label className="text-black">Photo Preview</Label>
+                          <div className="w-32 h-32 rounded-lg overflow-hidden border">
+                            <img 
+                              src={profileForm.photo_url} 
+                              alt="Profile preview"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.src = ''
+                                e.target.style.display = 'none'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Email for notifications */}
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="text-black">Email for Notifications</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={profileForm.email}
+                          onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                          placeholder="coach@example.com"
+                          className="bg-white"
+                        />
+                        <p className="text-xs text-gray-500">Used to send booking notifications</p>
+                      </div>
+                      
+                      {/* Elite Coach Fields - Only shown for elite coaches */}
+                      {coach?.is_special && (
+                        <div className="space-y-6 pt-4 border-t">
+                          <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                            <h4 className="font-semibold text-purple-800 mb-2 flex items-center gap-2">
+                              <Crown className="w-4 h-4" />
+                              Elite Coach Profile Fields
+                            </h4>
+                            <p className="text-sm text-purple-600">
+                              These fields are displayed on the Special Coaches booking page.
+                            </p>
+                          </div>
+                          
+                          {/* Rank Title */}
+                          <div className="space-y-2">
+                            <Label htmlFor="rank_title" className="text-black">Rank / Title</Label>
+                            <Input
+                              id="rank_title"
+                              value={profileForm.rank_title}
+                              onChange={(e) => setProfileForm({ ...profileForm, rank_title: e.target.value })}
+                              placeholder="e.g., FIDE Master, National Champion, Nigeria's #1"
+                              className="bg-white"
+                            />
+                            <p className="text-xs text-gray-500">Your chess title or ranking displayed on your elite coach profile</p>
+                          </div>
+                          
+                          {/* Special Bio */}
+                          <div className="space-y-2">
+                            <Label htmlFor="special_bio" className="text-black">Extended Bio</Label>
+                            <textarea
+                              id="special_bio"
+                              value={profileForm.special_bio}
+                              onChange={(e) => setProfileForm({ ...profileForm, special_bio: e.target.value })}
+                              placeholder="Detailed biography for your elite coach profile page..."
+                              rows={4}
+                              className="w-full px-3 py-2 border rounded-lg bg-white text-black"
+                            />
+                            <p className="text-xs text-gray-500">Detailed bio shown on the special coaches booking page</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Save Button */}
+                      <div className="pt-4">
+                        <Button 
+                          type="submit"
+                          disabled={savingProfile}
+                          className="w-full bg-[#5E5044] hover:bg-[#4a3f35]"
+                        >
+                          <Save className="w-4 h-4 mr-2" />
+                          {savingProfile ? 'Saving...' : 'Save Profile Changes'}
+                        </Button>
+                      </div>
+                    </form>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
         </main>
       </div>
       <Footer />

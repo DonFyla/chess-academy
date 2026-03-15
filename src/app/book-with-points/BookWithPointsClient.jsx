@@ -11,7 +11,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
   Coins, 
-  Crown, 
   Star, 
   Clock,
   ArrowRight,
@@ -56,14 +55,6 @@ function CoachCard({ coach }) {
       </div>
       
       <CardContent className="p-5">
-        {/* Special Badge */}
-        {isSpecial && (
-          <Badge className="mb-2 bg-purple-100 text-purple-800">
-            <Crown className="w-3 h-3 mr-1" />
-            {coach.rank_title || 'Elite Coach'}
-          </Badge>
-        )}
-        
         {/* Name */}
         <h3 className="text-xl font-bold text-black mb-1">{coach.name}</h3>
         
