@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format, addDays } from 'date-fns'
-import { Clock, Calendar, ArrowLeft, Video, Save, Coins, Ban, X, User } from 'lucide-react'
+import { Clock, Calendar, ArrowLeft, Video, Save, Coins, Ban, X, User, Crown } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase, getCurrentCoach } from '@/lib/supabase'
 
@@ -795,32 +795,47 @@ export default function CoachAvailabilityClient() {
                         <p className="text-xs text-gray-500">Used to send booking notifications</p>
                       </div>
                       
-                      {/* Rank Title (for elite coaches) */}
-                      <div className="space-y-2">
-                        <Label htmlFor="rank_title" className="text-black">Rank / Title</Label>
-                        <Input
-                          id="rank_title"
-                          value={profileForm.rank_title}
-                          onChange={(e) => setProfileForm({ ...profileForm, rank_title: e.target.value })}
-                          placeholder="e.g., FIDE Master, National Champion, Nigeria's #1"
-                          className="bg-white"
-                        />
-                        <p className="text-xs text-gray-500">Your chess title or ranking (shown on elite coach profiles)</p>
-                      </div>
-                      
-                      {/* Special Bio (for elite coaches) */}
-                      <div className="space-y-2">
-                        <Label htmlFor="special_bio" className="text-black">Extended Bio (Elite Coaches)</Label>
-                        <textarea
-                          id="special_bio"
-                          value={profileForm.special_bio}
-                          onChange={(e) => setProfileForm({ ...profileForm, special_bio: e.target.value })}
-                          placeholder="Detailed biography for your elite coach profile page..."
-                          rows={4}
-                          className="w-full px-3 py-2 border rounded-lg bg-white text-black"
-                        />
-                        <p className="text-xs text-gray-500">Extended bio shown on the special coaches booking page</p>
-                      </div>
+                      {/* Elite Coach Fields - Only shown for elite coaches */}
+                      {coach?.is_special && (
+                        <div className="space-y-6 pt-4 border-t">
+                          <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                            <h4 className="font-semibold text-purple-800 mb-2 flex items-center gap-2">
+                              <Crown className="w-4 h-4" />
+                              Elite Coach Profile Fields
+                            </h4>
+                            <p className="text-sm text-purple-600">
+                              These fields are displayed on the Special Coaches booking page.
+                            </p>
+                          </div>
+                          
+                          {/* Rank Title */}
+                          <div className="space-y-2">
+                            <Label htmlFor="rank_title" className="text-black">Rank / Title</Label>
+                            <Input
+                              id="rank_title"
+                              value={profileForm.rank_title}
+                              onChange={(e) => setProfileForm({ ...profileForm, rank_title: e.target.value })}
+                              placeholder="e.g., FIDE Master, National Champion, Nigeria's #1"
+                              className="bg-white"
+                            />
+                            <p className="text-xs text-gray-500">Your chess title or ranking displayed on your elite coach profile</p>
+                          </div>
+                          
+                          {/* Special Bio */}
+                          <div className="space-y-2">
+                            <Label htmlFor="special_bio" className="text-black">Extended Bio</Label>
+                            <textarea
+                              id="special_bio"
+                              value={profileForm.special_bio}
+                              onChange={(e) => setProfileForm({ ...profileForm, special_bio: e.target.value })}
+                              placeholder="Detailed biography for your elite coach profile page..."
+                              rows={4}
+                              className="w-full px-3 py-2 border rounded-lg bg-white text-black"
+                            />
+                            <p className="text-xs text-gray-500">Detailed bio shown on the special coaches booking page</p>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Save Button */}
                       <div className="pt-4">
