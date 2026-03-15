@@ -7,7 +7,14 @@ import { useSpecialCoaches } from '@/hooks/useSpecialCoaches'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Crown, Star, Trophy, ArrowRight, Loader2 } from 'lucide-react'
+import { Crown, Star, Trophy, Medal, ArrowRight, Loader2 } from 'lucide-react'
+
+const rankIcons = {
+  1: Crown,
+  2: Trophy,
+  3: Medal,
+  default: Star,
+}
 
 function SpecialCoachCard({ coach, index }) {
   const initials = coach.name
@@ -16,12 +23,25 @@ function SpecialCoachCard({ coach, index }) {
     .join('')
     .toUpperCase()
   
+  const RankIcon = rankIcons[index + 1] || rankIcons.default
   const isTopThree = index < 3
   
   return (
     <Card className={`overflow-hidden transition-all duration-300 hover:shadow-xl ${
       isTopThree ? 'border-2 border-[#5E5044]' : ''
     }`}>
+      {/* Rank Badge */}
+      {isTopThree && (
+        <div className={`text-center py-2 text-white font-bold ${
+          index === 0 ? 'bg-yellow-500' : 
+          index === 1 ? 'bg-gray-400' : 
+          'bg-amber-600'
+        }`}>
+          <RankIcon className="inline-block w-5 h-5 mr-2" />
+          #{index + 1} in Nigeria
+        </div>
+      )}
+      
       {/* Photo */}
       <div className="relative h-64 bg-[#F5EFE7]">
         {coach.photo_url ? (
