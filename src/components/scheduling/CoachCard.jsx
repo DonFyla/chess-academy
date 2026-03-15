@@ -4,23 +4,70 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { FaArrowRightLong } from 'react-icons/fa6'
 
+// Helper to convert sharing URLs to direct image URLs
+function getDirectImageUrl(url) {
+  if (!url) return null
+  
+  try {
+    // Dropbox conversion
+    if (url.includes('dropbox.com')) {
+      // Convert www.dropbox.com to dl.dropboxusercontent.com
+      let directUrl = url
+        .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+        .replace('dropbox.com', 'dl.dropboxusercontent.com')
+      
+      // Change dl=0 to dl=1 for direct access
+      directUrl = directUrl.replace('dl=0', 'dl=1')
+      
+      // If no dl param, add it
+      if (!directUrl.includes('dl=')) {
+        directUrl += (directUrl.includes('?') ? '&' : '?') + 'dl=1'
+      }
+      
+      return directUrl
+    }
+    
+    // Google Drive conversion (if needed)
+    if (url.includes('drive.google.com')) {
+      const fileId = url.match(/[-\w]{25,}/)
+      if (fileId) {
+        return `https://lh3.googleusercontent.com/d/${fileId}=s800`
+      }
+    }
+    
+    // Return original URL for other hosts
+    return url
+  } catch (e) {
+    console.error('Error converting image URL:', e)
+    return url
+  }
+}
+
 export default function CoachCard({ coach }) {
   const initials = coach.name
     .split(' ')
     .map((n) => n[0])
     .join('')
     .toUpperCase()
+  
+  // Get direct image URL for display
+  const directPhotoUrl = getDirectImageUrl(coach.photo_url)
 
   return (
     <div className="rounded-xl w-fit bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       {/* Coach Photo */}
       <div className="w-full h-48 bg-gray-100 relative">
-        {coach.photo_url ? (
+        {directPhotoUrl ? (
           <Image
-            src={coach.photo_url}
+            src={directPhotoUrl}
             alt={coach.name}
             fill
             className="object-cover"
+            onError={(e) => {
+              // Fallback to initials if image fails to load
+              e.target.style.display = 'none'
+              e.target.parentElement.classList.add('fallback-active')
+            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-[#F5EFE7]">

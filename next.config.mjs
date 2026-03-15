@@ -12,6 +12,10 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'dl.dropboxusercontent.com',
+      },
+      {
+        protocol: 'https',
         hostname: '**.dropboxusercontent.com',
       },
       {
