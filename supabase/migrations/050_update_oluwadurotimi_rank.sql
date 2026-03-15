@@ -2,7 +2,7 @@
 -- This will show the badge on his elite coach card
 
 UPDATE coaches
-SET rank_title = 'Nigeria\'s #12'
+SET rank_title = 'Nigeria''s #12'
 WHERE name ILIKE '%Oluwadurotimi%';
 
 -- Verify the update
