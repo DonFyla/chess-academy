@@ -457,32 +457,32 @@ export default function PointsBookingClient({ coachId }) {
         <div className="container mx-auto px-4 py-8">
           {/* Coach Info */}
           <Card className={`mb-8 ${coach.is_special ? 'bg-gradient-to-r from-purple-600 to-purple-700' : 'bg-gradient-to-r from-[#5E5044] to-[#7a6b5c]'} text-white`}>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
-                <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-2xl font-bold">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/20 rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold flex-shrink-0">
                   {initials}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   {coach.is_special && (
                     <div className="flex items-center gap-2 mb-1">
-                      <Crown className="w-5 h-5 text-yellow-400" />
-                      <span className="font-semibold">{coach.rank_title || 'Elite Coach'}</span>
+                      <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+                      <span className="font-semibold text-sm sm:text-base">{coach.rank_title || 'Elite Coach'}</span>
                     </div>
                   )}
-                  <h1 className="text-2xl font-bold">{coach.name}</h1>
-                  <p className="text-gray-200">{coach.specialization}</p>
+                  <h1 className="text-xl sm:text-2xl font-bold">{coach.name}</h1>
+                  <p className="text-gray-200 text-sm sm:text-base">{coach.specialization}</p>
                 </div>
-                <div className="flex items-center gap-6">
+                <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-6 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/20">
                   <div className="text-center">
-                    <div className="flex items-center gap-1 text-2xl font-bold">
-                      <Coins className="w-6 h-6" />
+                    <div className="flex items-center gap-1 text-xl sm:text-2xl font-bold">
+                      <Coins className="w-5 h-5 sm:w-6 sm:h-6" />
                       {pointsCost}
                     </div>
-                    <div className="text-sm text-gray-200">points/class</div>
+                    <div className="text-xs sm:text-sm text-gray-200">points/class</div>
                   </div>
-                  <div className="text-center bg-white/20 px-4 py-2 rounded-lg">
-                    <div className="text-sm text-gray-200">Your Balance</div>
-                    <div className={`text-xl font-bold ${canAfford ? 'text-green-300' : 'text-red-300'}`}>
+                  <div className="text-center bg-white/20 px-3 sm:px-4 py-2 rounded-lg">
+                    <div className="text-xs sm:text-sm text-gray-200">Your Balance</div>
+                    <div className={`text-lg sm:text-xl font-bold ${canAfford ? 'text-green-300' : 'text-red-300'}`}>
                       {userBalance} pts
                     </div>
                   </div>
@@ -492,7 +492,7 @@ export default function PointsBookingClient({ coachId }) {
           </Card>
           
           {!canAfford && selectedSlots.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center gap-3">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
               <div className="flex-1">
                 <p className="text-red-800 font-medium">Insufficient Points</p>
@@ -500,8 +500,8 @@ export default function PointsBookingClient({ coachId }) {
                   You need {totalCost} points but only have {userBalance}.
                 </p>
               </div>
-              <Link href="/buy-points">
-                <Button size="sm" className="bg-red-600 hover:bg-red-700">
+              <Link href="/buy-points" className="w-full sm:w-auto">
+                <Button size="sm" className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">
                   Buy Points
                 </Button>
               </Link>
@@ -532,11 +532,11 @@ export default function PointsBookingClient({ coachId }) {
                     ) : (
                       <div className="space-y-6" key={`calendar-${existingBookings?.length || 0}-${JSON.stringify(existingBookings?.map(b => b.session_date))}`}>
                         {weeks.map((weekStart, weekIdx) => (
-                          <div key={weekIdx} className="border rounded-lg p-4">
-                            <h4 className="font-semibold text-black mb-3">
+                          <div key={weekIdx} className="border rounded-lg p-3 sm:p-4">
+                            <h4 className="font-semibold text-black mb-3 text-sm sm:text-base">
                               Week of {format(weekStart, 'MMM d, yyyy')}
                             </h4>
-                            <div className="grid grid-cols-7 gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
                               {Array.from({ length: 7 }, (_, dayIdx) => {
                                 const date = addDays(weekStart, dayIdx)
                                 const dateStr = format(date, 'yyyy-MM-dd')
@@ -653,7 +653,7 @@ export default function PointsBookingClient({ coachId }) {
                                                 }])
                                               }
                                             }}
-                                            className={`w-full text-xs py-1 px-1 rounded transition-colors ${
+                                            className={`w-full text-xs py-2 sm:py-1 px-2 sm:px-1 rounded transition-colors ${
                                               selected
                                                 ? 'bg-[#5E5044] text-white'
                                                 : 'bg-white hover:bg-[#F5EFE7] border border-gray-200'
@@ -669,7 +669,7 @@ export default function PointsBookingClient({ coachId }) {
                                 }
                                 
                                 return (
-                                  <div key={dayIdx} className="min-h-[100px] p-2 bg-gray-50 rounded">
+                                  <div key={dayIdx} className="min-h-[120px] sm:min-h-[100px] p-2 bg-gray-50 rounded">
                                     <div className="text-xs text-gray-500 mb-1">
                                       {DAYS_OF_WEEK[date.getDay()]}
                                     </div>
@@ -789,7 +789,7 @@ export default function PointsBookingClient({ coachId }) {
                         !formData.studentEmail ||
                         !formData.studentPhone
                       }
-                      className="w-full bg-[#5E5044] hover:bg-[#4a3f35] py-6 text-lg"
+                      className="w-full bg-[#5E5044] hover:bg-[#4a3f35] py-5 sm:py-6 text-base sm:text-lg"
                     >
                       {createBooking.isPending ? (
                         <>

@@ -305,18 +305,18 @@ export default function SpecialBookingClient({ coachId }) {
             <Card className="mb-6">
               <CardHeader className="bg-gradient-to-r from-[#5E5044] to-[#7a6b5c] text-white">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-[#5E5044] text-xl font-bold">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center text-[#5E5044] text-lg sm:text-xl font-bold flex-shrink-0">
                     {initials}
                   </div>
                   <div>
-                    <CardTitle className="text-white">Review Your Booking</CardTitle>
-                    <p className="text-gray-200 text-sm">Special Coaching Session</p>
+                    <CardTitle className="text-white text-base sm:text-lg">Review Your Booking</CardTitle>
+                    <p className="text-gray-200 text-xs sm:text-sm">Special Coaching Session</p>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-6 space-y-6">
+              <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Coach Info */}
-                <div className="flex justify-between items-start p-4 bg-[#F5EFE7] rounded-lg">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-[#F5EFE7] rounded-lg gap-3 sm:gap-0">
                   <div>
                     <p className="text-sm text-gray-600">Coach</p>
                     <p className="font-semibold text-black flex items-center gap-2">
@@ -332,7 +332,7 @@ export default function SpecialBookingClient({ coachId }) {
                 </div>
 
                 {/* Student Info */}
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid sm:grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm text-gray-600">Student Name</p>
                     <p className="font-medium text-black">{formData.studentName}</p>
@@ -393,25 +393,25 @@ export default function SpecialBookingClient({ coachId }) {
                     Bank Transfer Details
                   </h4>
                   <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                       <span className="text-gray-600">Bank:</span>
                       <span className="font-medium text-black">{BANK_DETAILS.bankName}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                       <span className="text-gray-600">Account Number:</span>
-                      <span className="font-mono font-medium text-black bg-white px-2 py-1 rounded">{BANK_DETAILS.accountNumber}</span>
+                      <span className="font-mono font-medium text-black bg-white px-2 py-1 rounded w-fit">{BANK_DETAILS.accountNumber}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                       <span className="text-gray-600">Account Name:</span>
-                      <span className="font-medium text-black">{BANK_DETAILS.accountName}</span>
+                      <span className="font-medium text-black text-right">{BANK_DETAILS.accountName}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                       <span className="text-gray-600">Amount:</span>
                       <span className="font-bold text-black">₦{totalAmount.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                       <span className="text-gray-600">Reference:</span>
-                      <span className="font-mono font-medium text-black bg-white px-2 py-1 rounded">{bookingRef}</span>
+                      <span className="font-mono font-medium text-black bg-white px-2 py-1 rounded w-fit">{bookingRef}</span>
                     </div>
                   </div>
                 </div>
@@ -433,10 +433,11 @@ export default function SpecialBookingClient({ coachId }) {
                     href={`${WHATSAPP_LINK}?text=Hello! I've made a payment for Special Coaching.%0A%0AReference: ${bookingRef}%0AAmount: ₦${totalAmount.toLocaleString()}%0ACoach: ${coach.name}%0ASessions: ${totalSessions}%0A%0AAttached is my payment receipt.`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-4 w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-semibold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    className="mt-4 w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-semibold py-3 px-4 sm:px-6 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm sm:text-base"
                   >
                     <MessageCircle className="w-5 h-5" />
-                    Send Payment Receipt via WhatsApp
+                    <span className="hidden sm:inline">Send Payment Receipt via WhatsApp</span>
+                    <span className="sm:hidden">Send Receipt via WhatsApp</span>
                   </a>
                 </div>
 
@@ -452,13 +453,13 @@ export default function SpecialBookingClient({ coachId }) {
             </Card>
 
             {/* Actions */}
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setStep('form')}
                 disabled={createBooking.isPending}
-                className="flex-1 py-6"
+                className="flex-1 py-5 sm:py-6 order-2 sm:order-1"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Edit
@@ -467,7 +468,7 @@ export default function SpecialBookingClient({ coachId }) {
                 type="button"
                 onClick={handleConfirmBooking}
                 disabled={createBooking.isPending}
-                className="flex-1 bg-[#5E5044] hover:bg-[#4a3f35] py-6 text-lg"
+                className="flex-1 bg-[#5E5044] hover:bg-[#4a3f35] py-5 sm:py-6 text-base sm:text-lg order-1 sm:order-2"
               >
                 {createBooking.isPending ? (
                   <>
@@ -507,24 +508,24 @@ export default function SpecialBookingClient({ coachId }) {
         <div className="container mx-auto px-4 py-8">
           {/* Coach Info */}
           <Card className={`mb-8 ${coach.is_special ? 'bg-gradient-to-r from-purple-600 to-purple-700' : 'bg-gradient-to-r from-[#5E5044] to-[#7a6b5c]'} text-white`}>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
-                <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-2xl font-bold">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/20 rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold flex-shrink-0">
                   {initials}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   {coach.is_special && (
                     <div className="flex items-center gap-2 mb-1">
-                      <Crown className="w-5 h-5 text-yellow-400" />
-                      <span className="font-semibold">{coach.rank_title || 'Elite Coach'}</span>
+                      <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+                      <span className="font-semibold text-sm sm:text-base">{coach.rank_title || 'Elite Coach'}</span>
                     </div>
                   )}
-                  <h1 className="text-2xl font-bold">{coach.name}</h1>
-                  <p className="text-gray-200">{coach.specialization}</p>
+                  <h1 className="text-xl sm:text-2xl font-bold">{coach.name}</h1>
+                  <p className="text-gray-200 text-sm sm:text-base">{coach.specialization}</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-3xl font-bold">₦{hourlyRate.toLocaleString()}</div>
-                  <div className="text-sm text-gray-200">per session</div>
+                <div className="text-left sm:text-right pt-2 sm:pt-0 border-t sm:border-t-0 border-white/20">
+                  <div className="text-2xl sm:text-3xl font-bold">₦{hourlyRate.toLocaleString()}</div>
+                  <div className="text-xs sm:text-sm text-gray-200">per session</div>
                 </div>
               </div>
             </CardContent>
@@ -598,29 +599,29 @@ export default function SpecialBookingClient({ coachId }) {
                     ) : (
                       <div className="space-y-4">
                         {/* Week Navigator */}
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                           <button
                             type="button"
                             onClick={() => setCurrentWeek(prev => addDays(prev, -7))}
-                            className="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200 text-black"
+                            className="w-full sm:w-auto px-3 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200 text-black"
                           >
-                            Previous Week
+                            ← Previous
                           </button>
-                          <span className="text-sm font-medium text-black">
+                          <span className="text-sm font-medium text-black order-first sm:order-none">
                             {format(currentWeek, 'MMM d')} - {format(addDays(currentWeek, 6), 'MMM d, yyyy')}
                           </span>
                           <button
                             type="button"
                             onClick={() => setCurrentWeek(prev => addDays(prev, 7))}
-                            className="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200 text-black"
+                            className="w-full sm:w-auto px-3 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200 text-black"
                           >
-                            Next Week
+                            Next →
                           </button>
                         </div>
 
                         {/* Calendar Grid */}
-                        <div className="border rounded-lg p-4">
-                          <div className="grid grid-cols-7 gap-2">
+                        <div className="border rounded-lg p-3 sm:p-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
                             {Array.from({ length: 7 }, (_, dayIdx) => {
                               const date = addDays(currentWeek, dayIdx)
                               const dateStr = format(date, 'yyyy-MM-dd')
@@ -674,7 +675,7 @@ export default function SpecialBookingClient({ coachId }) {
                                           key={idx}
                                           type="button"
                                           onClick={() => toggleSlot(date, slot)}
-                                          className={`w-full text-xs py-1 px-1 rounded transition-colors ${
+                                          className={`w-full text-xs py-2 sm:py-1 px-2 sm:px-1 rounded transition-colors ${
                                             selected
                                               ? 'bg-[#5E5044] text-white'
                                               : 'bg-white hover:bg-[#F5EFE7] border border-gray-200'
@@ -690,7 +691,7 @@ export default function SpecialBookingClient({ coachId }) {
                               }
                               
                               return (
-                                <div key={dayIdx} className="min-h-[100px] p-2 bg-gray-50 rounded">
+                                <div key={dayIdx} className="min-h-[120px] sm:min-h-[100px] p-2 bg-gray-50 rounded">
                                   <div className="text-xs text-gray-500 mb-1">
                                     {DAYS_OF_WEEK[date.getDay()]}
                                   </div>
@@ -802,7 +803,7 @@ export default function SpecialBookingClient({ coachId }) {
                     <Button
                       type="submit"
                       disabled={selectedSlots.length !== totalSessions}
-                      className="w-full bg-[#5E5044] hover:bg-[#4a3f35] py-6 text-lg"
+                      className="w-full bg-[#5E5044] hover:bg-[#4a3f35] py-5 sm:py-6 text-base sm:text-lg"
                     >
                       Review & Confirm
                     </Button>
