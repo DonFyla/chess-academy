@@ -91,13 +91,7 @@ export default function CoachCard({ coach }) {
         )}
         
         {/* Action Links */}
-        <div className="flex gap-4">
-          <Link 
-            href={`/tutors`}
-            className="text-sm text-gray-600 hover:text-[#5E5044] flex items-center gap-1"
-          >
-            View Profile
-          </Link>
+        <div className="flex">
           <Link 
             href={`/book/${coach.id}`}
             className="text-sm font-semibold text-[#5E5044] flex items-center gap-2 hover:gap-3 transition-all"
