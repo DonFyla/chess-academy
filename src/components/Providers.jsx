@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 import { AuthProvider } from '@/contexts/AuthContext'
+import QuizPopup from './QuizPopup'
 
 export default function Providers({ children }) {
   const [queryClient] = useState(() => new QueryClient({
@@ -18,6 +19,7 @@ export default function Providers({ children }) {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         {children}
+        <QuizPopup />
       </AuthProvider>
     </QueryClientProvider>
   )
