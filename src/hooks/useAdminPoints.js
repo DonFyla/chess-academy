@@ -10,7 +10,7 @@ export function usePendingPointsPurchases() {
     queryFn: async () => {
       console.log('Fetching pending purchases...')
       
-      // Try the RPC function first
+      // Primary: Use RPC function
       const { data: rpcData, error: rpcError } = await supabase.rpc('get_pending_purchases')
       
       if (!rpcError && rpcData) {
@@ -18,22 +18,9 @@ export function usePendingPointsPurchases() {
         return rpcData
       }
       
-      console.log('RPC failed, trying view...', rpcError?.message)
+      console.log('RPC failed, using direct query...', rpcError?.message)
       
-      // Fallback to view
-      const { data: viewData, error: viewError } = await supabase
-        .from('admin_pending_purchases')
-        .select('*')
-        .order('created_at', { ascending: false })
-      
-      if (!viewError && viewData) {
-        console.log('Pending purchases (view):', viewData.length, 'items')
-        return viewData
-      }
-      
-      console.log('View failed, using direct query...', viewError?.message)
-      
-      // Last resort: direct query with manual user lookup
+      // Fallback: direct query with manual user lookup
       const { data: transactions, error: txError } = await supabase
         .from('point_transactions')
         .select('*')
