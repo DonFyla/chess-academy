@@ -12,6 +12,7 @@ import { DAYS_OF_WEEK, COURSE_TYPES } from '@/lib/scheduling-types'
 import { useCreateBooking } from '@/hooks/useBookings'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnifiedSchedule } from '@/hooks/useUnifiedSchedule'
+import { usePaystackPayment } from '@/hooks/usePaystack'
 import { toast } from 'sonner'
 
 function formatTime(time) {
@@ -51,6 +52,7 @@ export default function BookingForm({ coachId, availability, existingBookings, c
   }, [user])
   
   const createBooking = useCreateBooking()
+  const { initializePayment, isLoading: paystackLoading } = usePaystackPayment()
 
   // Get available days of week from availability
   const availableDaysOfWeek = [...new Set(availability.map((s) => s.day_of_week))]
@@ -187,9 +189,10 @@ export default function BookingForm({ coachId, availability, existingBookings, c
     try {
       const recurringDates = generateRecurringDates()
       const monthlyPrice = calculatePrice()
+      const ref = `BOOK-${Date.now().toString(36).toUpperCase()}`
       
       // Create ONE booking with recurring dates stored as JSON
-      await createBooking.mutateAsync({
+      const booking = await createBooking.mutateAsync({
         coach_id: coachId,
         student_name: studentName,
         student_email: studentEmail,
@@ -205,21 +208,36 @@ export default function BookingForm({ coachId, availability, existingBookings, c
         booking_mode: bookingMode,
         notes: notes || null,
         course_type: courseType || null,
+        payment_reference: ref,
       })
       
-      toast.success(`Booking submitted! Check your email for payment details. Total: ₦${monthlyPrice.toLocaleString()}`)
-      
-      // Reset form
-      setSelectedDay1(null)
-      setSelectedSlot1(null)
-      setSelectedDay2(null)
-      setSelectedSlot2(null)
-      setStudentName('')
-      setStudentEmail('')
-      setStudentPhone('')
-      setCourseType('')
-      setNotes('')
-      setBookingMode('single')
+      await initializePayment({
+        email: studentEmail,
+        amount: monthlyPrice,
+        reference: ref,
+        metadata: {
+          type: 'booking',
+          booking_id: booking.id,
+          table: 'bookings',
+        },
+        onSuccess: (transaction) => {
+          toast.success('Payment successful! Your booking is confirmed.')
+          // Reset form
+          setSelectedDay1(null)
+          setSelectedSlot1(null)
+          setSelectedDay2(null)
+          setSelectedSlot2(null)
+          setStudentName('')
+          setStudentEmail('')
+          setStudentPhone('')
+          setCourseType('')
+          setNotes('')
+          setBookingMode('single')
+        },
+        onCancel: () => {
+          toast.info('Payment cancelled. Your booking is reserved for 48 hours. Check your email to complete payment.')
+        },
+      })
     } catch (error) {
       console.error('Booking error:', error)
       toast.error(error.message || 'Failed to submit booking. Please try again.')
@@ -521,16 +539,16 @@ export default function BookingForm({ coachId, availability, existingBookings, c
             <Button 
               type="submit" 
               className="w-full bg-[#5E5044] hover:bg-[#4a3f35] text-white"
-              disabled={createBooking.isPending}
+              disabled={createBooking.isPending || paystackLoading}
             >
-              {createBooking.isPending 
-                ? 'Submitting...' 
-                : `Complete Booking - ₦${calculatePrice().toLocaleString()}`
+              {createBooking.isPending || paystackLoading
+                ? 'Processing...' 
+                : `Pay & Book - ₦${calculatePrice().toLocaleString()}`
               }
             </Button>
             
             <p className="text-sm text-gray-500 text-center">
-              You'll receive an email with our bank details and WhatsApp link to confirm your payment.
+              Secure payment powered by Paystack. You will be redirected to complete your payment.
             </p>
           </CardContent>
         </Card>

@@ -18,6 +18,7 @@ import { useSpecialCoach, useCreateSpecialBooking } from '@/hooks/useSpecialCoac
 import { useCoachAvailability } from '@/hooks/useAvailability'
 import { useCoachBlockedDates } from '@/hooks/useCoachBlocks'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePaystackPayment } from '@/hooks/usePaystack'
 import { supabase } from '@/lib/supabase'
 
 // Helper to format time as HH:MM for comparison
@@ -35,14 +36,6 @@ const formatTimeHM = (timeVal) => {
 }
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-const WHATSAPP_LINK = process.env.NEXT_PUBLIC_WHATSAPP_LINK || 'https://wa.link/uj48gk'
-
-const BANK_DETAILS = {
-  bankName: 'GT Bank',
-  accountNumber: '0878016456',
-  accountName: 'The Moving Train Educational Services Ltd',
-}
 
 // Check if a slot is already booked (from special bookings or points bookings)
 const isSlotBooked = (dateStr, startTime, endTime, existingBookings) => {
@@ -111,6 +104,7 @@ export default function SpecialBookingClient({ coachId }) {
   const { data: availability = [], isLoading: loadingAvailability } = useCoachAvailability(coachId)
   const { data: blockedDates = [] } = useCoachBlockedDates(coachId)
   const createBooking = useCreateSpecialBooking()
+  const { initializePayment, isLoading: paystackLoading } = usePaystackPayment()
   
   // Fetch existing bookings using unified schedule function (works for anonymous users too)
   const { data: existingBookings = [], error: bookingsError } = useQuery({
@@ -229,6 +223,8 @@ export default function SpecialBookingClient({ coachId }) {
   
   const handleConfirmBooking = async () => {
     try {
+      const ref = `SPEC-${Date.now().toString(36).toUpperCase()}`
+      
       const booking = {
         coach_id: coachId,
         student_name: formData.studentName,
@@ -241,13 +237,28 @@ export default function SpecialBookingClient({ coachId }) {
         hourly_rate: hourlyRate,
         total_amount: totalAmount,
         status: 'pending_payment',
+        payment_reference: ref,
       }
       
-      await createBooking.mutateAsync(booking)
+      const result = await createBooking.mutateAsync(booking)
       
-      toast.success('Booking created successfully! Check your email for payment details.')
-      // Redirect to confirmation/success page instead of dashboard (which requires login)
-      router.push('/special-coaches?booked=true')
+      await initializePayment({
+        email: formData.studentEmail,
+        amount: totalAmount,
+        reference: ref,
+        metadata: {
+          type: 'special_booking',
+          booking_id: result?.id || result?.[0]?.id,
+          table: 'special_bookings',
+        },
+        onSuccess: (transaction) => {
+          toast.success('Payment successful! Your booking is confirmed.')
+          router.push('/special-coaches?booked=true')
+        },
+        onCancel: () => {
+          toast.info('Payment cancelled. Your booking is reserved for 48 hours.')
+        },
+      })
     } catch (error) {
       console.error('Booking error:', error)
       toast.error('Failed to create booking: ' + error.message)
@@ -284,7 +295,6 @@ export default function SpecialBookingClient({ coachId }) {
   }
   
   const initials = coach.name.split(' ').map(n => n[0]).join('').toUpperCase()
-  const bookingRef = Math.random().toString(36).substring(2, 10).toUpperCase()
   
   // Confirmation Step
   if (step === 'confirm') {
@@ -377,76 +387,22 @@ export default function SpecialBookingClient({ coachId }) {
               </CardContent>
             </Card>
 
-            {/* Payment Instructions */}
-            <Card className="mb-6 border-green-200">
-              <CardHeader className="bg-green-50">
-                <CardTitle className="flex items-center gap-2 text-green-800">
+            {/* Payment Notice */}
+            <Card className="mb-6 border-blue-200">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="flex items-center gap-2 text-blue-800">
                   <CreditCard className="w-5 h-5" />
-                  Payment Instructions
+                  Payment
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                {/* Bank Transfer Details */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    Bank Transfer Details
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
-                      <span className="text-gray-600">Bank:</span>
-                      <span className="font-medium text-black">{BANK_DETAILS.bankName}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
-                      <span className="text-gray-600">Account Number:</span>
-                      <span className="font-mono font-medium text-black bg-white px-2 py-1 rounded w-fit">{BANK_DETAILS.accountNumber}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
-                      <span className="text-gray-600">Account Name:</span>
-                      <span className="font-medium text-black text-right">{BANK_DETAILS.accountName}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
-                      <span className="text-gray-600">Amount:</span>
-                      <span className="font-bold text-black">₦{totalAmount.toLocaleString()}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
-                      <span className="text-gray-600">Reference:</span>
-                      <span className="font-mono font-medium text-black bg-white px-2 py-1 rounded w-fit">{bookingRef}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* WhatsApp Confirmation */}
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-orange-900 mb-3 flex items-center gap-2">
-                    <MessageCircle className="w-5 h-5" />
-                    Confirm Your Payment
-                  </h4>
-                  <ol className="text-sm text-orange-800 space-y-2 list-decimal list-inside">
-                    <li>Make the transfer using the bank details above</li>
-                    <li>Take a screenshot of the payment receipt</li>
-                    <li>Send the receipt via WhatsApp with your reference number</li>
-                    <li>We&apos;ll verify and confirm your booking within 24 hours</li>
-                  </ol>
-                  
-                  <a
-                    href={`${WHATSAPP_LINK}?text=Hello! I've made a payment for Special Coaching.%0A%0AReference: ${bookingRef}%0AAmount: ₦${totalAmount.toLocaleString()}%0ACoach: ${coach.name}%0ASessions: ${totalSessions}%0A%0AAttached is my payment receipt.`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-semibold py-3 px-4 sm:px-6 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm sm:text-base"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    <span className="hidden sm:inline">Send Payment Receipt via WhatsApp</span>
-                    <span className="sm:hidden">Send Receipt via WhatsApp</span>
-                  </a>
-                </div>
-
-                {/* Time Notice */}
+              <CardContent className="p-6 space-y-4">
+                <p className="text-sm text-gray-700">
+                  Please complete payment to confirm your booking. You will be redirected to our secure payment partner.
+                </p>
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-yellow-800">
-                    <strong>Important:</strong> Your spot is held for 48 hours. Please complete payment within this time to secure your booking. 
-                    You will receive an email with these payment details.
+                    <strong>Important:</strong> Your spot is held for 48 hours. Please complete payment within this time to secure your booking.
                   </p>
                 </div>
               </CardContent>
@@ -458,7 +414,7 @@ export default function SpecialBookingClient({ coachId }) {
                 type="button"
                 variant="outline"
                 onClick={() => setStep('form')}
-                disabled={createBooking.isPending}
+                disabled={createBooking.isPending || paystackLoading}
                 className="flex-1 py-5 sm:py-6 order-2 sm:order-1"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -467,18 +423,18 @@ export default function SpecialBookingClient({ coachId }) {
               <Button
                 type="button"
                 onClick={handleConfirmBooking}
-                disabled={createBooking.isPending}
+                disabled={createBooking.isPending || paystackLoading}
                 className="flex-1 bg-[#5E5044] hover:bg-[#4a3f35] py-5 sm:py-6 text-base sm:text-lg order-1 sm:order-2"
               >
-                {createBooking.isPending ? (
+                {createBooking.isPending || paystackLoading ? (
                   <>
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Confirming...
+                    Processing...
                   </>
                 ) : (
                   <>
                     <CheckCircle className="w-5 h-5 mr-2" />
-                    Confirm & Create Booking
+                    Pay & Book
                   </>
                 )}
               </Button>

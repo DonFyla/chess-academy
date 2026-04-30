@@ -74,6 +74,7 @@ export function useCreateBooking() {
         booking_mode: booking.booking_mode,
         notes: booking.notes,
         course_type: booking.course_type,
+        payment_reference: booking.payment_reference,
         status: 'pending_payment'
       }
       
