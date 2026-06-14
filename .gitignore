@@ -34,3 +34,24 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# python / django backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/venv/
+venv/
+ENV/
+env/
+*.env
+backend/.env
+backend/staticfiles/
+backend/media/
+backend/db.sqlite3
+.pytest_cache/
+.mypy_cache/
+
+# docker
+.dockerignore

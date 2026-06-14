@@ -1,0 +1,82 @@
+name: Test Backend
+
+on:
+  push:
+    branches:
+      - django-migration
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/test-backend.yml'
+  pull_request:
+    branches:
+      - django-migration
+      - main
+    paths:
+      - 'backend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: chess_academy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Django checks
+        env:
+          SECRET_KEY: test-secret-key
+          DATABASE_URL: postgres://user:password@localhost:5432/chess_academy
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          python manage.py check
+
+      - name: Run migrations
+        env:
+          SECRET_KEY: test-secret-key
+          DATABASE_URL: postgres://user:password@localhost:5432/chess_academy
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          python manage.py migrate --noinput
+
+      - name: Run tests
+        env:
+          SECRET_KEY: test-secret-key
+          DATABASE_URL: postgres://user:password@localhost:5432/chess_academy
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          python manage.py test

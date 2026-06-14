@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Moving Train Chess Academy{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Moving Train Chess Academy - from novice to mastery.{% endblock %}">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-[#F5EFE7] text-gray-900">
+    <nav class="bg-white border-b border-gray-200">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="{% url 'home' %}" class="text-xl font-bold text-[#5E5044]">Moving Train</a>
+            <div class="space-x-4">
+                <a href="{% url 'home' %}" class="hover:text-[#5E5044]">Home</a>
+                {% if user.is_authenticated %}
+                    <span class="text-sm text-gray-600">{{ user.username }}</span>
+                    <a href="{% url 'accounts:logout' %}" class="hover:text-[#5E5044]">Logout</a>
+                {% else %}
+                    <a href="{% url 'accounts:login' %}" class="hover:text-[#5E5044]">Login</a>
+                    <a href="{% url 'accounts:signup' %}" class="hover:text-[#5E5044]">Signup</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 py-8 mt-12">
+        <div class="container mx-auto px-6 text-center text-gray-600">
+            <p>&copy; {% now "Y" %} Moving Train Chess Academy. All rights reserved.</p>
+        </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
