@@ -12,11 +12,8 @@ function Header() {
           The Moving Train <br /> Online Chess Academy
         </p>
         <p className="text-lg sm:text-xl  text-center ">
-          We take Special Delight in preparing our Students for greatness. No
-          excuses!!! <br />
-          {`  We're a journey from novice to mastery. Join us on the tracks of chess
-          excellence as we guide you through every move, every strategy, and
-          every triumph.`}
+          Our mission statement: <br />
+          We will make your child fall in love with thinking.
         </p>
         <p className="text-center"></p>
         <a
