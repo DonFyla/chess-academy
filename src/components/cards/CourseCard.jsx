@@ -21,7 +21,7 @@ function CourseCard({ course }) {
         </div>
         <p className=" text-xs md:text-sm my-2 ">{course.details}</p>
         <a href={course.link} className="flex gap-2 items-center">
-          <span className="text-sm font-semibold">Apply Now</span>
+          <span className="text-sm font-semibold">Enter</span>
           <FaArrowRightLong size={20} />
         </a>
       </div>
