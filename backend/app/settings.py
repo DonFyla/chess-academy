@@ -136,6 +136,9 @@ CKEDITOR_UPLOAD_PATH = "uploads/"
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Custom user model
+AUTH_USER_MODEL = "accounts.User"
+
 # Silence known warnings
 # TODO: Migrate from django-ckeditor (CKEditor 4) to a maintained editor
 # (e.g., django-ckeditor-5 or a plain textarea) to resolve the security warning.
