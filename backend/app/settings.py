@@ -25,6 +25,11 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_extensions",
+    "rest_framework",
+    "corsheaders",
+    "widget_tweaks",
+    "ckeditor",
+    "ckeditor_uploader",
     # Local apps
     "web",
     "accounts",
@@ -34,6 +39,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -65,16 +71,19 @@ TEMPLATES = [
 WSGI_APPLICATION = "app.wsgi.application"
 
 # Database
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("POSTGRES_DB", default="chess_academy"),
-        "USER": config("POSTGRES_USER", default="user"),
-        "PASSWORD": config("POSTGRES_PASSWORD", default="password"),
-        "HOST": config("POSTGRES_HOST", default="db"),
-        "PORT": config("POSTGRES_PORT", default="5432"),
+DATABASE_URL = config("DATABASE_URL", default=None)
+
+if DATABASE_URL:
+    import dj_database_url
+
+    DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
     }
-}
 
 # Redis
 REDIS_URL = config("REDIS_URL", default="redis://redis:6379/0")
@@ -122,9 +131,35 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # Media files
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+CKEDITOR_UPLOAD_PATH = "uploads/"
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Silence known warnings
+# TODO: Migrate from django-ckeditor (CKEditor 4) to a maintained editor
+# (e.g., django-ckeditor-5 or a plain textarea) to resolve the security warning.
+SILENCED_SYSTEM_CHECKS = ["ckeditor.W001"]
+
+# Django REST Framework
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+}
+
+# CORS
+CORS_ALLOW_ALL_ORIGINS = config("CORS_ALLOW_ALL_ORIGINS", default=True, cast=bool)
+CORS_ALLOW_CREDENTIALS = True
+
+# CKEditor
+CKEDITOR_UPLOAD_PATH = "uploads/"
+CKEDITOR_CONFIGS = {
+    "default": {
+        "toolbar": "full",
+        "height": 300,
+        "width": "100%",
+    },
+}
 
 # Email
 EMAIL_BACKEND = config(
