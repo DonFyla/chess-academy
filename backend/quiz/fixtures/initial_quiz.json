@@ -1,0 +1,1140 @@
+[
+  {
+    "model": "accounts.user",
+    "pk": "11111111-1111-1111-1111-111111111111",
+    "fields": {
+      "password": "!",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "quizadmin",
+      "first_name": "",
+      "last_name": "",
+      "email": "quizadmin@example.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2024-01-01T00:00:00Z",
+      "phone": "",
+      "full_name": "Quiz Admin",
+      "is_coach": false,
+      "is_student": false,
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "quiz.questionnaire",
+    "pk": 1,
+    "fields": {
+      "title": "beginner",
+      "description": "Beginner level chess assessment",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111"
+    }
+  },
+  {
+    "model": "quiz.questionnaire",
+    "pk": 2,
+    "fields": {
+      "title": "intermediate",
+      "description": "Intermediate level chess assessment",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111"
+    }
+  },
+  {
+    "model": "quiz.questionnaire",
+    "pk": 3,
+    "fields": {
+      "title": "expert",
+      "description": "Expert level chess assessment",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111"
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 1,
+    "fields": {
+      "questionnaire": 1,
+      "question_type": "radio",
+      "question": "Which chess piece can only move diagonally?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 1
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 1,
+    "fields": {
+      "question": 1,
+      "text": "Bishop",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 2,
+    "fields": {
+      "question": 1,
+      "text": "Rook",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 3,
+    "fields": {
+      "question": 1,
+      "text": "Knight",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 4,
+    "fields": {
+      "question": 1,
+      "text": "Queen",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 2,
+    "fields": {
+      "questionnaire": 1,
+      "question_type": "radio",
+      "question": "How many squares does a Knight move in its L-shape?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 2
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 5,
+    "fields": {
+      "question": 2,
+      "text": "1 square",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 6,
+    "fields": {
+      "question": 2,
+      "text": "2 squares in one direction and 1 in the other",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 7,
+    "fields": {
+      "question": 2,
+      "text": "3 squares",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 8,
+    "fields": {
+      "question": 2,
+      "text": "Any number of squares",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 3,
+    "fields": {
+      "questionnaire": 1,
+      "question_type": "radio",
+      "question": "What is the most powerful piece in chess?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 3
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 9,
+    "fields": {
+      "question": 3,
+      "text": "King",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 10,
+    "fields": {
+      "question": 3,
+      "text": "Queen",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 11,
+    "fields": {
+      "question": 3,
+      "text": "Rook",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 12,
+    "fields": {
+      "question": 3,
+      "text": "Bishop",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 4,
+    "fields": {
+      "questionnaire": 1,
+      "question_type": "radio",
+      "question": "What is the main goal of a chess game?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 4
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 13,
+    "fields": {
+      "question": 4,
+      "text": "Capture all opponent pieces",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 14,
+    "fields": {
+      "question": 4,
+      "text": "Checkmate the opponent's king",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 15,
+    "fields": {
+      "question": 4,
+      "text": "Promote a pawn",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 16,
+    "fields": {
+      "question": 4,
+      "text": "Castle both sides",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 5,
+    "fields": {
+      "questionnaire": 1,
+      "question_type": "radio",
+      "question": "Which piece can move one square in any direction?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 5
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 17,
+    "fields": {
+      "question": 5,
+      "text": "Pawn",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 18,
+    "fields": {
+      "question": 5,
+      "text": "Knight",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 19,
+    "fields": {
+      "question": 5,
+      "text": "King",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 20,
+    "fields": {
+      "question": 5,
+      "text": "Bishop",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 6,
+    "fields": {
+      "questionnaire": 1,
+      "question_type": "radio",
+      "question": "How many pawns does each player start with?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 6
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 21,
+    "fields": {
+      "question": 6,
+      "text": "6",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 22,
+    "fields": {
+      "question": 6,
+      "text": "8",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 23,
+    "fields": {
+      "question": 6,
+      "text": "10",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 24,
+    "fields": {
+      "question": 6,
+      "text": "16",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 7,
+    "fields": {
+      "questionnaire": 1,
+      "question_type": "text",
+      "question": "Which piece is represented by a horse's head?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 7
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 25,
+    "fields": {
+      "question": 7,
+      "text": "Knight",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 8,
+    "fields": {
+      "questionnaire": 1,
+      "question_type": "text",
+      "question": "What is it called when the king is under attack and cannot escape?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 8
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 26,
+    "fields": {
+      "question": 8,
+      "text": "Checkmate",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 9,
+    "fields": {
+      "questionnaire": 2,
+      "question_type": "radio",
+      "question": "What is a fork in chess?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 1
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 27,
+    "fields": {
+      "question": 9,
+      "text": "A piece attacks two or more opponent pieces at once",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 28,
+    "fields": {
+      "question": 9,
+      "text": "A special pawn move",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 29,
+    "fields": {
+      "question": 9,
+      "text": "When two rooks line up",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 30,
+    "fields": {
+      "question": 9,
+      "text": "A type of checkmate",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 10,
+    "fields": {
+      "questionnaire": 2,
+      "question_type": "radio",
+      "question": "What is a pin?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 2
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 31,
+    "fields": {
+      "question": 10,
+      "text": "A piece is blocked and cannot move",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 32,
+    "fields": {
+      "question": 10,
+      "text": "A piece cannot move without exposing a more valuable piece behind it",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 33,
+    "fields": {
+      "question": 10,
+      "text": "A pawn reaches the last rank",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 34,
+    "fields": {
+      "question": 10,
+      "text": "The king is in check",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 11,
+    "fields": {
+      "questionnaire": 2,
+      "question_type": "radio",
+      "question": "What is castling?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 3
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 35,
+    "fields": {
+      "question": 11,
+      "text": "Moving the king two squares towards a rook and moving the rook",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 36,
+    "fields": {
+      "question": 11,
+      "text": "Capturing the king",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 37,
+    "fields": {
+      "question": 11,
+      "text": "Promoting a pawn",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 38,
+    "fields": {
+      "question": 11,
+      "text": "A draw offer",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 12,
+    "fields": {
+      "questionnaire": 2,
+      "question_type": "radio",
+      "question": "What does 'en passant' mean?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 4
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 39,
+    "fields": {
+      "question": 12,
+      "text": "A special pawn capture",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 40,
+    "fields": {
+      "question": 12,
+      "text": "Castling on the queen side",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 41,
+    "fields": {
+      "question": 12,
+      "text": "A type of stalemate",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 42,
+    "fields": {
+      "question": 12,
+      "text": "Resigning the game",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 13,
+    "fields": {
+      "questionnaire": 2,
+      "question_type": "radio",
+      "question": "What is stalemate?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 5
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 43,
+    "fields": {
+      "question": 13,
+      "text": "When a player has no legal moves and their king is not in check",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 44,
+    "fields": {
+      "question": 13,
+      "text": "When the king is captured",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 45,
+    "fields": {
+      "question": 13,
+      "text": "When time runs out",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 46,
+    "fields": {
+      "question": 13,
+      "text": "When both players have equal material",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 14,
+    "fields": {
+      "questionnaire": 2,
+      "question_type": "radio",
+      "question": "What is the value of a queen usually considered to be?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 6
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 47,
+    "fields": {
+      "question": 14,
+      "text": "3 points",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 48,
+    "fields": {
+      "question": 14,
+      "text": "5 points",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 49,
+    "fields": {
+      "question": 14,
+      "text": "9 points",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 50,
+    "fields": {
+      "question": 14,
+      "text": "Infinite",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 15,
+    "fields": {
+      "questionnaire": 2,
+      "question_type": "text",
+      "question": "Which opening begins with 1.e4 e5?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 7
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 51,
+    "fields": {
+      "question": 15,
+      "text": "Open Game",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 52,
+    "fields": {
+      "question": 15,
+      "text": "King's Pawn Game",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 16,
+    "fields": {
+      "questionnaire": 2,
+      "question_type": "radio",
+      "question": "What is a discovered attack?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 8
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 53,
+    "fields": {
+      "question": 16,
+      "text": "An attack revealed by moving one piece",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 54,
+    "fields": {
+      "question": 16,
+      "text": "An attack from a discovered piece",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 55,
+    "fields": {
+      "question": 16,
+      "text": "A check from a pawn",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 56,
+    "fields": {
+      "question": 16,
+      "text": "A double check",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 17,
+    "fields": {
+      "questionnaire": 3,
+      "question_type": "radio",
+      "question": "What is zugzwang?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 1
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 57,
+    "fields": {
+      "question": 17,
+      "text": "A position where any move worsens your position",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 58,
+    "fields": {
+      "question": 17,
+      "text": "A forced checkmate",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 59,
+    "fields": {
+      "question": 17,
+      "text": "A drawn position",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 60,
+    "fields": {
+      "question": 17,
+      "text": "A winning attack",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 18,
+    "fields": {
+      "questionnaire": 3,
+      "question_type": "radio",
+      "question": "What is a zwischenzug?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 2
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 61,
+    "fields": {
+      "question": 18,
+      "text": "An intermediate move played before an expected move",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 62,
+    "fields": {
+      "question": 18,
+      "text": "A move that wins material",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 63,
+    "fields": {
+      "question": 18,
+      "text": "A defensive tactic",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 64,
+    "fields": {
+      "question": 18,
+      "text": "A type of sacrifice",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 19,
+    "fields": {
+      "questionnaire": 3,
+      "question_type": "radio",
+      "question": "What is the Sicilian Defense characterized by?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 3
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 65,
+    "fields": {
+      "question": 19,
+      "text": "1.e4 e5",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 66,
+    "fields": {
+      "question": 19,
+      "text": "1.e4 c5",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 67,
+    "fields": {
+      "question": 19,
+      "text": "1.d4 d5",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 68,
+    "fields": {
+      "question": 19,
+      "text": "1.c4 e5",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 20,
+    "fields": {
+      "questionnaire": 3,
+      "question_type": "radio",
+      "question": "What is prophylaxis in chess?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 4
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 69,
+    "fields": {
+      "question": 20,
+      "text": "Preventing the opponent's plans and ideas",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 70,
+    "fields": {
+      "question": 20,
+      "text": "Attacking the king",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 71,
+    "fields": {
+      "question": 20,
+      "text": "Exchanging pieces",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 72,
+    "fields": {
+      "question": 20,
+      "text": "Pushing pawns",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 21,
+    "fields": {
+      "questionnaire": 3,
+      "question_type": "radio",
+      "question": "What is a minority attack?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 5
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 73,
+    "fields": {
+      "question": 21,
+      "text": "A smaller pawn majority attacks a larger pawn majority",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 74,
+    "fields": {
+      "question": 21,
+      "text": "An attack with fewer pieces",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 75,
+    "fields": {
+      "question": 21,
+      "text": "A king hunt",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 76,
+    "fields": {
+      "question": 21,
+      "text": "A pawn breakthrough",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 22,
+    "fields": {
+      "questionnaire": 3,
+      "question_type": "radio",
+      "question": "Which World Champion is known for the quote: 'When I am trying to find a plan, I first look at my opponent's position'?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 6
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 77,
+    "fields": {
+      "question": 22,
+      "text": "Bobby Fischer",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 78,
+    "fields": {
+      "question": 22,
+      "text": "Anatoly Karpov",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 79,
+    "fields": {
+      "question": 22,
+      "text": "Garry Kasparov",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 80,
+    "fields": {
+      "question": 22,
+      "text": "Magnus Carlsen",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 23,
+    "fields": {
+      "questionnaire": 3,
+      "question_type": "text",
+      "question": "What does the term 'isolani' refer to?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 7
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 81,
+    "fields": {
+      "question": 23,
+      "text": "Isolated pawn",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 82,
+    "fields": {
+      "question": 23,
+      "text": "Isolated queen pawn",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.question",
+    "pk": 24,
+    "fields": {
+      "questionnaire": 3,
+      "question_type": "radio",
+      "question": "What is the key idea behind the 'positional sacrifice'?",
+      "created_at": "2026-06-15T17:04:42.067229+00:00",
+      "updated_at": "2026-06-15T17:04:42.067229+00:00",
+      "created_by": "11111111-1111-1111-1111-111111111111",
+      "placement": 8
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 83,
+    "fields": {
+      "question": 24,
+      "text": "Giving up material for long-term positional advantages",
+      "correct": true
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 84,
+    "fields": {
+      "question": 24,
+      "text": "Sacrificing to checkmate",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 85,
+    "fields": {
+      "question": 24,
+      "text": "Exchanging queens",
+      "correct": false
+    }
+  },
+  {
+    "model": "quiz.options",
+    "pk": 86,
+    "fields": {
+      "question": 24,
+      "text": "Losing material intentionally",
+      "correct": false
+    }
+  }
+]

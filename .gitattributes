@@ -1,0 +1,7 @@
+* text=auto
+
+# Ensure shell scripts always use LF line endings, even on Windows
+*.sh text eol=lf
+
+# Python files
+*.py text eol=lf

@@ -25,7 +25,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_extensions",
-    "corsheaders",
     "widget_tweaks",
     "ckeditor",
     "ckeditor_uploader",
@@ -38,7 +37,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -62,6 +60,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "web.context_processors.navigation",
             ],
         },
     },
@@ -142,10 +141,6 @@ AUTH_USER_MODEL = "accounts.User"
 # TODO: Migrate from django-ckeditor (CKEditor 4) to a maintained editor
 # (e.g., django-ckeditor-5 or a plain textarea) to resolve the security warning.
 SILENCED_SYSTEM_CHECKS = ["ckeditor.W001"]
-
-# CORS
-CORS_ALLOW_ALL_ORIGINS = config("CORS_ALLOW_ALL_ORIGINS", default=True, cast=bool)
-CORS_ALLOW_CREDENTIALS = True
 
 # CKEditor
 CKEDITOR_UPLOAD_PATH = "uploads/"

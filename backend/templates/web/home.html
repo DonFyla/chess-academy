@@ -1,35 +1,203 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Moving Train Chess Academy{% endblock %}
+{% block title %}Moving Train Chess Academy - Online Chess Coaching{% endblock %}
 
 {% block content %}
-<section class="container mx-auto px-6 py-16">
-    <div class="flex flex-col items-center text-center">
-        <h1 class="text-4xl sm:text-6xl font-semibold mb-6">
-            The Moving Train <br /> Online Chess Academy
-        </h1>
-        <p class="text-lg sm:text-xl mb-8 max-w-2xl">
-            Our mission statement: <br />
-            We will make your child fall in love with thinking.
-        </p>
-        <a
-            href="https://wa.link/uj48gk"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="px-6 py-3 bg-[#5E5044] text-white rounded-full hover:bg-[#4a3f35] transition-colors"
-        >
-            Learn Now
-        </a>
+<!-- Hero -->
+<section class="relative">
+    <div class="absolute inset-0 bg-gradient-to-br from-brand-100/50 to-transparent"></div>
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+        <div class="grid lg:grid-cols-2 gap-12 items-center py-20 lg:py-28">
+            <div class="space-y-8 text-center lg:text-left -mt-[75px] lg:-mt-[370px]">
+                <div class="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-brand-100">
+                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    <span class="text-sm font-medium text-brand-700">Now enrolling for all levels</span>
+                </div>
+                <h1 class="section-title leading-tight">
+                    The Moving Train <br>
+                    <span class="text-brand-600">Online Chess Academy</span>
+                </h1>
+                <p class="text-lg md:text-xl text-brand-700 max-w-xl mx-auto lg:mx-0">
+                    Our mission statement: <br class="hidden sm:block">
+                    <span class="font-semibold">We will make your child fall in love with thinking.</span>
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                    <a href="{% url 'quiz:register' %}" class="btn-primary">
+                        Take a Quick Quiz
+                        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+                    <a href="https://wa.link/uj48gk" target="_blank" rel="noopener noreferrer" class="btn-secondary">
+                        Learn Now
+                    </a>
+                </div>
+                <div class="flex items-center justify-center lg:justify-start gap-6 text-sm text-brand-600">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-brand-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                        <span>Rated 5.0 by parents</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        <span>500+ students trained</span>
+                    </div>
+                </div>
+
+                <!-- Hero picture cards -->
+                {% if hero_cards %}
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4">
+                        {% for card in hero_cards %}
+                            <div class="group relative overflow-hidden rounded-xl shadow-md aspect-square">
+                                <img src="{% static card.image %}" alt="{{ card.caption }}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
+                                <div class="absolute inset-0 bg-gradient-to-t from-brand-900/70 to-transparent flex items-end p-2">
+                                    <span class="text-white text-xs font-medium">{{ card.caption }}</span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="relative">
+                <div class="absolute -top-10 -right-10 w-72 h-72 bg-brand-200/50 rounded-full blur-3xl"></div>
+                <div class="absolute -bottom-10 -left-10 w-72 h-72 bg-brand-300/30 rounded-full blur-3xl"></div>
+                <div class="relative grid grid-cols-2 gap-4">
+                    {% for item in gallery %}
+                        <div class="{% if forloop.counter == 1 or forloop.counter == 4 %}mt-8{% endif %}">
+                            <img src="{% static item.image %}" alt="{{ item.caption }}" class="w-full h-48 md:h-64 object-cover rounded-2xl shadow-lg">
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
-<section class="container mx-auto px-6 py-12">
-    <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
-        <h2 class="text-2xl font-semibold mb-4">Django Migration in Progress</h2>
-        <p class="text-gray-600">
-            This is the new Django monolith skeleton. Public pages, booking, scheduling,
-            payments, and admin dashboards will be rebuilt here.
-        </p>
+<!-- About -->
+<section id="about-us" class="py-20 lg:py-28 bg-white">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-3xl mx-auto text-center mb-16">
+            <span class="text-brand-600 font-semibold text-sm uppercase tracking-wider">About Us</span>
+            <h2 class="section-title mt-3 mb-6">Building Champions, One Move at a Time</h2>
+            <p class="text-lg text-brand-700">
+                The Moving Train Online Academy offers top-notch chess education, fostering lifelong passion and skills. Our expert instruction cultivates strategic thinking, problem-solving, and sportsmanship to prepare players for success in chess and life.
+            </p>
+        </div>
+        <div class="flex flex-wrap justify-center items-center gap-4 md:gap-8">
+            <img src="{% static 'images/others/kid1.svg' %}" alt="Student learning chess" class="w-32 md:w-48 rounded-2xl shadow-lg -rotate-3">
+            <img src="{% static 'images/others/lines.svg' %}" alt="Chess board pattern" class="w-40 md:w-64 opacity-80">
+            <img src="{% static 'images/others/kid2.svg' %}" alt="Student playing chess" class="w-32 md:w-48 rounded-2xl shadow-lg rotate-3">
+        </div>
+        <div class="text-center mt-12">
+            <a href="https://wa.link/uj48gk" target="_blank" rel="noopener noreferrer" class="btn-primary">Start Learning Today</a>
+        </div>
+    </div>
+</section>
+
+<!-- Courses -->
+<section id="courses" class="py-20 lg:py-28 bg-brand-50">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <span class="text-brand-600 font-semibold text-sm uppercase tracking-wider">Programs</span>
+            <h2 class="section-title mt-3">Our Most Popular Courses</h2>
+        </div>
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% for course in courses %}
+                <div class="card group hover:shadow-xl transition-shadow">
+                    <div class="aspect-[4/3] overflow-hidden bg-brand-100">
+                        <img src="{% static course.image %}" alt="{{ course.type }} course" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xl font-bold text-brand-900">{{ course.type }}</h3>
+                            <div class="flex text-amber-400">
+                                {% for i in "12345" %}
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <p class="text-brand-700 text-sm mb-6 line-clamp-3">{{ course.details }}</p>
+                        <a href="{% url 'course_detail' course.slug %}" class="inline-flex items-center gap-2 text-brand-700 font-semibold hover:text-brand-600 transition-colors">
+                            View Curriculum
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Tutors -->
+<section id="tutors" class="py-20 lg:py-28 bg-white">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <span class="text-brand-600 font-semibold text-sm uppercase tracking-wider">Expert Coaches</span>
+            <h2 class="section-title mt-3">Meet Our Team Leaders</h2>
+        </div>
+        <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {% for tutor in tutors %}
+                <div class="card p-6 text-center hover:shadow-xl transition-shadow">
+                    <img src="{% static tutor.image %}" alt="{{ tutor.name }}" class="w-full h-64 object-cover rounded-xl mb-6">
+                    <h3 class="text-xl font-bold text-brand-900 mb-4">{{ tutor.name }}</h3>
+                    <ul class="text-left text-sm text-brand-700 space-y-2 mb-6">
+                        {% for feat in tutor.feats %}
+                            <li class="flex items-start gap-2">
+                                <span class="w-1.5 h-1.5 bg-brand-500 rounded-full mt-1.5 flex-shrink-0"></span>
+                                <span>{{ feat }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <a href="https://wa.link/uj48gk" target="_blank" rel="noopener noreferrer" class="btn-primary w-full justify-center text-sm">Book a Session</a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials -->
+<section id="testimonials" class="py-20 lg:py-28 bg-brand-100/50">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <span class="text-brand-600 font-semibold text-sm uppercase tracking-wider">Testimonials</span>
+            <h2 class="section-title mt-3">What Parents & Students Say</h2>
+        </div>
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {% for testimonial in testimonials %}
+                <div class="card p-6 flex flex-col h-full">
+                    <div class="flex items-center gap-3 mb-4">
+                        {% if testimonial.image %}
+                            <img src="{% static testimonial.image %}" alt="{{ testimonial.name }}" class="w-12 h-12 rounded-full object-cover">
+                        {% else %}
+                            <div class="w-12 h-12 rounded-full bg-brand-200 flex items-center justify-center text-brand-700 font-bold">
+                                {{ testimonial.name|first }}
+                            </div>
+                        {% endif %}
+                        <div>
+                            <p class="font-semibold text-brand-900 text-sm">{{ testimonial.name }}</p>
+                            <p class="text-xs text-brand-600">{{ testimonial.title }}</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-brand-700 flex-grow">"{{ testimonial.text|truncatewords:40 }}"</p>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="mt-16 max-w-4xl mx-auto bg-white rounded-2xl p-8 shadow-sm border border-brand-100 text-center">
+            <img src="{% static 'images/others/franklin.svg' %}" alt="Benjamin Franklin" class="w-24 h-24 mx-auto mb-4 rounded-full object-cover border-2 border-brand-200">
+            <p class="text-lg italic text-brand-700 mb-4">
+                "By playing chess then, we may learn: First: Foresight. Second: circumspection. Third: Caution. And lastly, we learn by chess the habit of not being discouraged by present bad appearances in the state of our affairs, the habit of hoping for a favourable chance, and that of preserving in the secrets of resources."
+            </p>
+            <p class="font-semibold text-brand-900">— Benjamin Franklin</p>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 lg:py-28 bg-brand-900 text-white">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-3xl md:text-5xl font-bold mb-6">Ready to Start Your Chess Journey?</h2>
+        <p class="text-brand-200 text-lg max-w-2xl mx-auto mb-10">Contact us today to join our academy and give your child the gift of strategic thinking.</p>
+        <a href="https://wa.link/uj48gk" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center px-8 py-4 bg-white text-brand-900 font-semibold rounded-full hover:bg-brand-100 transition-colors">
+            Contact Us on WhatsApp
+        </a>
     </div>
 </section>
 {% endblock %}

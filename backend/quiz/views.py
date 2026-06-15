@@ -16,13 +16,26 @@ def _build_session(qtaker, questionnaire):
         return None
     question_count = all_questions.count()
     questions_to_take = min(QUESTIONS_PER_SESSION, question_count)
-    randomized_questions = all_questions.order_by("?")[:questions_to_take]
-    randomized_question_ids = list(randomized_questions.values_list("id", flat=True))
+    # Evaluate the sliced QuerySet to a list to avoid SQLite randomisation quirks
+    randomized_questions = list(all_questions.order_by("?")[:questions_to_take])
+    randomized_question_ids = [q.id for q in randomized_questions]
     qtaker.current_question_set = randomized_question_ids
     qtaker.current_score = 0
     qtaker.next_question_set = []
     qtaker.save(update_fields=["current_question_set", "current_score", "next_question_set"])
     return randomized_question_ids
+
+
+def _text_answer_is_correct(question, answer_text):
+    """Return True if the supplied text matches any of the question's correct options."""
+    if not answer_text:
+        return False
+    cleaned = answer_text.strip().lower()
+    correct_texts = (
+        Options.objects.filter(question=question, correct=True)
+        .values_list("text", flat=True)
+    )
+    return any(cleaned == text.strip().lower() for text in correct_texts)
 
 
 def qtaker_view(request):
@@ -60,10 +73,24 @@ def quiz_question_view(request, qtaker_id, question_id):
     questionnaire = get_object_or_404(Questionnaire, title=skill)
     question = get_object_or_404(Question, id=question_id, questionnaire=questionnaire)
 
-    # Ensure a session exists
-    question_ids = qtaker.current_question_set or []
-    if not question_ids:
+    # Handle session transition from a previously completed questionnaire
+    current_set = qtaker.current_question_set or []
+    next_set = qtaker.next_question_set or []
+
+    if next_set and question.id in next_set:
+        # Promote next_question_set to current_question_set
+        qtaker.current_question_set = next_set
+        qtaker.next_question_set = []
+        qtaker.save(update_fields=["current_question_set", "next_question_set"])
+        question_ids = next_set
+    elif current_set and question.id in current_set:
+        question_ids = current_set
+    elif not current_set and not next_set:
+        # No session exists yet — build one
         question_ids = _build_session(qtaker, questionnaire) or []
+    else:
+        messages.error(request, "This question is not part of your current session.")
+        return redirect("quiz:register")
 
     if question.id not in question_ids:
         messages.error(request, "This question is not part of your current session.")
@@ -91,12 +118,7 @@ def quiz_question_view(request, qtaker_id, question_id):
                 is_correct = chosen_opt.correct
                 stored_answer_id = chosen_opt.id
             elif question.question_type == "text":
-                correct_opt = get_object_or_404(
-                    Options, question=question, correct=True
-                )
-                is_correct = (
-                    answer_value.strip().lower() == correct_opt.text.strip().lower()
-                )
+                is_correct = _text_answer_is_correct(question, answer_value)
                 stored_text_answer = answer_value.strip()
 
             qtaker.last_answer_id = stored_answer_id
@@ -138,11 +160,8 @@ def quiz_answer_view(request, qtaker_id, answer_id):
             messages.error(request, "No question answer was recorded.")
             return redirect("quiz:register")
         question = get_object_or_404(Question, id=qtaker.last_question_id)
-        correct_opt = get_object_or_404(Options, question=question, correct=True)
         user_answer_text = qtaker.last_text_answer
-        is_correct = (
-            user_answer_text.strip().lower() == correct_opt.text.strip().lower()
-        )
+        is_correct = _text_answer_is_correct(question, user_answer_text)
         chosen_answer = {"id": 0, "text": user_answer_text, "correct": is_correct}
     else:
         chosen_answer_obj = get_object_or_404(Options, pk=answer_id_int)
@@ -216,12 +235,11 @@ def quiz_result_view(request, qtaker_id):
                 if all_questions.exists():
                     question_count = all_questions.count()
                     questions_to_take = min(QUESTIONS_PER_SESSION, question_count)
-                    randomized_questions = all_questions.order_by("?")[:questions_to_take]
-                    randomized_question_ids = list(
-                        randomized_questions.values_list("id", flat=True)
-                    )
+                    randomized_questions = list(all_questions.order_by("?")[:questions_to_take])
+                    randomized_question_ids = [q.id for q in randomized_questions]
                     qtaker.next_question_set = randomized_question_ids
-                    first_question = randomized_questions.first()
+                    qtaker.current_question_set = []
+                    first_question = randomized_questions[0] if randomized_questions else None
                     first_question_id = first_question.id if first_question else None
                     next_questionnaire_data = {
                         "id": next_questionnaire.id,
@@ -234,22 +252,18 @@ def quiz_result_view(request, qtaker_id):
     if passed and next_skill:
         qtaker.skill = next_skill
 
+    score_for_template = qtaker.current_score
+    qtaker.current_score = 0
     qtaker.save(
-        update_fields=["test_result", "next_question_set", "skill"]
+        update_fields=["test_result", "current_score", "next_question_set", "current_question_set", "skill"]
     )
 
     context = {
         "qtaker": qtaker,
-        "questionnaire": questionnaire,
-        "score": qtaker.current_score,
+        "score": score_for_template,
         "total_questions": total_questions,
-        "percentage": round(percent, 2),
+        "percentage": percent,
         "passed": passed,
-        "next_skill": next_skill,
         "next_questionnaire": next_questionnaire_data,
     }
-    # Reset score for any potential retake, but keep the result stored on test_result
-    qtaker.current_score = 0
-    qtaker.save(update_fields=["current_score"])
-
     return render(request, "quiz/result.html", context)
