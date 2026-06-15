@@ -12,7 +12,7 @@ urlpatterns = [
     path("ckeditor/", include("ckeditor_uploader.urls")),
     path("", include("web.urls")),
     path("accounts/", include("accounts.urls")),
-    path("questionnaire/api/", include("quiz.urls")),
+    path("quiz/", include("quiz.urls")),
     path("scheduling/", include("scheduling.urls")),
     path("payments/", include("payments.urls")),
 ]

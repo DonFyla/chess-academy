@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Results - Chess Quiz{% endblock %}
+
+{% block content %}
+<section class="container mx-auto px-6 py-16">
+    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8 text-center">
+        <h1 class="text-3xl font-semibold mb-4">Quiz Results</h1>
+
+        {% if passed %}
+            <div class="mb-6">
+                <div class="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center text-green-600 text-2xl font-bold">★</div>
+                <h2 class="text-2xl font-semibold mt-4 text-green-700">You passed!</h2>
+            </div>
+        {% else %}
+            <div class="mb-6">
+                <div class="w-16 h-16 mx-auto bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 text-2xl font-bold">↻</div>
+                <h2 class="text-2xl font-semibold mt-4 text-yellow-700">Keep practicing</h2>
+            </div>
+        {% endif %}
+
+        <p class="text-5xl font-bold text-[#5E5044] mb-2">{{ percentage }}%</p>
+        <p class="text-gray-600 mb-8">You scored {{ score }} out of {{ total_questions }}</p>
+
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+            <a href="{% url 'quiz:register' %}" class="px-6 py-3 border border-[#5E5044] text-[#5E5044] rounded-full hover:bg-[#5E5044] hover:text-white transition-colors font-medium">
+                Retake Quiz
+            </a>
+            {% if passed and next_questionnaire %}
+                <a href="{% url 'quiz:question' qtaker.id next_questionnaire.first_question_id %}" class="px-6 py-3 bg-[#5E5044] text-white rounded-full hover:bg-[#4a3f35] transition-colors font-medium">
+                    Try {{ next_questionnaire.title|title }} Level
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

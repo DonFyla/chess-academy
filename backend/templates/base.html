@@ -15,6 +15,7 @@
             <a href="{% url 'home' %}" class="text-xl font-bold text-[#5E5044]">Moving Train</a>
             <div class="space-x-4">
                 <a href="{% url 'home' %}" class="hover:text-[#5E5044]">Home</a>
+                <a href="{% url 'quiz:register' %}" class="hover:text-[#5E5044]">Quiz</a>
                 {% if user.is_authenticated %}
                     <span class="text-sm text-gray-600">{{ user.username }}</span>
                     <a href="{% url 'accounts:logout' %}" class="hover:text-[#5E5044]">Logout</a>

@@ -1,9 +1,11 @@
 from django.urls import path
 from . import views
 
+app_name = "quiz"
+
 urlpatterns = [
-    path("qtaker/", views.QtakerView, name="qtaker-create"),
-    path("quiz/<int:Qtakerid>/<int:question_id>/", views.quiz, name="quiz_question"),
-    path("answer/<int:Qtakerid>/<int:id>/", views.view_answer, name="quiz_answer"),
-    path("result/<int:Qtakerid>/", views.result, name="result"),
+    path("", views.qtaker_view, name="register"),
+    path("<int:qtaker_id>/<int:question_id>/", views.quiz_question_view, name="question"),
+    path("answer/<int:qtaker_id>/<int:answer_id>/", views.quiz_answer_view, name="answer"),
+    path("result/<int:qtaker_id>/", views.quiz_result_view, name="result"),
 ]

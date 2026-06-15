@@ -1,17 +1,15 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from rest_framework.test import APITestCase
-from rest_framework import status
 from .models import Questionnaire, Question, Options, Qtaker
 
 User = get_user_model()
 
 
-class QuizAPITests(APITestCase):
+class QuizTemplateTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser", password="testpass"
+            username="testuser", password="testpass", email="test@example.com"
         )
         self.questionnaire = Questionnaire.objects.create(
             title="beginner",
@@ -32,34 +30,74 @@ class QuizAPITests(APITestCase):
             question=self.question, text="Pawn", correct=False
         )
 
-    def test_create_qtaker(self):
-        url = "/questionnaire/api/qtaker/"
+    def test_register_page_renders(self):
+        response = self.client.get(reverse("quiz:register"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "quiz/register.html")
+
+    def test_create_qtaker_redirects_to_first_question(self):
         data = {"name": "Test User", "age": 10, "email": "test@example.com", "skill": "beginner"}
-        response = self.client.post(url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn("qtaker_id", response.data)
+        response = self.client.post(reverse("quiz:register"), data)
+        self.assertEqual(response.status_code, 302)
+        qtaker = Qtaker.objects.get(email="test@example.com")
+        self.assertEqual(qtaker.current_question_set[0], self.question.id)
 
-    def test_get_question(self):
+    def test_question_page_renders(self):
         qtaker = Qtaker.objects.create(
             name="Test User", age=10, email="test@example.com", skill="beginner"
         )
         qtaker.current_question_set = [self.question.id]
         qtaker.save()
 
-        url = f"/questionnaire/api/quiz/{qtaker.id}/{self.question.id}/"
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["question"]["id"], self.question.id)
+        response = self.client.get(
+            reverse("quiz:question", args=[qtaker.id, self.question.id])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "quiz/question.html")
+        self.assertContains(response, "Queen")
 
-    def test_submit_answer(self):
+    def test_submit_correct_answer(self):
         qtaker = Qtaker.objects.create(
             name="Test User", age=10, email="test@example.com", skill="beginner"
         )
         qtaker.current_question_set = [self.question.id]
         qtaker.save()
 
-        url = f"/questionnaire/api/quiz/{qtaker.id}/{self.question.id}/"
-        data = {"answer": str(self.correct_option.id)}
-        response = self.client.post(url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data["is_correct"])
+        response = self.client.post(
+            reverse("quiz:question", args=[qtaker.id, self.question.id]),
+            {"answer": str(self.correct_option.id)},
+        )
+        self.assertEqual(response.status_code, 302)
+        qtaker.refresh_from_db()
+        self.assertEqual(qtaker.last_answer_id, self.correct_option.id)
+
+    def test_answer_page_renders_and_scores(self):
+        qtaker = Qtaker.objects.create(
+            name="Test User", age=10, email="test@example.com", skill="beginner"
+        )
+        qtaker.current_question_set = [self.question.id]
+        qtaker.last_question_id = self.question.id
+        qtaker.last_answer_id = self.correct_option.id
+        qtaker.save()
+
+        response = self.client.get(
+            reverse("quiz:answer", args=[qtaker.id, self.correct_option.id])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "quiz/answer.html")
+        qtaker.refresh_from_db()
+        self.assertEqual(qtaker.current_score, 1)
+
+    def test_result_page_renders(self):
+        qtaker = Qtaker.objects.create(
+            name="Test User", age=10, email="test@example.com", skill="beginner"
+        )
+        qtaker.current_question_set = [self.question.id]
+        qtaker.current_score = 1
+        qtaker.save()
+
+        response = self.client.get(reverse("quiz:result", args=[qtaker.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "quiz/result.html")
+        qtaker.refresh_from_db()
+        self.assertEqual(qtaker.test_result, 100.0)

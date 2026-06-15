@@ -25,7 +25,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_extensions",
-    "rest_framework",
     "corsheaders",
     "widget_tweaks",
     "ckeditor",
@@ -143,12 +142,6 @@ AUTH_USER_MODEL = "accounts.User"
 # TODO: Migrate from django-ckeditor (CKEditor 4) to a maintained editor
 # (e.g., django-ckeditor-5 or a plain textarea) to resolve the security warning.
 SILENCED_SYSTEM_CHECKS = ["ckeditor.W001"]
-
-# Django REST Framework
-REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
-    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
-}
 
 # CORS
 CORS_ALLOW_ALL_ORIGINS = config("CORS_ALLOW_ALL_ORIGINS", default=True, cast=bool)
