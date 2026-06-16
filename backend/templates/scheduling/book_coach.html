@@ -12,249 +12,515 @@
         </a>
 
         <div class="max-w-5xl mx-auto">
+            <!-- Coach Header -->
             <div class="text-center mb-10">
                 <h1 class="text-3xl lg:text-4xl font-bold text-brand-900 mb-3">Book {{ coach.name }}</h1>
                 {% if coach.specialization %}
                     <p class="text-brand-600 text-lg">{{ coach.specialization }}</p>
                 {% endif %}
+                <div class="flex items-center justify-center gap-6 mt-4 text-sm text-brand-700">
+                    <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        {{ points_cost }} point{{ points_cost|pluralize }} / class
+                    </span>
+                    <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a1 1 0 11-2 0 1 1 0 012 0z"></path></svg>
+                        Your balance: <strong id="user-balance-display">{{ user_balance }}</strong> points
+                    </span>
+                </div>
             </div>
 
-            <form method="post" class="space-y-8" id="booking-form" onsubmit="return validateBookingForm()">
-                {% csrf_token %}
-
-                {% if form.non_field_errors %}
-                    <div class="p-4 bg-red-50 text-red-700 rounded-xl">
-                        {{ form.non_field_errors }}
-                    </div>
-                {% endif %}
-
-                <!-- Booking Mode -->
-                <div class="card p-6 md:p-8">
-                    <h2 class="text-xl font-bold text-brand-900 mb-5">How Many Sessions Per Week?</h2>
-                    <div class="grid sm:grid-cols-2 gap-4">
-                        {% for value, label in form.fields.booking_mode.choices %}
-                            <label class="relative cursor-pointer">
-                                <input type="radio" name="booking_mode" value="{{ value }}" class="peer sr-only" {% if form.booking_mode.value == value or value == 'single' %}checked{% endif %} onchange="updateBookingMode()">
-                                <div class="p-5 rounded-xl border-2 border-brand-200 hover:border-brand-400 peer-checked:border-brand-600 peer-checked:bg-brand-600 peer-checked:text-white transition-all">
-                                    <p class="font-semibold text-lg">{{ label }}</p>
-                                    <p class="text-sm mt-1 opacity-90">
-                                        {% if value == 'single' %}
-                                            ₦{{ price_per_session|floatformat:0 }} × 4 sessions
-                                        {% else %}
-                                            ₦{{ price_per_session|floatformat:0 }} × 8 sessions with 5% discount
-                                        {% endif %}
-                                    </p>
-                                </div>
-                            </label>
-                        {% endfor %}
-                    </div>
-                    <div class="mt-4 p-4 bg-brand-50 rounded-xl">
-                        <p class="text-brand-700">
-                            Total sessions: <span id="total-sessions" class="font-bold">4</span>
-                            <span class="mx-2">|</span>
-                            Amount due: <span id="total-amount" class="font-bold text-brand-900">₦<span id="total-amount-value">{{ price_per_session|floatformat:0 }}</span></span>
-                        </p>
-                    </div>
+            <!-- Tabs -->
+            <div class="mb-8">
+                <div class="inline-flex p-1 bg-white rounded-xl border border-brand-200 shadow-sm">
+                    <button type="button" onclick="switchTab('points')" id="tab-points" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-medium transition-all bg-brand-600 text-white">
+                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Book with Points
+                    </button>
+                    <button type="button" onclick="switchTab('recurring')" id="tab-recurring" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-medium transition-all text-brand-700 hover:bg-brand-100">
+                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        Book Recurring Classes
+                    </button>
                 </div>
+            </div>
 
-                <!-- Session 1 -->
-                <div class="card p-6 md:p-8">
-                    <h2 class="text-xl font-bold text-brand-900 mb-5">1. Select First Weekly Day</h2>
-                    <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-6">
-                        {% for day_name in day_order %}
-                            {% with day_index=forloop.counter0 %}
-                                <button type="button"
-                                    data-day="{{ day_index }}"
-                                    data-session="1"
-                                    onclick="selectDay({{ day_index }}, 1)"
-                                    {% if day_index not in available_days %}disabled{% endif %}
-                                    class="day-btn-1 p-3 rounded-xl text-sm font-medium border-2 transition-all
-                                        {% if day_index in available_days %}
-                                            border-brand-200 text-brand-700 hover:border-brand-400 bg-white
-                                        {% else %}
-                                            border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed
-                                        {% endif %}">
-                                    <span class="block sm:hidden">{{ day_name.0 }}</span>
-                                    <span class="hidden sm:block">{{ day_name|slice:':3' }}</span>
-                                </button>
-                            {% endwith %}
-                        {% endfor %}
-                    </div>
-                    <input type="hidden" name="day_of_week_1" id="day-of-week-1" value="{{ form.day_of_week_1.value|default:'' }}">
-                    {{ form.time_slot_1 }}
+            <!-- Points Tab -->
+            <div id="panel-points" class="tab-panel">
+                <form method="post" class="space-y-8" id="points-form" onsubmit="return validatePointsForm()">
+                    {% csrf_token %}
+                    <input type="hidden" name="booking_type" value="points">
+                    <input type="hidden" name="selected_slots" id="selected-slots-input" value="">
 
-                    <div id="slots-container-1" class="hidden">
-                        <p class="text-sm font-medium text-brand-700 mb-3">Select Time</p>
-                        <div class="flex flex-wrap gap-3" id="slots-list-1"></div>
-                    </div>
-                </div>
+                    {% if points_form.non_field_errors %}
+                        <div class="p-4 bg-red-50 text-red-700 rounded-xl">{{ points_form.non_field_errors }}</div>
+                    {% endif %}
 
-                <!-- Session 2 -->
-                <div id="session-2" class="card p-6 md:p-8 hidden border-dashed border-2 border-brand-300">
-                    <h2 class="text-xl font-bold text-brand-900 mb-5">2. Select Second Weekly Day</h2>
-                    <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-6">
-                        {% for day_name in day_order %}
-                            {% with day_index=forloop.counter0 %}
-                                <button type="button"
-                                    data-day="{{ day_index }}"
-                                    data-session="2"
-                                    onclick="selectDay({{ day_index }}, 2)"
-                                    {% if day_index not in available_days %}disabled{% endif %}
-                                    class="day-btn-2 p-3 rounded-xl text-sm font-medium border-2 transition-all
-                                        {% if day_index in available_days %}
-                                            border-brand-200 text-brand-700 hover:border-brand-400 bg-white
-                                        {% else %}
-                                            border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed
-                                        {% endif %}">
-                                    <span class="block sm:hidden">{{ day_name.0 }}</span>
-                                    <span class="hidden sm:block">{{ day_name|slice:':3' }}</span>
-                                </button>
-                            {% endwith %}
-                        {% endfor %}
-                    </div>
-                    <input type="hidden" name="day_of_week_2" id="day-of-week-2" value="{{ form.day_of_week_2.value|default:'' }}">
-                    {{ form.time_slot_2 }}
-
-                    <div id="slots-container-2" class="hidden">
-                        <p class="text-sm font-medium text-brand-700 mb-3">Select Time</p>
-                        <div class="flex flex-wrap gap-3" id="slots-list-2"></div>
-                    </div>
-                </div>
-
-                <!-- Student Info + Summary -->
-                <div id="student-form" class="card p-6 md:p-8 hidden">
-                    <h2 class="text-xl font-bold text-brand-900 mb-5">Your Information</h2>
-
-                    <div class="bg-brand-50 p-5 rounded-xl mb-6">
-                        <h3 class="font-semibold text-brand-900 mb-2">Booking Summary</h3>
-                        <p class="text-sm text-brand-700"><strong>Coach:</strong> {{ coach.name }}</p>
-                        <p class="text-sm text-brand-700"><strong>Schedule:</strong></p>
-                        <ul class="list-disc list-inside ml-2 text-sm text-brand-700 mb-2" id="summary-schedule"></ul>
-                        <p class="text-sm text-brand-700"><strong>Total Sessions:</strong> <span id="summary-sessions">4</span></p>
-                        <p class="text-xl font-bold text-brand-900 mt-2">Amount Due: <span id="summary-amount">₦<span id="summary-amount-value">{{ price_per_session|floatformat:0 }}</span></span></p>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                            <label for="{{ form.student_name.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Full Name *</label>
-                            {{ form.student_name|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
-                            {% if form.student_name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.student_name.errors|first }}</p>{% endif %}
+                    <!-- Calendar -->
+                    <div class="card p-6 md:p-8">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                            <h2 class="text-xl font-bold text-brand-900">Select Time Slots</h2>
+                            <div class="text-sm text-brand-600">
+                                Selected: <span id="selected-count" class="font-bold text-brand-900">0</span>
+                                <span class="mx-2">|</span>
+                                Cost: <span id="selected-cost" class="font-bold text-brand-900">0</span> points
+                            </div>
                         </div>
-                        <div>
-                            <label for="{{ form.student_email.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Email *</label>
-                            {{ form.student_email|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
-                            {% if form.student_email.errors %}<p class="mt-1 text-sm text-red-600">{{ form.student_email.errors|first }}</p>{% endif %}
+                        <div id="calendar-container" class="space-y-6"></div>
+                    </div>
+
+                    <!-- Selected Slots Summary -->
+                    <div id="selected-slots-summary" class="card p-6 md:p-8 hidden">
+                        <h2 class="text-xl font-bold text-brand-900 mb-4">Selected Slots</h2>
+                        <div id="selected-slots-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <!-- Student Info -->
+                    <div class="card p-6 md:p-8">
+                        <h2 class="text-xl font-bold text-brand-900 mb-5">Your Information</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label for="{{ points_form.student_name.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Full Name *</label>
+                                {{ points_form.student_name|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
+                            <div>
+                                <label for="{{ points_form.student_email.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Email *</label>
+                                {{ points_form.student_email|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
+                            <div>
+                                <label for="{{ points_form.student_phone.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Phone</label>
+                                {{ points_form.student_phone|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="{{ points_form.student_notes.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Notes</label>
+                                {{ points_form.student_notes|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
                         </div>
-                        <div>
-                            <label for="{{ form.student_phone.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Phone</label>
-                            {{ form.student_phone|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
-                            {% if form.student_phone.errors %}<p class="mt-1 text-sm text-red-600">{{ form.student_phone.errors|first }}</p>{% endif %}
+
+                        <div class="mt-6 p-4 bg-brand-50 rounded-xl">
+                            <p class="text-brand-700">
+                                Total Cost: <span id="total-cost-display" class="text-2xl font-bold text-brand-900">0</span> points
+                                <span class="mx-2">|</span>
+                                Balance after booking: <span id="balance-after-display" class="font-bold text-brand-900">{{ user_balance }}</span> points
+                            </p>
                         </div>
-                        <div>
-                            <label for="{{ form.course_type.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Course Type</label>
-                            {{ form.course_type|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
-                            {% if form.course_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.course_type.errors|first }}</p>{% endif %}
-                        </div>
-                        <div class="md:col-span-2">
-                            <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Notes</label>
-                            {{ form.notes|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
-                            {% if form.notes.errors %}<p class="mt-1 text-sm text-red-600">{{ form.notes.errors|first }}</p>{% endif %}
+
+                        <div class="mt-6">
+                            <button type="submit" id="points-submit-btn" class="w-full sm:w-auto px-8 py-4 bg-brand-600 text-white font-semibold rounded-full hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                Complete Points Booking
+                            </button>
+                            <a href="{% url 'payments:buy_points' %}" id="buy-points-link" class="hidden ml-4 px-8 py-4 bg-green-600 text-white font-semibold rounded-full hover:bg-green-700 transition-colors inline-flex items-center">
+                                Buy More Points
+                            </a>
                         </div>
                     </div>
+                </form>
+            </div>
 
-                    <div class="pt-6">
-                        <button type="submit" class="w-full px-8 py-4 bg-brand-600 text-white font-semibold rounded-full hover:bg-brand-700 transition-colors" id="submit-btn">
-                            Complete Booking
-                        </button>
-                        <p class="text-sm text-brand-500 text-center mt-3">You'll receive an email with payment details.</p>
+            <!-- Recurring Tab -->
+            <div id="panel-recurring" class="tab-panel hidden">
+                <form method="post" class="space-y-8" id="recurring-form" onsubmit="return validateRecurringForm()">
+                    {% csrf_token %}
+                    <input type="hidden" name="booking_type" value="recurring">
+
+                    {% if recurring_form.non_field_errors %}
+                        <div class="p-4 bg-red-50 text-red-700 rounded-xl">{{ recurring_form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <!-- Booking Mode -->
+                    <div class="card p-6 md:p-8">
+                        <h2 class="text-xl font-bold text-brand-900 mb-5">How Many Sessions Per Week?</h2>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            {% for value, label in recurring_form.fields.booking_mode.choices %}
+                                <label class="relative cursor-pointer">
+                                    <input type="radio" name="booking_mode" value="{{ value }}" class="peer sr-only" {% if recurring_form.booking_mode.value == value or value == 'single' %}checked{% endif %} onchange="updateRecurringMode()">
+                                    <div class="p-5 rounded-xl border-2 border-brand-200 hover:border-brand-400 peer-checked:border-brand-600 peer-checked:bg-brand-600 peer-checked:text-white transition-all">
+                                        <p class="font-semibold text-lg">{{ label }}</p>
+                                        <p class="text-sm mt-1 opacity-90">
+                                            {% if value == 'single' %}
+                                                ₦{{ price_per_session|floatformat:0 }} × 4 sessions
+                                            {% else %}
+                                                ₦{{ price_per_session|floatformat:0 }} × 8 sessions with 5% discount
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </label>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-4 p-4 bg-brand-50 rounded-xl">
+                            <p class="text-brand-700">
+                                Total sessions: <span id="recurring-total-sessions" class="font-bold">4</span>
+                                <span class="mx-2">|</span>
+                                Amount due: <span id="recurring-total-amount" class="font-bold text-brand-900">₦<span id="recurring-total-amount-value">{{ price_per_session|floatformat:0 }}</span></span>
+                            </p>
+                        </div>
                     </div>
-                </div>
-            </form>
+
+                    <!-- Session 1 -->
+                    <div class="card p-6 md:p-8">
+                        <h2 class="text-xl font-bold text-brand-900 mb-5">1. Select First Weekly Day</h2>
+                        <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-6">
+                            {% for day_name in day_order %}
+                                {% with day_index=forloop.counter0 %}
+                                    <button type="button"
+                                        data-day="{{ day_index }}"
+                                        data-session="1"
+                                        onclick="selectRecurringDay({{ day_index }}, 1)"
+                                        {% if day_index not in available_days %}disabled{% endif %}
+                                        class="r-day-btn-1 p-3 rounded-xl text-sm font-medium border-2 transition-all
+                                            {% if day_index in available_days %}
+                                                border-brand-200 text-brand-700 hover:border-brand-400 bg-white
+                                            {% else %}
+                                                border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed
+                                            {% endif %}">
+                                        <span class="block sm:hidden">{{ day_name.0 }}</span>
+                                        <span class="hidden sm:block">{{ day_name|slice:':3' }}</span>
+                                    </button>
+                                {% endwith %}
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="day_of_week_1" id="r-day-of-week-1" value="{{ recurring_form.day_of_week_1.value|default:'' }}">
+                        {{ recurring_form.time_slot_1 }}
+                        <div id="r-slots-container-1" class="hidden">
+                            <p class="text-sm font-medium text-brand-700 mb-3">Select Time</p>
+                            <div class="flex flex-wrap gap-3" id="r-slots-list-1"></div>
+                        </div>
+                    </div>
+
+                    <!-- Session 2 -->
+                    <div id="r-session-2" class="card p-6 md:p-8 hidden border-dashed border-2 border-brand-300">
+                        <h2 class="text-xl font-bold text-brand-900 mb-5">2. Select Second Weekly Day</h2>
+                        <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-6">
+                            {% for day_name in day_order %}
+                                {% with day_index=forloop.counter0 %}
+                                    <button type="button"
+                                        data-day="{{ day_index }}"
+                                        data-session="2"
+                                        onclick="selectRecurringDay({{ day_index }}, 2)"
+                                        {% if day_index not in available_days %}disabled{% endif %}
+                                        class="r-day-btn-2 p-3 rounded-xl text-sm font-medium border-2 transition-all
+                                            {% if day_index in available_days %}
+                                                border-brand-200 text-brand-700 hover:border-brand-400 bg-white
+                                            {% else %}
+                                                border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed
+                                            {% endif %}">
+                                        <span class="block sm:hidden">{{ day_name.0 }}</span>
+                                        <span class="hidden sm:block">{{ day_name|slice:':3' }}</span>
+                                    </button>
+                                {% endwith %}
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="day_of_week_2" id="r-day-of-week-2" value="{{ recurring_form.day_of_week_2.value|default:'' }}">
+                        {{ recurring_form.time_slot_2 }}
+                        <div id="r-slots-container-2" class="hidden">
+                            <p class="text-sm font-medium text-brand-700 mb-3">Select Time</p>
+                            <div class="flex flex-wrap gap-3" id="r-slots-list-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Student Info -->
+                    <div id="r-student-form" class="card p-6 md:p-8 hidden">
+                        <h2 class="text-xl font-bold text-brand-900 mb-5">Your Information</h2>
+                        <div class="bg-brand-50 p-5 rounded-xl mb-6">
+                            <h3 class="font-semibold text-brand-900 mb-2">Booking Summary</h3>
+                            <p class="text-sm text-brand-700"><strong>Coach:</strong> {{ coach.name }}</p>
+                            <p class="text-sm text-brand-700"><strong>Schedule:</strong></p>
+                            <ul class="list-disc list-inside ml-2 text-sm text-brand-700 mb-2" id="r-summary-schedule"></ul>
+                            <p class="text-sm text-brand-700"><strong>Total Sessions:</strong> <span id="r-summary-sessions">4</span></p>
+                            <p class="text-xl font-bold text-brand-900 mt-2">Amount Due: <span id="r-summary-amount">₦<span id="r-summary-amount-value">{{ price_per_session|floatformat:0 }}</span></span></p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label for="{{ recurring_form.student_name.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Full Name *</label>
+                                {{ recurring_form.student_name|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
+                            <div>
+                                <label for="{{ recurring_form.student_email.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Email *</label>
+                                {{ recurring_form.student_email|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
+                            <div>
+                                <label for="{{ recurring_form.student_phone.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Phone</label>
+                                {{ recurring_form.student_phone|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
+                            <div>
+                                <label for="{{ recurring_form.course_type.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Course Type</label>
+                                {{ recurring_form.course_type|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="{{ recurring_form.notes.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Notes</label>
+                                {{ recurring_form.notes|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
+                        </div>
+
+                        <div class="pt-6">
+                            <button type="submit" class="w-full sm:w-auto px-8 py-4 bg-brand-600 text-white font-semibold rounded-full hover:bg-brand-700 transition-colors">
+                                Complete Booking
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </section>
 
 <script>
     const slotsByDay = JSON.parse('{{ slots_by_day_json|escapejs }}');
-    const bookedSlots = JSON.parse('{{ booked_slots_json|escapejs }}');
+    const bookedSlotsRecurring = JSON.parse('{{ booked_slots_recurring_json|escapejs }}');
+    const bookedSlotsFlexible = JSON.parse('{{ booked_slots_flexible_json|escapejs }}');
+    const blockedDates = JSON.parse('{{ blocked_dates_json|escapejs }}');
     const dayNames = JSON.parse('{{ day_order_json|escapejs }}');
     const pricePerSession = {{ price_per_session }};
+    const pointsCost = {{ points_cost }};
+    const userBalance = {{ user_balance }};
 
-    let selectedDay1 = null;
-    let selectedSlot1 = null;
-    let selectedDay2 = null;
-    let selectedSlot2 = null;
+    // Tab switching
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+        document.getElementById('panel-' + tab).classList.remove('hidden');
 
-    function formatTime(timeStr) {
-        const [hours, minutes] = timeStr.split(':');
-        const hour = parseInt(hours, 10);
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour % 12 || 12;
-        return `${displayHour}:${minutes} ${ampm}`;
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('bg-brand-600', 'text-white');
+            btn.classList.add('text-brand-700', 'hover:bg-brand-100');
+        });
+        const activeBtn = document.getElementById('tab-' + tab);
+        activeBtn.classList.remove('text-brand-700', 'hover:bg-brand-100');
+        activeBtn.classList.add('bg-brand-600', 'text-white');
     }
 
-    function isSlotBooked(dayIndex, slot) {
-        const booked = bookedSlots[dayIndex] || [];
+    // ================= POINTS BOOKING =================
+    let selectedPointsSlots = [];
+
+    function formatTime(timeStr) {
+        const [h, m] = timeStr.split(':');
+        const hour = parseInt(h, 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 || 12;
+        return `${displayHour}:${m} ${ampm}`;
+    }
+
+    function isSlotBookedFlexible(dateStr, startTime, endTime) {
+        const booked = bookedSlotsFlexible[dateStr] || [];
+        return booked.some(b => b.start < endTime && b.end > startTime);
+    }
+
+    function isSlotBlocked(dateStr, startTime, endTime) {
+        const block = blockedDates[dateStr];
+        if (!block) return false;
+        if (block.full_day) return true;
+        return startTime < block.end && endTime > block.start;
+    }
+
+    function formatDateLagos(d) {
+        return d.toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' });
+    }
+
+    function getLagosToday() {
+        const now = new Date();
+        const lagosStr = now.toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' });
+        return new Date(lagosStr + 'T00:00:00');
+    }
+
+    function generateCalendar() {
+        const container = document.getElementById('calendar-container');
+        container.innerHTML = '';
+        const today = getLagosToday();
+
+        for (let week = 0; week < 4; week++) {
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() + 1 + week * 7); // Start from tomorrow
+            // Adjust to Monday of the week containing tomorrow
+            const dayOfWeek = weekStart.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            const monday = new Date(weekStart);
+            monday.setDate(weekStart.getDate() + mondayOffset);
+
+            const weekDiv = document.createElement('div');
+            weekDiv.className = 'border border-brand-200 rounded-xl p-4';
+            weekDiv.innerHTML = `<h4 class="font-semibold text-brand-900 mb-3">Week of ${monday.toLocaleDateString('en-US', { timeZone: 'Africa/Lagos', month: 'short', day: 'numeric', year: 'numeric' })}</h4>`;
+
+            const daysDiv = document.createElement('div');
+            daysDiv.className = 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2';
+
+            for (let d = 0; d < 7; d++) {
+                const date = new Date(monday);
+                date.setDate(monday.getDate() + d);
+                const dateStr = formatDateLagos(date);
+                const dayIndex = date.getDay();
+                const slots = slotsByDay[dayIndex] || [];
+                const isPast = date < today;
+
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'min-h-[120px] p-2 bg-brand-50 rounded-lg';
+
+                let content = '';
+                const availableSlots = slots.filter(slot => {
+                    const start = slot.start_time;
+                    const end = slot.end_time;
+                    return !isSlotBookedFlexible(dateStr, start, end) && !isSlotBlocked(dateStr, start, end) && !isSlotBookedRecurring(dayIndex, slot);
+                });
+
+                if (isPast) {
+                    content = '<span class="text-xs text-gray-400">—</span>';
+                } else if (slots.length === 0) {
+                    content = '<span class="text-xs text-gray-400">—</span>';
+                } else if (availableSlots.length === 0) {
+                    content = '<div class="text-xs text-orange-500 font-medium">Fully Booked</div>';
+                } else {
+                    content = '<div class="space-y-1">' + availableSlots.map(slot => {
+                        const isSelected = selectedPointsSlots.some(s => s.date === dateStr && s.start_time === slot.start_time);
+                        return `<button type="button" onclick="togglePointsSlot('${dateStr}', ${dayIndex}, '${slot.start_time}', '${slot.end_time}')" class="w-full text-xs py-1.5 px-1 rounded transition-colors ${isSelected ? 'bg-brand-600 text-white' : 'bg-white hover:bg-brand-100 border border-brand-200 text-brand-700'}">${formatTime(slot.start_time)}</button>`;
+                    }).join('') + '</div>';
+                }
+
+                const displayDay = parseInt(date.toLocaleDateString('en-GB', { timeZone: 'Africa/Lagos', day: 'numeric' }), 10);
+                dayDiv.innerHTML = `
+                    <div class="text-xs text-brand-500 mb-1">${dayNames[dayIndex].slice(0, 3)}</div>
+                    <div class="text-sm font-semibold text-brand-900 mb-2">${displayDay}</div>
+                    ${content}
+                `;
+                daysDiv.appendChild(dayDiv);
+            }
+
+            weekDiv.appendChild(daysDiv);
+            container.appendChild(weekDiv);
+        }
+    }
+
+    function togglePointsSlot(dateStr, dayOfWeek, startTime, endTime) {
+        const existingIndex = selectedPointsSlots.findIndex(s => s.date === dateStr && s.start_time === startTime);
+        if (existingIndex >= 0) {
+            selectedPointsSlots.splice(existingIndex, 1);
+        } else {
+            if (selectedPointsSlots.length >= 10) {
+                alert('You can book up to 10 sessions at a time');
+                return;
+            }
+            selectedPointsSlots.push({ date: dateStr, day_of_week: dayOfWeek, start_time: startTime, end_time: endTime });
+        }
+        selectedPointsSlots.sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
+        updatePointsSummary();
+        generateCalendar();
+    }
+
+    function updatePointsSummary() {
+        const count = selectedPointsSlots.length;
+        const totalCost = count * pointsCost;
+        const balanceAfter = userBalance - totalCost;
+
+        document.getElementById('selected-count').textContent = count;
+        document.getElementById('selected-cost').textContent = totalCost;
+        document.getElementById('total-cost-display').textContent = totalCost;
+        document.getElementById('balance-after-display').textContent = balanceAfter;
+        document.getElementById('selected-slots-input').value = JSON.stringify(selectedPointsSlots);
+
+        const summary = document.getElementById('selected-slots-summary');
+        const list = document.getElementById('selected-slots-list');
+        if (count > 0) {
+            summary.classList.remove('hidden');
+            list.innerHTML = selectedPointsSlots.map(slot => `
+                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100 text-brand-700 text-sm">
+                    ${dayNames[slot.day_of_week].slice(0, 3)} ${slot.date} · ${formatTime(slot.start_time)}
+                    <button type="button" onclick="togglePointsSlot('${slot.date}', ${slot.day_of_week}, '${slot.start_time}', '${slot.end_time}')" class="text-brand-500 hover:text-red-600">×</button>
+                </span>
+            `).join('');
+        } else {
+            summary.classList.add('hidden');
+        }
+
+        const submitBtn = document.getElementById('points-submit-btn');
+        const buyLink = document.getElementById('buy-points-link');
+        if (count === 0) {
+            submitBtn.disabled = true;
+            buyLink.classList.add('hidden');
+        } else if (userBalance < totalCost) {
+            submitBtn.disabled = true;
+            buyLink.classList.remove('hidden');
+        } else {
+            submitBtn.disabled = false;
+            buyLink.classList.add('hidden');
+        }
+    }
+
+    function validatePointsForm() {
+        if (selectedPointsSlots.length === 0) {
+            alert('Please select at least one time slot.');
+            return false;
+        }
+        const totalCost = selectedPointsSlots.length * pointsCost;
+        if (userBalance < totalCost) {
+            alert('Insufficient points. Please buy more points.');
+            return false;
+        }
+        return true;
+    }
+
+    // ================= RECURRING BOOKING =================
+    let rSelectedDay1 = null;
+    let rSelectedSlot1 = null;
+    let rSelectedDay2 = null;
+    let rSelectedSlot2 = null;
+
+    function isSlotBookedRecurring(dayIndex, slot) {
+        const booked = bookedSlotsRecurring[dayIndex] || [];
         return booked.some(b => b.start < slot.end_time && b.end > slot.start_time);
     }
 
-    function updateBookingMode() {
+    function updateRecurringMode() {
         const mode = document.querySelector('input[name="booking_mode"]:checked').value;
-        const session2 = document.getElementById('session-2');
-        const totalSessions = document.getElementById('total-sessions');
-        const totalAmount = document.getElementById('total-amount');
-        const summarySessions = document.getElementById('summary-sessions');
+        const session2 = document.getElementById('r-session-2');
+        const totalSessions = document.getElementById('recurring-total-sessions');
+        const totalAmountValue = document.getElementById('recurring-total-amount-value');
+        const summarySessions = document.getElementById('r-summary-sessions');
 
         if (mode === 'double') {
             session2.classList.remove('hidden');
             totalSessions.textContent = '8';
             summarySessions.textContent = '8';
-            const total = Math.round(pricePerSession * 8 * 0.95);
-            document.getElementById('total-amount-value').textContent = total.toLocaleString();
+            totalAmountValue.textContent = Math.round(pricePerSession * 8 * 0.95).toLocaleString();
         } else {
             session2.classList.add('hidden');
-            selectedDay2 = null;
-            selectedSlot2 = null;
-            document.getElementById('day-of-week-2').value = '';
+            rSelectedDay2 = null;
+            rSelectedSlot2 = null;
+            document.getElementById('r-day-of-week-2').value = '';
             document.querySelector('[name="time_slot_2"]').value = '';
             totalSessions.textContent = '4';
             summarySessions.textContent = '4';
-            document.getElementById('total-amount-value').textContent = (pricePerSession * 4).toLocaleString();
+            totalAmountValue.textContent = (pricePerSession * 4).toLocaleString();
         }
-        updateSummary();
-        updateStudentFormVisibility();
+        updateRecurringSummary();
+        updateRecurringStudentFormVisibility();
     }
 
-    function selectDay(dayIndex, session) {
+    function selectRecurringDay(dayIndex, session) {
         if (!slotsByDay[dayIndex]) return;
 
         if (session === 1) {
-            selectedDay1 = dayIndex;
-            selectedSlot1 = null;
-            document.getElementById('day-of-week-1').value = dayIndex;
+            rSelectedDay1 = dayIndex;
+            rSelectedSlot1 = null;
+            document.getElementById('r-day-of-week-1').value = dayIndex;
             document.querySelector('[name="time_slot_1"]').value = '';
-            // Re-render session 2 buttons so the same day is disabled
-            renderDayButtons(2);
-            renderSlots(2);
+            renderRecurringDayButtons(2);
+            renderRecurringSlots(2);
         } else {
-            if (dayIndex === selectedDay1) return;
-            selectedDay2 = dayIndex;
-            selectedSlot2 = null;
-            document.getElementById('day-of-week-2').value = dayIndex;
+            if (dayIndex === rSelectedDay1) return;
+            rSelectedDay2 = dayIndex;
+            rSelectedSlot2 = null;
+            document.getElementById('r-day-of-week-2').value = dayIndex;
             document.querySelector('[name="time_slot_2"]').value = '';
         }
 
-        renderDayButtons(session);
-        renderSlots(session);
-        updateStudentFormVisibility();
+        renderRecurringDayButtons(session);
+        renderRecurringSlots(session);
+        updateRecurringStudentFormVisibility();
     }
 
-    function renderDayButtons(session) {
-        document.querySelectorAll(`.day-btn-${session}`).forEach(btn => {
+    function renderRecurringDayButtons(session) {
+        document.querySelectorAll(`.r-day-btn-${session}`).forEach(btn => {
             const day = parseInt(btn.dataset.day);
-            const isSelected = session === 1 ? day === selectedDay1 : day === selectedDay2;
+            const isSelected = session === 1 ? day === rSelectedDay1 : day === rSelectedDay2;
             const isAvailable = slotsByDay[day] !== undefined;
-            const isSameAsDay1 = session === 2 && day === selectedDay1;
+            const isSameAsDay1 = session === 2 && day === rSelectedDay1;
 
             btn.classList.remove('bg-brand-600', 'text-white', 'border-brand-600', 'bg-white', 'text-brand-700', 'border-brand-200', 'bg-gray-50', 'text-gray-300', 'border-gray-100', 'cursor-not-allowed');
             btn.disabled = false;
@@ -264,7 +530,6 @@
             } else if (isSameAsDay1) {
                 btn.classList.add('bg-gray-100', 'text-gray-400', 'border-gray-100', 'cursor-not-allowed');
                 btn.disabled = true;
-                btn.title = 'Already selected as first weekly day';
             } else if (isAvailable) {
                 btn.classList.add('bg-white', 'text-brand-700', 'border-brand-200');
             } else {
@@ -274,10 +539,10 @@
         });
     }
 
-    function renderSlots(session) {
-        const dayIndex = session === 1 ? selectedDay1 : selectedDay2;
-        const container = document.getElementById(`slots-container-${session}`);
-        const list = document.getElementById(`slots-list-${session}`);
+    function renderRecurringSlots(session) {
+        const dayIndex = session === 1 ? rSelectedDay1 : rSelectedDay2;
+        const container = document.getElementById(`r-slots-container-${session}`);
+        const list = document.getElementById(`r-slots-list-${session}`);
 
         if (dayIndex === null || !slotsByDay[dayIndex]) {
             container.classList.add('hidden');
@@ -285,9 +550,9 @@
         }
 
         list.innerHTML = '';
-        const selectedSlot = session === 1 ? selectedSlot1 : selectedSlot2;
+        const selectedSlot = session === 1 ? rSelectedSlot1 : rSelectedSlot2;
         slotsByDay[dayIndex].forEach(slot => {
-            const booked = isSlotBooked(dayIndex, slot);
+            const booked = isSlotBookedRecurring(dayIndex, slot);
             const isSelected = selectedSlot && selectedSlot.start_time === slot.start_time && selectedSlot.end_time === slot.end_time;
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -301,7 +566,7 @@
             btn.textContent = formatTime(slot.start_time) + ' - ' + formatTime(slot.end_time) + (booked ? ' (Booked)' : '');
 
             if (!booked) {
-                btn.onclick = () => selectSlot(session, slot);
+                btn.onclick = () => selectRecurringSlot(session, slot);
             }
             list.appendChild(btn);
         });
@@ -309,54 +574,44 @@
         container.classList.remove('hidden');
     }
 
-    function selectSlot(session, slot) {
+    function selectRecurringSlot(session, slot) {
         if (session === 1) {
-            selectedSlot1 = slot;
+            rSelectedSlot1 = slot;
             document.querySelector('[name="time_slot_1"]').value = slot.start_time + '|' + slot.end_time;
         } else {
-            selectedSlot2 = slot;
+            rSelectedSlot2 = slot;
             document.querySelector('[name="time_slot_2"]').value = slot.start_time + '|' + slot.end_time;
         }
-        renderSlots(session);
-        updateSummary();
-        updateStudentFormVisibility();
+        renderRecurringSlots(session);
+        updateRecurringSummary();
+        updateRecurringStudentFormVisibility();
     }
 
-    function updateSummary() {
-        const schedule = document.getElementById('summary-schedule');
+    function updateRecurringSummary() {
+        const schedule = document.getElementById('r-summary-schedule');
         schedule.innerHTML = '';
-        if (selectedDay1 !== null && selectedSlot1) {
+        if (rSelectedDay1 !== null && rSelectedSlot1) {
             const li = document.createElement('li');
-            li.textContent = dayNames[selectedDay1] + 's at ' + formatTime(selectedSlot1.start_time);
+            li.textContent = dayNames[rSelectedDay1] + 's at ' + formatTime(rSelectedSlot1.start_time);
             schedule.appendChild(li);
         }
         const mode = document.querySelector('input[name="booking_mode"]:checked').value;
-        if (mode === 'double' && selectedDay2 !== null && selectedSlot2) {
+        if (mode === 'double' && rSelectedDay2 !== null && rSelectedSlot2) {
             const li = document.createElement('li');
-            li.textContent = dayNames[selectedDay2] + 's at ' + formatTime(selectedSlot2.start_time);
+            li.textContent = dayNames[rSelectedDay2] + 's at ' + formatTime(rSelectedSlot2.start_time);
             schedule.appendChild(li);
         }
 
-        const summaryAmount = document.getElementById('summary-amount');
         const sessions = mode === 'double' ? 8 : 4;
         const total = mode === 'double' ? Math.round(pricePerSession * sessions * 0.95) : pricePerSession * sessions;
-        document.getElementById('summary-amount-value').textContent = total.toLocaleString();
+        document.getElementById('r-summary-amount-value').textContent = total.toLocaleString();
     }
 
-    function updateStudentFormVisibility() {
+    function updateRecurringStudentFormVisibility() {
         const mode = document.querySelector('input[name="booking_mode"]:checked').value;
-        const ready = selectedDay1 !== null && selectedSlot1 &&
-            (mode === 'single' || (selectedDay2 !== null && selectedSlot2));
-        // Also ensure hidden fields are set before showing the form
-        if (ready) {
-            document.getElementById('day-of-week-1').value = selectedDay1;
-            document.querySelector('[name="time_slot_1"]').value = selectedSlot1.start_time + '|' + selectedSlot1.end_time;
-            if (mode === 'double' && selectedDay2 !== null && selectedSlot2) {
-                document.getElementById('day-of-week-2').value = selectedDay2;
-                document.querySelector('[name="time_slot_2"]').value = selectedSlot2.start_time + '|' + selectedSlot2.end_time;
-            }
-        }
-        const studentForm = document.getElementById('student-form');
+        const ready = rSelectedDay1 !== null && rSelectedSlot1 &&
+            (mode === 'single' || (rSelectedDay2 !== null && rSelectedSlot2));
+        const studentForm = document.getElementById('r-student-form');
         if (ready) {
             studentForm.classList.remove('hidden');
         } else {
@@ -364,13 +619,13 @@
         }
     }
 
-    function validateBookingForm() {
+    function validateRecurringForm() {
         const mode = document.querySelector('input[name="booking_mode"]:checked').value;
-        if (selectedDay1 === null || !selectedSlot1) {
+        if (rSelectedDay1 === null || !rSelectedSlot1) {
             alert('Please select a day and time for your first weekly session.');
             return false;
         }
-        if (mode === 'double' && (selectedDay2 === null || !selectedSlot2)) {
+        if (mode === 'double' && (rSelectedDay2 === null || !rSelectedSlot2)) {
             alert('Please select a day and time for your second weekly session.');
             return false;
         }
@@ -379,9 +634,10 @@
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
-        updateBookingMode();
-        renderDayButtons(1);
-        renderDayButtons(2);
+        generateCalendar();
+        updateRecurringMode();
+        renderRecurringDayButtons(1);
+        renderRecurringDayButtons(2);
     });
 </script>
 {% endblock %}

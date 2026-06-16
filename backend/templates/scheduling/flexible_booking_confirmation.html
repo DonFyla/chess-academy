@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Booking Confirmed - Moving Train Chess Academy{% endblock %}
+
+{% block content %}
+<section class="min-h-screen bg-brand-50 py-20 lg:py-28">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl mx-auto text-center">
+            <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mx-auto mb-6">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h1 class="text-3xl font-bold text-brand-900 mb-4">Booking Confirmed</h1>
+            <p class="text-brand-600 mb-8">Your session with {{ booking.coach.name }} has been booked using {{ booking.points_used }} point{{ booking.points_used|pluralize }}.</p>
+
+            <div class="card p-8 text-left mb-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                        <p class="text-sm text-brand-500 mb-1">Coach</p>
+                        <p class="font-semibold text-brand-900">{{ booking.coach.name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-brand-500 mb-1">Date</p>
+                        <p class="font-semibold text-brand-900">{{ booking.session_date|date:"l, F j, Y" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-brand-500 mb-1">Time</p>
+                        <p class="font-semibold text-brand-900">{{ booking.start_time|time:"g:i A" }} - {{ booking.end_time|time:"g:i A" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-brand-500 mb-1">Points Used</p>
+                        <p class="font-semibold text-brand-900">{{ booking.points_used }}</p>
+                    </div>
+                </div>
+
+                {% if booking.coach.meeting_link %}
+                    <div class="mt-6 pt-6 border-t border-brand-100">
+                        <p class="text-sm text-brand-500 mb-3">Meeting Link</p>
+                        <a href="{{ booking.coach.meeting_link }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-6 py-3 bg-brand-600 text-white font-medium rounded-full hover:bg-brand-700 transition-colors">
+                            Join Session
+                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <a href="{% url 'accounts:dashboard' %}" class="btn-primary inline-flex items-center justify-center">Go to Dashboard</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

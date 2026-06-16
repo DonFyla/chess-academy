@@ -3,6 +3,14 @@ from datetime import datetime
 
 register = template.Library()
 
+
+@register.filter
+def div(value, arg):
+    try:
+        return int(value) // int(arg)
+    except (ValueError, ZeroDivisionError):
+        return 0
+
 DAY_NAMES = [
     "Sunday",
     "Monday",

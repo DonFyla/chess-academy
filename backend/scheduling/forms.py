@@ -201,8 +201,6 @@ class BookingForm(forms.ModelForm):
 
         recurring_dates.sort(key=lambda x: x["date"])
 
-        recurring_dates.sort(key=lambda x: x["date"])
-
         price_per_session = coach.hourly_rate or 10000
         sessions_count = 8 if mode == "double" else 4
         total = price_per_session * sessions_count
@@ -224,3 +222,23 @@ class BookingForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class PointsBookingForm(forms.Form):
+    selected_slots = forms.CharField(widget=forms.HiddenInput())
+    student_name = forms.CharField(max_length=255)
+    student_email = forms.EmailField()
+    student_phone = forms.CharField(max_length=20, required=False)
+    student_notes = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False)
+
+    def clean_selected_slots(self):
+        raw = self.cleaned_data.get("selected_slots", "")
+        if not raw:
+            raise forms.ValidationError("Please select at least one time slot.")
+        try:
+            slots = json.loads(raw)
+        except json.JSONDecodeError:
+            raise forms.ValidationError("Invalid slot data.")
+        if not isinstance(slots, list) or len(slots) == 0:
+            raise forms.ValidationError("Please select at least one time slot.")
+        return slots

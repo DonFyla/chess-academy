@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Coach Dashboard - Moving Train Chess Academy{% endblock %}
+
+{% block content %}
+<section class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-brand-900">Coach Dashboard</h1>
+            <p class="mt-2 text-brand-600">Welcome back, {{ user.full_name|default:user.email }}.</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-brand-100">
+                <p class="text-sm text-brand-500">Total Students</p>
+                <p class="text-3xl font-bold text-brand-900 mt-1">{{ total_students|default:"0" }}</p>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-brand-100">
+                <p class="text-sm text-brand-500">Upcoming Bookings</p>
+                <p class="text-3xl font-bold text-brand-900 mt-1">{{ upcoming_bookings|length|default:"0" }}</p>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-brand-100">
+                <p class="text-sm text-brand-500">Availability Slots</p>
+                <p class="text-3xl font-bold text-brand-900 mt-1">{{ availability_slots|length|default:"0" }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Upcoming bookings -->
+            <div class="bg-white rounded-2xl shadow-sm border border-brand-100 overflow-hidden">
+                <div class="px-6 py-4 border-b border-brand-100 flex items-center justify-between">
+                    <h2 class="font-semibold text-brand-900">Upcoming Bookings</h2>
+                    <a href="{% url 'scheduling:index' %}" class="text-sm text-brand-600 hover:text-brand-900">Manage</a>
+                </div>
+                <div class="p-6">
+                    {% if upcoming_bookings %}
+                        <ul class="space-y-4">
+                            {% for booking in upcoming_bookings %}
+                                <li class="flex items-start gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 flex-shrink-0">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                    </div>
+                                    <div class="flex-grow">
+                                        <div class="flex items-center justify-between">
+                                            <p class="font-medium text-brand-900">{{ booking.student_name }}</p>
+                                            <span class="text-xs px-2 py-0.5 rounded-full
+                                                {% if booking.status == 'confirmed' %}bg-emerald-100 text-emerald-700
+                                                {% elif booking.status == 'pending' %}bg-yellow-100 text-yellow-700
+                                                {% else %}bg-brand-100 text-brand-700{% endif %}">
+                                                {{ booking.get_status_display }}
+                                            </span>
+                                        </div>
+                                        <p class="text-sm text-brand-600">{{ booking.booking_date }} · {{ booking.start_time|time:"g:i A" }}</p>
+                                        <p class="text-xs text-brand-500 mt-0.5">{{ booking.course_type|default:"General"|title }}</p>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-brand-600 text-sm">No upcoming bookings.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Availability -->
+            <div class="bg-white rounded-2xl shadow-sm border border-brand-100 overflow-hidden">
+                <div class="px-6 py-4 border-b border-brand-100 flex items-center justify-between">
+                    <h2 class="font-semibold text-brand-900">Availability</h2>
+                    <a href="{% url 'scheduling:index' %}" class="text-sm text-brand-600 hover:text-brand-900">Update</a>
+                </div>
+                <div class="p-6">
+                    {% if availability_slots %}
+                        <ul class="space-y-3">
+                            {% for slot in availability_slots %}
+                                <li class="flex items-center justify-between text-sm">
+                                    <span class="font-medium text-brand-900">{{ slot.get_day_of_week_display }}</span>
+                                    <span class="text-brand-600">{{ slot.start_time|time:"g:i A" }} - {{ slot.end_time|time:"g:i A" }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-brand-600 text-sm">No availability slots set.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Coach profile -->
+        <div class="bg-white rounded-2xl shadow-sm border border-brand-100 overflow-hidden mt-6">
+            <div class="px-6 py-4 border-b border-brand-100">
+                <h2 class="font-semibold text-brand-900">Coach Profile</h2>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <p class="text-sm text-brand-500">Name</p>
+                    <p class="font-medium text-brand-900">{{ coach.name|default:user.full_name|default:user.email }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-brand-500">Specialization</p>
+                    <p class="font-medium text-brand-900">{{ coach.specialization|default:"Not set" }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-brand-500">Email</p>
+                    <p class="font-medium text-brand-900">{{ user.email }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-brand-500">Hourly Rate</p>
+                    <p class="font-medium text-brand-900">
+                        {% if coach.hourly_rate %}₦{{ coach.hourly_rate }}{% else %}Not set{% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

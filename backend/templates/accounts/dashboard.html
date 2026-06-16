@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Moving Train Chess Academy{% endblock %}
+
+{% block content %}
+<section class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-brand-900">Welcome, {{ user.full_name|default:user.email }}!</h1>
+            <p class="mt-2 text-brand-600">Here is your personal dashboard.</p>
+        </div>
+
+        <!-- Stats / Quick links -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-brand-100">
+                <div class="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <h3 class="font-semibold text-brand-900">My Courses</h3>
+                <p class="text-sm text-brand-600 mt-1">Browse and continue learning.</p>
+                <a href="{% url 'courses' %}" class="inline-block mt-4 text-sm font-medium text-brand-700 hover:text-brand-900">View courses →</a>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-brand-100">
+                <div class="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                </div>
+                <h3 class="font-semibold text-brand-900">Chess Quiz</h3>
+                <p class="text-sm text-brand-600 mt-1">Test your skills and level up.</p>
+                <a href="{% url 'quiz:register' %}" class="inline-block mt-4 text-sm font-medium text-brand-700 hover:text-brand-900">Take quiz →</a>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-brand-100">
+                <div class="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                </div>
+                <h3 class="font-semibold text-brand-900">Profile</h3>
+                <p class="text-sm text-brand-600 mt-1">Manage your account details.</p>
+                <span class="inline-block mt-4 text-sm font-medium text-brand-400">Coming soon</span>
+            </div>
+        </div>
+
+        <!-- Account info -->
+        <div class="bg-white rounded-2xl shadow-sm border border-brand-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-brand-100">
+                <h2 class="font-semibold text-brand-900">Account Information</h2>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <p class="text-sm text-brand-500">Full Name</p>
+                    <p class="font-medium text-brand-900">{{ user.full_name|default:"Not provided" }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-brand-500">Email</p>
+                    <p class="font-medium text-brand-900">{{ user.email }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-brand-500">Phone</p>
+                    <p class="font-medium text-brand-900">{{ user.phone|default:"Not provided" }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-brand-500">Account Type</p>
+                    <p class="font-medium text-brand-900">
+                        {% if user.is_coach %}Coach{% elif user.is_student %}Student{% else %}Member{% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

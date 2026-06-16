@@ -1,11 +1,22 @@
+import json
 from datetime import date, time, timedelta
+from unittest.mock import patch
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from .models import Coach, AvailabilitySlot, CoachBlockedDate, Booking
+from .models import Coach, AvailabilitySlot, CoachBlockedDate, Booking, FlexibleBooking
 
 User = get_user_model()
+
+
+def _mock_initialize_success(*args, **kwargs):
+    return {
+        "success": True,
+        "authorization_url": "https://checkout.paystack.com/test-booking-url",
+        "reference": kwargs.get("reference", "BK-TEST"),
+        "message": "Transaction initialized",
+    }
 
 
 class CoachDashboardTests(TestCase):
@@ -157,6 +168,25 @@ class CoachDashboardTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(CoachBlockedDate.objects.filter(coach=self.coach).count(), 0)
+
+    def test_coach_dashboard_shows_flexible_bookings(self):
+        FlexibleBooking.objects.create(
+            user=self.student_user,
+            coach=self.coach,
+            session_date=date(2030, 12, 25),
+            start_time=time(11, 0),
+            end_time=time(12, 0),
+            day_of_week=3,
+            points_used=2,
+            status="confirmed",
+            student_notes="Focus on openings",
+        )
+        self.client.force_login(self.coach_user)
+        response = self.client.get(reverse("scheduling:coach_dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Points Bookings")
+        self.assertContains(response, "Focus on openings")
+        self.assertContains(response, "2 points")
 
 
 class EffectiveAvailabilityTests(TestCase):
@@ -321,7 +351,8 @@ class BookingFlowTests(TestCase):
         self.assertTemplateUsed(response, "scheduling/book_coach.html")
         self.assertContains(response, self.coach.name)
 
-    def test_student_can_submit_single_weekly_booking(self):
+    @patch("scheduling.views.initialize_transaction", side_effect=_mock_initialize_success)
+    def test_student_can_submit_single_weekly_booking(self, mock_init):
         self.client.force_login(self.student_user)
         response = self.client.post(
             reverse("scheduling:book_coach", args=[self.coach.id]),
@@ -336,7 +367,9 @@ class BookingFlowTests(TestCase):
                 "notes": "Looking forward to it",
             },
         )
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "scheduling/booking_payment.html")
+        self.assertContains(response, "https://checkout.paystack.com/test-booking-url")
         self.assertEqual(Booking.objects.count(), 1)
         booking = Booking.objects.first()
         self.assertEqual(booking.coach, self.coach)
@@ -346,8 +379,11 @@ class BookingFlowTests(TestCase):
         self.assertEqual(booking.monthly_amount, 40000)
         self.assertEqual(booking.recurring_days, [1])
         self.assertEqual(len(booking.recurring_dates), 4)
+        self.assertEqual(booking.payment_status, "pending")
+        self.assertTrue(booking.payment_reference.startswith("BK-"))
 
-    def test_student_can_submit_double_weekly_booking(self):
+    @patch("scheduling.views.initialize_transaction", side_effect=_mock_initialize_success)
+    def test_student_can_submit_double_weekly_booking(self, mock_init):
         self.client.force_login(self.student_user)
         response = self.client.post(
             reverse("scheduling:book_coach", args=[self.coach.id]),
@@ -364,7 +400,8 @@ class BookingFlowTests(TestCase):
                 "notes": "",
             },
         )
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "scheduling/booking_payment.html")
         booking = Booking.objects.first()
         self.assertEqual(booking.booking_mode, "double")
         self.assertEqual(booking.sessions_per_month, 8)
@@ -408,6 +445,179 @@ class BookingFlowTests(TestCase):
         self.assertTemplateUsed(response, "scheduling/booking_confirmation.html")
         self.assertContains(response, self.coach.name)
 
+    def test_recurring_slot_shows_as_booked_after_booking(self):
+        from datetime import timedelta as _td
+
+        today = date.today()
+        days_ahead = 0 - today.weekday()  # next Monday
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_monday = today + _td(days=days_ahead)
+
+        Booking.objects.create(
+            coach=self.coach,
+            student_name="First Student",
+            student_email="first@example.com",
+            booking_date=next_monday,
+            start_time=time(11, 0),
+            end_time=time(12, 0),
+            recurring_days=[1],
+            recurring_dates=[{"date": next_monday.isoformat(), "start_time": "11:00", "end_time": "12:00"}],
+            sessions_per_month=4,
+            monthly_amount=40000,
+            status="pending",
+        )
+
+        self.client.force_login(self.student_user)
+        response = self.client.get(reverse("scheduling:book_coach", args=[self.coach.id]))
+        self.assertEqual(response.status_code, 200)
+
+        booked = json.loads(response.context["booked_slots_recurring_json"])
+        self.assertIn("1", booked)
+        self.assertEqual(len(booked["1"]), 1)
+        self.assertEqual(booked["1"][0]["start"], "11:00")
+        self.assertEqual(booked["1"][0]["end"], "12:00")
+
+    def test_double_recurring_slots_block_correct_days(self):
+        from datetime import timedelta as _td
+
+        today = date.today()
+        monday_offset = 0 - today.weekday()
+        if monday_offset <= 0:
+            monday_offset += 7
+        next_monday = today + _td(days=monday_offset)
+        next_wednesday = next_monday + _td(days=2)
+
+        Booking.objects.create(
+            coach=self.coach,
+            student_name="First Student",
+            student_email="first@example.com",
+            booking_date=next_monday,
+            start_time=time(11, 0),
+            end_time=time(12, 0),
+            recurring_days=[1, 3],
+            recurring_dates=[
+                {"date": next_monday.isoformat(), "start_time": "11:00", "end_time": "12:00"},
+                {"date": next_wednesday.isoformat(), "start_time": "14:00", "end_time": "15:00"},
+            ],
+            sessions_per_month=8,
+            monthly_amount=76000,
+            status="pending",
+        )
+
+        self.client.force_login(self.student_user)
+        response = self.client.get(reverse("scheduling:book_coach", args=[self.coach.id]))
+        booked = json.loads(response.context["booked_slots_recurring_json"])
+
+        self.assertIn("1", booked)
+        self.assertEqual(booked["1"], [{"start": "11:00", "end": "12:00"}])
+        self.assertIn("3", booked)
+        self.assertEqual(booked["3"], [{"start": "14:00", "end": "15:00"}])
+
+    def test_points_calendar_hides_recurring_booked_slots(self):
+        from datetime import timedelta as _td
+
+        today = date.today()
+        monday_offset = 0 - today.weekday()
+        if monday_offset <= 0:
+            monday_offset += 7
+        next_monday = today + _td(days=monday_offset)
+
+        # The coach only has one slot on Monday, and it's booked by a recurring booking
+        Booking.objects.create(
+            coach=self.coach,
+            student_name="First Student",
+            student_email="first@example.com",
+            booking_date=next_monday,
+            start_time=time(11, 0),
+            end_time=time(12, 0),
+            recurring_days=[1],
+            recurring_dates=[{"date": next_monday.isoformat(), "start_time": "11:00", "end_time": "12:00"}],
+            sessions_per_month=4,
+            monthly_amount=40000,
+            status="pending",
+        )
+
+        self.client.force_login(self.student_user)
+        response = self.client.get(reverse("scheduling:book_coach", args=[self.coach.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Fully Booked")
+
+
+class BookingPaymentTests(TestCase):
+    def setUp(self):
+        self.coach_user = User.objects.create_user(
+            email="paymentcoach@example.com",
+            username="paymentcoach",
+            password="testpass123",
+            full_name="Payment Coach",
+            is_coach=True,
+            is_student=False,
+        )
+        self.coach = Coach.objects.create(
+            user=self.coach_user,
+            name="Payment Coach",
+            email="paymentcoach@example.com",
+            hourly_rate=10000,
+        )
+        self.student_user = User.objects.create_user(
+            email="paymentstudent@example.com",
+            username="paymentstudent",
+            password="testpass123",
+            full_name="Payment Student",
+        )
+        self.booking = Booking.objects.create(
+            coach=self.coach,
+            student_name="Payment Student",
+            student_email="paymentstudent@example.com",
+            booking_date=date(2030, 12, 25),
+            start_time=time(11, 0),
+            end_time=time(12, 0),
+            recurring_days=[1],
+            recurring_dates=[{"date": "2030-12-25", "start_time": "11:00", "end_time": "12:00"}],
+            sessions_per_month=4,
+            monthly_amount=40000,
+            payment_reference="BK-CALLBACK-123",
+            payment_status="pending",
+            status="pending",
+        )
+
+    @patch("payments.views.verify_transaction")
+    def test_booking_callback_confirms_booking_on_success(self, mock_verify):
+        mock_verify.return_value = {
+            "success": True,
+            "status": "success",
+            "reference": "BK-CALLBACK-123",
+        }
+        self.client.force_login(self.student_user)
+        response = self.client.get(
+            reverse("payments:booking_callback"),
+            {"reference": "BK-CALLBACK-123"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("scheduling:booking_confirmation", args=[self.booking.id]))
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "confirmed")
+        self.assertEqual(self.booking.payment_status, "paid")
+        self.assertIsNotNone(self.booking.payment_date)
+
+    @patch("payments.views.verify_transaction")
+    def test_booking_callback_shows_error_on_failure(self, mock_verify):
+        mock_verify.return_value = {
+            "success": True,
+            "status": "failed",
+            "reference": "BK-CALLBACK-123",
+        }
+        self.client.force_login(self.student_user)
+        response = self.client.get(
+            reverse("payments:booking_callback"),
+            {"reference": "BK-CALLBACK-123"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "pending")
+        self.assertEqual(self.booking.payment_status, "pending")
+
 
 class CoachBookingManagementTests(TestCase):
     def setUp(self):
@@ -434,7 +644,9 @@ class CoachBookingManagementTests(TestCase):
             status="pending",
         )
 
-    def test_coach_can_confirm_booking(self):
+    def test_coach_can_confirm_paid_booking(self):
+        self.booking.payment_status = "paid"
+        self.booking.save()
         self.client.force_login(self.coach_user)
         response = self.client.post(
             reverse("scheduling:coach_dashboard"),
@@ -443,6 +655,17 @@ class CoachBookingManagementTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.booking.refresh_from_db()
         self.assertEqual(self.booking.status, "confirmed")
+
+    def test_coach_cannot_confirm_unpaid_booking(self):
+        self.assertEqual(self.booking.payment_status, "pending")
+        self.client.force_login(self.coach_user)
+        response = self.client.post(
+            reverse("scheduling:coach_dashboard"),
+            {"action": "confirm_booking", "booking_id": str(self.booking.id)},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "pending")
 
     def test_coach_can_reject_booking(self):
         self.client.force_login(self.coach_user)
@@ -472,3 +695,168 @@ class CoachBookingManagementTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.booking.refresh_from_db()
         self.assertEqual(self.booking.status, "pending")
+
+
+class PointsBookingFlowTests(TestCase):
+    def setUp(self):
+        self.coach_user = User.objects.create_user(
+            email="pointscoach@example.com",
+            username="pointscoach",
+            password="testpass123",
+            full_name="Points Coach",
+            is_coach=True,
+            is_student=False,
+        )
+        self.coach = Coach.objects.create(
+            user=self.coach_user,
+            name="Points Coach",
+            email="pointscoach@example.com",
+            hourly_rate=10000,
+            points_cost=2,
+            meeting_link="https://meet.example.com/points",
+        )
+        self.student_user = User.objects.create_user(
+            email="pointsstudent@example.com",
+            username="pointsstudent",
+            password="testpass123",
+            full_name="Points Student",
+        )
+        from payments.points_service import add_points
+        add_points(self.student_user, 10, description="Test top-up", payment_reference="TEST")
+
+        AvailabilitySlot.objects.create(
+            coach=self.coach,
+            day_of_week=1,
+            start_time=time(11, 0),
+            end_time=time(12, 0),
+        )
+        AvailabilitySlot.objects.create(
+            coach=self.coach,
+            day_of_week=3,
+            start_time=time(14, 0),
+            end_time=time(15, 0),
+        )
+
+    def _future_monday(self):
+        from datetime import timedelta as _td
+        today = date.today()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        return today + _td(days=days_ahead)
+
+    def test_booking_page_has_points_tab(self):
+        self.client.force_login(self.student_user)
+        response = self.client.get(reverse("scheduling:book_coach", args=[self.coach.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Book with Points")
+        self.assertContains(response, "Book Recurring Classes")
+
+    def test_points_booking_creates_flexible_bookings(self):
+        from payments.models import UserPoints, PointTransaction
+        from scheduling.models import FlexibleBooking
+
+        monday = self._future_monday()
+        slots_payload = [
+            {
+                "date": monday.isoformat(),
+                "day_of_week": 1,
+                "start_time": "11:00",
+                "end_time": "12:00",
+            }
+        ]
+
+        self.client.force_login(self.student_user)
+        response = self.client.post(
+            reverse("scheduling:book_coach", args=[self.coach.id]),
+            {
+                "booking_type": "points",
+                "selected_slots": json.dumps(slots_payload),
+                "student_name": "Points Student",
+                "student_email": "pointsstudent@example.com",
+                "student_phone": "+2348012345678",
+                "student_notes": "Please focus on openings",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(FlexibleBooking.objects.count(), 1)
+        flex = FlexibleBooking.objects.first()
+        self.assertEqual(flex.user, self.student_user)
+        self.assertEqual(flex.coach, self.coach)
+        self.assertEqual(flex.points_used, 2)
+        self.assertEqual(flex.session_date, monday)
+        self.assertEqual(flex.start_time, time(11, 0))
+        self.assertEqual(flex.end_time, time(12, 0))
+        self.assertEqual(flex.status, "confirmed")
+
+        points = UserPoints.objects.get(user=self.student_user)
+        self.assertEqual(points.balance, 8)
+
+        tx = PointTransaction.objects.filter(user=self.student_user, type="usage").first()
+        self.assertIsNotNone(tx)
+        self.assertEqual(tx.amount, -2)
+        self.assertEqual(tx.balance_after, 8)
+
+    def test_points_booking_rejects_insufficient_balance(self):
+        from scheduling.models import FlexibleBooking
+        from payments.points_service import get_or_create_user_points
+
+        points = get_or_create_user_points(self.student_user)
+        points.balance = 1
+        points.save()
+
+        monday = self._future_monday()
+        slots_payload = [
+            {
+                "date": monday.isoformat(),
+                "day_of_week": 1,
+                "start_time": "11:00",
+                "end_time": "12:00",
+            }
+        ]
+
+        self.client.force_login(self.student_user)
+        response = self.client.post(
+            reverse("scheduling:book_coach", args=[self.coach.id]),
+            {
+                "booking_type": "points",
+                "selected_slots": json.dumps(slots_payload),
+                "student_name": "Points Student",
+                "student_email": "pointsstudent@example.com",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(FlexibleBooking.objects.count(), 0)
+
+    def test_points_booking_rejects_empty_slots(self):
+        from scheduling.models import FlexibleBooking
+
+        self.client.force_login(self.student_user)
+        response = self.client.post(
+            reverse("scheduling:book_coach", args=[self.coach.id]),
+            {
+                "booking_type": "points",
+                "selected_slots": "",
+                "student_name": "Points Student",
+                "student_email": "pointsstudent@example.com",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(FlexibleBooking.objects.count(), 0)
+
+    def test_flexible_booking_confirmation_page(self):
+        from scheduling.models import FlexibleBooking
+        flex = FlexibleBooking.objects.create(
+            user=self.student_user,
+            coach=self.coach,
+            session_date=date(2030, 12, 25),
+            start_time=time(11, 0),
+            end_time=time(12, 0),
+            day_of_week=3,
+            points_used=2,
+        )
+        self.client.force_login(self.student_user)
+        response = self.client.get(reverse("scheduling:flexible_booking_confirmation", args=[flex.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "scheduling/flexible_booking_confirmation.html")
+        self.assertContains(response, self.coach.name)

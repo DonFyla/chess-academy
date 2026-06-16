@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load payments_extras %}
+
+{% block title %}Buy Points - Moving Train Chess Academy{% endblock %}
+
+{% block content %}
+<section class="min-h-screen bg-brand-50 py-16 lg:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <a href="{% url 'accounts:dashboard' %}" class="inline-flex items-center text-brand-700 hover:text-brand-900 font-medium mb-8">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back to Dashboard
+        </a>
+
+        <div class="text-center mb-12">
+            <h1 class="text-3xl md:text-4xl font-bold text-brand-900 mb-4">Buy Points</h1>
+            <p class="text-lg text-brand-600 max-w-2xl mx-auto">Purchase points to book flexible classes with any coach. Points are valid for one year.</p>
+        </div>
+
+        <!-- Balance -->
+        <div class="max-w-md mx-auto mb-10">
+            <div class="bg-gradient-to-r from-brand-700 to-brand-600 text-white rounded-2xl p-6 text-center shadow-lg">
+                <p class="text-brand-100 mb-2">Your Current Balance</p>
+                <p class="text-5xl font-bold">{{ balance }}</p>
+                <p class="text-sm text-brand-100 mt-2">points</p>
+            </div>
+        </div>
+
+        {% if paystack_error %}
+            <div class="max-w-2xl mx-auto bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <p class="text-red-700">{{ paystack_error }}</p>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Info -->
+        <div class="max-w-2xl mx-auto bg-blue-50 border border-blue-200 rounded-xl p-4 mb-10">
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <div>
+                    <p class="text-blue-800 font-medium">How Points Work:</p>
+                    <ul class="text-blue-700 text-sm mt-2 space-y-1">
+                        <li>• 1 point = 1 class with a regular coach</li>
+                        <li>• Elite coaches cost more points per class</li>
+                        <li>• Book any available time slot</li>
+                        <li>• Points valid for 1 year from purchase</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {% if selected_package and payment_reference and authorization_url %}
+            <!-- Paystack Payment -->
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-sm border-2 border-brand-600 overflow-hidden">
+                    <div class="bg-brand-600 text-white px-6 py-4">
+                        <h2 class="text-xl font-bold flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            Complete Your Payment
+                        </h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <div class="bg-brand-50 rounded-xl p-5">
+                            <h3 class="font-bold text-brand-900 mb-4">Purchase Summary</h3>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between"><span class="text-brand-600">Points</span><span class="font-bold text-brand-900">{{ selected_package.points }}</span></div>
+                                <div class="flex justify-between"><span class="text-brand-600">Amount</span><span class="font-bold text-brand-900">₦{{ selected_package.price|floatformat:0 }}</span></div>
+                                <div class="flex justify-between pt-2 border-t border-brand-200"><span class="text-brand-600">Reference</span><span class="font-mono font-bold text-brand-700">{{ payment_reference }}</span></div>
+                            </div>
+                        </div>
+
+                        <div id="paystack-redirect" class="text-center py-4">
+                            <p class="text-brand-600 mb-3">Redirecting you to Paystack's secure checkout...</p>
+                            <div class="w-8 h-8 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin mx-auto"></div>
+                        </div>
+
+                        <a id="paystack-pay-btn" href="{{ authorization_url }}" class="hidden flex items-center justify-center gap-2 w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 1 1 0 012 0z"></path></svg>
+                            Pay with Paystack
+                        </a>
+
+                        <p class="text-xs text-brand-500 text-center">If you are not redirected automatically, click the button above.</p>
+
+                        <script>
+                            (function() {
+                                var url = "{{ authorization_url|escapejs }}";
+                                if (url) {
+                                    setTimeout(function() {
+                                        window.location.href = url;
+                                    }, 1500);
+                                } else {
+                                    document.getElementById('paystack-redirect').classList.add('hidden');
+                                    document.getElementById('paystack-pay-btn').classList.remove('hidden');
+                                }
+                            })();
+                        </script>
+
+                        <div class="flex gap-4">
+                            <a href="{% url 'payments:buy_points' %}" class="flex-1 px-4 py-3 border-2 border-brand-200 text-brand-700 font-medium rounded-xl text-center hover:bg-brand-50 transition-colors">Back to Packages</a>
+                            <a href="{% url 'accounts:dashboard' %}" class="flex-1 px-4 py-3 bg-brand-600 text-white font-medium rounded-xl text-center hover:bg-brand-700 transition-colors">Go to Dashboard</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <!-- Packages -->
+            <h2 class="text-2xl font-bold text-brand-900 text-center mb-6">Choose a Package</h2>
+            <div class="grid md:grid-cols-3 lg:grid-cols-5 gap-4 mb-12 max-w-6xl mx-auto">
+                {% for pkg in point_packages %}
+                    <form method="post" class="relative">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="buy_package">
+                        <input type="hidden" name="points" value="{{ pkg.points }}">
+                        <input type="hidden" name="price" value="{{ pkg.price }}">
+                        <button type="submit" class="w-full h-full bg-white rounded-2xl p-6 shadow-sm border-2 {% if pkg.popular %}border-brand-600 ring-2 ring-brand-600 ring-opacity-20{% else %}border-brand-100{% endif %} hover:shadow-lg transition-all text-left">
+                            {% if pkg.popular %}
+                                <div class="absolute top-0 left-0 right-0 bg-brand-600 text-white text-center text-xs py-1 rounded-t-2xl">Most Popular</div>
+                            {% endif %}
+                            {% if pkg.savings %}
+                                <span class="absolute top-2 right-2 px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">Save {{ pkg.savings }}</span>
+                            {% endif %}
+                            <div class="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 mx-auto mb-4">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <div class="text-center">
+                                <h3 class="text-3xl font-bold text-brand-900 mb-1">{{ pkg.points }}</h3>
+                                <p class="text-brand-500 text-sm mb-4">points</p>
+                                <p class="text-2xl font-bold text-brand-700 mb-1">₦{{ pkg.price|floatformat:0 }}</p>
+                                <p class="text-brand-400 text-sm mb-4">₦{{ pkg.price|div:pkg.points|floatformat:0 }}/point</p>
+                                <span class="inline-flex items-center justify-center px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-full">Select</span>
+                            </div>
+                        </button>
+                    </form>
+                {% endfor %}
+            </div>
+
+            <!-- Custom Amount -->
+            <div class="max-w-md mx-auto">
+                <div class="bg-white rounded-2xl shadow-sm border border-brand-100 p-6">
+                    <h2 class="text-xl font-bold text-brand-900 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        Custom Amount
+                    </h2>
+                    <p class="text-brand-600 mb-4">Buy any number of points at ₦{{ price_per_point|floatformat:0 }} each.</p>
+                    <form method="post" class="flex gap-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="buy_custom">
+                        <input type="number" name="custom_amount" min="1" placeholder="Enter amount" class="flex-1 px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none" required>
+                        <button type="submit" class="px-6 py-3 bg-brand-600 text-white font-medium rounded-xl hover:bg-brand-700 transition-colors">Select</button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

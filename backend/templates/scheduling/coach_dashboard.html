@@ -131,6 +131,11 @@
                                                             <span class="inline-block px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700">
                                                                 Pending
                                                             </span>
+                                                            {% if booking.payment_status == 'paid' %}
+                                                                <span class="inline-block px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700">Paid</span>
+                                                            {% else %}
+                                                                <span class="inline-block px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-700">Payment Pending</span>
+                                                            {% endif %}
                                                         </div>
                                                         <div class="text-sm text-brand-600 mt-1">
                                                             <p>{{ booking.student_email }}{% if booking.student_phone %} • {{ booking.student_phone }}{% endif %}</p>
@@ -144,12 +149,14 @@
                                                         </div>
                                                     </div>
                                                     <div class="flex gap-2">
-                                                        <form method="post" class="inline">
-                                                            {% csrf_token %}
-                                                            <input type="hidden" name="action" value="confirm_booking">
-                                                            <input type="hidden" name="booking_id" value="{{ booking.id }}">
-                                                            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors" onclick="return confirm('Confirm this booking?')">Confirm</button>
-                                                        </form>
+                                                        {% if booking.payment_status == 'paid' %}
+                                                            <form method="post" class="inline">
+                                                                {% csrf_token %}
+                                                                <input type="hidden" name="action" value="confirm_booking">
+                                                                <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                                                                <button type="submit" class="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors" onclick="return confirm('Confirm this booking?')">Confirm</button>
+                                                            </form>
+                                                        {% endif %}
                                                         <form method="post" class="inline">
                                                             {% csrf_token %}
                                                             <input type="hidden" name="action" value="reject_booking">
@@ -257,6 +264,66 @@
                                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                     </div>
                                     <p class="text-brand-600">No upcoming bookings yet.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Points Bookings -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-brand-100 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-brand-100 flex items-center gap-3">
+                            <div class="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <h2 class="font-semibold text-brand-900">Points Bookings</h2>
+                        </div>
+                        <div class="p-6">
+                            {% if flexible_bookings %}
+                                <div class="space-y-4">
+                                    {% for booking in flexible_bookings %}
+                                        <div class="border border-brand-100 rounded-xl p-4 hover:bg-brand-50 transition-colors">
+                                            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                                <div>
+                                                    <div class="flex items-center gap-2 mb-1">
+                                                        <span class="font-semibold text-brand-900 text-lg">{{ booking.user.full_name|default:booking.user.email }}</span>
+                                                        <span class="inline-block px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700">
+                                                            Points
+                                                        </span>
+                                                    </div>
+                                                    <div class="text-sm text-brand-600 mt-1">
+                                                        <p>{{ booking.user.email }}</p>
+                                                        <div class="flex items-center gap-2 mt-1">
+                                                            <svg class="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                                            <span>{{ booking.session_date|date:"l, M j, Y" }}</span>
+                                                        </div>
+                                                        <div class="flex items-center gap-2 mt-1">
+                                                            <svg class="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                            <span>{{ booking.start_time|time:"g:i A" }} - {{ booking.end_time|time:"g:i A" }}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="text-right shrink-0">
+                                                    <span class="inline-block px-2.5 py-1 rounded-full text-xs font-medium
+                                                        {% if booking.status == 'confirmed' %}bg-emerald-100 text-emerald-700
+                                                        {% elif booking.status == 'completed' %}bg-blue-100 text-blue-700
+                                                        {% else %}bg-brand-100 text-brand-700{% endif %}">
+                                                        {{ booking.get_status_display }}
+                                                    </span>
+                                                    <p class="text-xs text-brand-500 mt-1">{{ booking.points_used }} point{{ booking.points_used|pluralize }}</p>
+                                                </div>
+                                            </div>
+                                            {% if booking.student_notes %}
+                                                <p class="mt-3 text-sm text-brand-600"><span class="font-medium">Notes:</span> {{ booking.student_notes }}</p>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-10">
+                                    <div class="w-16 h-16 bg-brand-100 rounded-full flex items-center justify-center text-brand-400 mx-auto mb-3">
+                                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    </div>
+                                    <p class="text-brand-600">No points bookings yet.</p>
                                 </div>
                             {% endif %}
                         </div>
