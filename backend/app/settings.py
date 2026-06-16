@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "quiz",
     "scheduling",
     "payments",
+    "admin_portal",
 ]
 
 MIDDLEWARE = [

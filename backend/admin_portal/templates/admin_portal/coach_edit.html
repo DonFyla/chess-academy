@@ -1,0 +1,77 @@
+{% extends "admin_portal/base.html" %}
+
+{% block title %}Edit Coach - Admin Portal{% endblock %}
+
+{% block admin_content %}
+<section class="p-4 lg:p-8">
+    <div class="max-w-3xl mx-auto">
+        <header class="mb-8">
+            <h1 class="text-2xl lg:text-3xl font-bold text-brand-900">Edit Coach</h1>
+            <p class="text-brand-600 mt-1">Update {{ coach.name }}&apos;s profile.</p>
+        </header>
+
+        <form method="post" class="bg-white rounded-2xl p-6 lg:p-8 border border-brand-100 shadow-sm space-y-6">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-brand-700 mb-1">Name</label>
+                    <input type="text" name="name" value="{{ coach.name }}" required class="w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-brand-700 mb-1">Email</label>
+                    <input type="email" name="email" value="{{ coach.email }}" class="w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-brand-700 mb-1">Specialization</label>
+                    <input type="text" name="specialization" value="{{ coach.specialization }}" class="w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-brand-700 mb-1">Rank Title</label>
+                    <input type="text" name="rank_title" value="{{ coach.rank_title }}" class="w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-brand-700 mb-1">Hourly Rate (₦)</label>
+                    <input type="number" name="hourly_rate" value="{{ coach.hourly_rate|default:'' }}" class="w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-brand-700 mb-1">Points Cost per Session</label>
+                    <input type="number" name="points_cost" value="{{ coach.points_cost }}" min="1" class="w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-brand-700 mb-1">Featured Order</label>
+                    <input type="number" name="featured_order" value="{{ coach.featured_order|default:'' }}" class="w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none">
+                </div>
+                <div class="flex items-center gap-3 md:pt-7">
+                    <input type="checkbox" name="is_special" id="is_special" {% if coach.is_special %}checked{% endif %} class="w-5 h-5 text-brand-600 rounded border-brand-300 focus:ring-brand-600">
+                    <label for="is_special" class="text-brand-700 font-medium">Elite / Special Coach</label>
+                </div>
+                <div class="flex items-center gap-3 md:pt-7">
+                    <input type="checkbox" name="is_admin" id="is_admin" {% if coach.is_admin %}checked{% endif %} class="w-5 h-5 text-brand-600 rounded border-brand-300 focus:ring-brand-600">
+                    <label for="is_admin" class="text-brand-700 font-medium">Admin Coach</label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-brand-700 mb-1">Meeting Link</label>
+                <input type="url" name="meeting_link" value="{{ coach.meeting_link }}" class="w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-brand-700 mb-1">Photo URL</label>
+                <input type="url" name="photo_url" value="{{ coach.photo_url }}" class="w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-brand-700 mb-1">Bio</label>
+                <textarea name="bio" rows="4" class="w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none">{{ coach.bio }}</textarea>
+            </div>
+
+            <div class="flex items-center gap-4 pt-4 border-t border-brand-100">
+                <button type="submit" class="px-8 py-3 bg-brand-600 text-white font-semibold rounded-full hover:bg-brand-700 transition-colors">Save Changes</button>
+                <a href="{% url 'admin_portal:coaches' %}" class="px-8 py-3 border-2 border-brand-200 text-brand-700 font-semibold rounded-full hover:bg-brand-50 transition-colors">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

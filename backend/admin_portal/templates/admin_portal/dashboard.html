@@ -1,0 +1,109 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+
+{% block title %}Admin Dashboard - Moving Train Chess Academy{% endblock %}
+
+{% block admin_content %}
+<section class="p-4 lg:p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8">
+            <h1 class="text-2xl lg:text-3xl font-bold text-brand-900">Dashboard</h1>
+            <p class="text-brand-600 mt-1">Overview of the academy today.</p>
+        </header>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-2xl p-6 border border-brand-100 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-brand-600 font-medium">Students</p>
+                        <p class="text-3xl font-bold text-brand-900 mt-1">{{ total_students }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 border border-brand-100 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-brand-600 font-medium">Coaches</p>
+                        <p class="text-3xl font-bold text-brand-900 mt-1">{{ total_coaches }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 border border-brand-100 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-brand-600 font-medium">Pending Bookings</p>
+                        <p class="text-3xl font-bold text-brand-900 mt-1">{{ pending_bookings }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 border border-brand-100 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-brand-600 font-medium">This Week's Classes</p>
+                        <p class="text-3xl font-bold text-brand-900 mt-1">{{ confirmed_bookings_this_week }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-brand-100 flex items-center justify-between">
+                    <h2 class="font-bold text-brand-900">Recent Bookings</h2>
+                    <a href="{% url 'admin_portal:bookings' %}" class="text-sm font-medium text-brand-700 hover:text-brand-900">View all</a>
+                </div>
+                <div class="divide-y divide-brand-100">
+                    {% for booking in recent_bookings %}
+                        <div class="p-4 flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-brand-900">{{ booking.student_name }}</p>
+                                <p class="text-sm text-brand-600">{{ booking.coach.name }} · {{ booking.get_status_display }}</p>
+                            </div>
+                            <span class="text-sm text-brand-500">{{ booking.created_at|date:"M j" }}</span>
+                        </div>
+                    {% empty %}
+                        <div class="p-8 text-center text-brand-600">No bookings yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-brand-100 flex items-center justify-between">
+                    <h2 class="font-bold text-brand-900">Recent Points Activity</h2>
+                    <a href="{% url 'payments:points_admin' %}" class="text-sm font-medium text-brand-700 hover:text-brand-900">Manage points</a>
+                </div>
+                <div class="divide-y divide-brand-100">
+                    {% for tx in recent_points %}
+                        <div class="p-4 flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-brand-900">{{ tx.user.email }}</p>
+                                <p class="text-sm text-brand-600">{{ tx.get_type_display }} · {{ tx.get_status_display }}</p>
+                            </div>
+                            <span class="font-bold {% if tx.amount < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">
+                                {{ tx.amount }}
+                            </span>
+                        </div>
+                    {% empty %}
+                        <div class="p-8 text-center text-brand-600">No points activity yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

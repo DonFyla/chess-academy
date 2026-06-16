@@ -15,6 +15,7 @@ urlpatterns = [
     path("quiz/", include("quiz.urls")),
     path("scheduling/", include("scheduling.urls")),
     path("payments/", include("payments.urls")),
+    path("admin-portal/", include("admin_portal.urls")),
 ]
 
 if settings.DEBUG:

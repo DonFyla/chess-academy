@@ -1,0 +1,145 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize scheduling_extras %}
+
+{% block title %}{{ student.full_name|default:student.email }} - Admin Portal{% endblock %}
+
+{% block admin_content %}
+<section class="p-4 lg:p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8">
+            <a href="{% url 'admin_portal:students' %}" class="inline-flex items-center text-sm font-medium text-brand-700 hover:text-brand-900 mb-2">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Back to Students
+            </a>
+            <h1 class="text-2xl lg:text-3xl font-bold text-brand-900">{{ student.full_name|default:student.email }}</h1>
+            <p class="text-brand-600 mt-1">{{ student.email }}{% if student.phone %} · {{ student.phone }}{% endif %}</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-brand-700 to-brand-600 rounded-2xl p-6 text-white">
+                <p class="text-brand-100 text-sm font-medium">Points Balance</p>
+                <p class="text-4xl font-bold mt-2">{{ points_balance }}</p>
+                <p class="text-sm text-brand-100 mt-1">points</p>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 border border-brand-100 shadow-sm">
+                <p class="text-brand-600 text-sm font-medium">Recurring Bookings</p>
+                <p class="text-4xl font-bold text-brand-900 mt-2">{{ bookings.count }}</p>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 border border-brand-100 shadow-sm">
+                <p class="text-brand-600 text-sm font-medium">Flexible Bookings</p>
+                <p class="text-4xl font-bold text-brand-900 mt-2">{{ flexible_bookings.count }}</p>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <!-- Recurring bookings -->
+            <div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-brand-100">
+                    <h2 class="font-bold text-brand-900">Recurring Bookings</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-brand-50 text-brand-700">
+                            <tr>
+                                <th class="px-6 py-3 font-medium">Coach</th>
+                                <th class="px-6 py-3 font-medium">Schedule</th>
+                                <th class="px-6 py-3 font-medium">Amount</th>
+                                <th class="px-6 py-3 font-medium">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-brand-100">
+                            {% for booking in bookings %}
+                                <tr>
+                                    <td class="px-6 py-4">{{ booking.coach.name }}</td>
+                                    <td class="px-6 py-4">
+                                        {% for day in booking.recurring_days %}
+                                            {{ day|day_name }}{% if not forloop.last %} & {% endif %}
+                                        {% endfor %}
+                                        at {{ booking.start_time|time:"g:i A" }}
+                                    </td>
+                                    <td class="px-6 py-4">₦{{ booking.monthly_amount|floatformat:0|intcomma }}</td>
+                                    <td class="px-6 py-4">{{ booking.get_status_display }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="px-6 py-8 text-center text-brand-600">No recurring bookings.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Flexible bookings -->
+            <div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-brand-100">
+                    <h2 class="font-bold text-brand-900">Flexible Bookings</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-brand-50 text-brand-700">
+                            <tr>
+                                <th class="px-6 py-3 font-medium">Coach</th>
+                                <th class="px-6 py-3 font-medium">Date & Time</th>
+                                <th class="px-6 py-3 font-medium">Points</th>
+                                <th class="px-6 py-3 font-medium">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-brand-100">
+                            {% for flex in flexible_bookings %}
+                                <tr>
+                                    <td class="px-6 py-4">{{ flex.coach.name }}</td>
+                                    <td class="px-6 py-4">{{ flex.session_date|date:"M j, Y" }} · {{ flex.start_time|time:"g:i A" }} - {{ flex.end_time|time:"g:i A" }}</td>
+                                    <td class="px-6 py-4">{{ flex.points_used }} pts</td>
+                                    <td class="px-6 py-4">{{ flex.get_status_display }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="px-6 py-8 text-center text-brand-600">No flexible bookings.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Points transactions -->
+            <div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-brand-100">
+                    <h2 class="font-bold text-brand-900">Points Transactions</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-brand-50 text-brand-700">
+                            <tr>
+                                <th class="px-6 py-3 font-medium">Type</th>
+                                <th class="px-6 py-3 font-medium">Amount</th>
+                                <th class="px-6 py-3 font-medium">Balance After</th>
+                                <th class="px-6 py-3 font-medium">Status</th>
+                                <th class="px-6 py-3 font-medium">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-brand-100">
+                            {% for tx in points_transactions %}
+                                <tr>
+                                    <td class="px-6 py-4">{{ tx.get_type_display }}</td>
+                                    <td class="px-6 py-4 font-medium {% if tx.amount < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">{{ tx.amount }}</td>
+                                    <td class="px-6 py-4">{{ tx.balance_after }}</td>
+                                    <td class="px-6 py-4">{{ tx.get_status_display }}</td>
+                                    <td class="px-6 py-4 text-brand-500">{{ tx.created_at|date:"M j, Y g:i A" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="px-6 py-8 text-center text-brand-600">No transactions.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

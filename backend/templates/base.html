@@ -14,6 +14,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="bg-brand-50 text-brand-900 antialiased">
+    {% block nav %}
     <!-- Navigation -->
     <nav class="fixed top-0 inset-x-0 z-50 bg-white/90 backdrop-blur-md border-b border-brand-100">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -37,8 +38,8 @@
                 <div class="hidden lg:flex items-center gap-3">
                     {% if user.is_authenticated %}
                         {% if user.is_superuser %}
-                            <a href="{% url 'payments:points_admin' %}" class="px-4 py-2 text-sm font-medium text-brand-700 rounded-full hover:bg-brand-100 transition-colors">
-                                Points Admin
+                            <a href="{% url 'admin_portal:dashboard' %}" class="px-4 py-2 text-sm font-medium text-brand-700 rounded-full hover:bg-brand-100 transition-colors">
+                                Admin Portal
                             </a>
                         {% endif %}
                         {% if user.is_coach %}
@@ -90,8 +91,8 @@
                 {% endfor %}
                 {% if user.is_authenticated %}
                     {% if user.is_superuser %}
-                        <a href="{% url 'payments:points_admin' %}" class="block px-4 py-3 text-base font-medium rounded-xl text-brand-700 hover:bg-brand-100 transition-colors">
-                            Points Admin
+                        <a href="{% url 'admin_portal:dashboard' %}" class="block px-4 py-3 text-base font-medium rounded-xl text-brand-700 hover:bg-brand-100 transition-colors">
+                            Admin Portal
                         </a>
                     {% endif %}
                     {% if user.is_coach %}
@@ -120,10 +121,12 @@
             </div>
         </div>
     </nav>
+    {% endblock %}
 
     <!-- Spacer for fixed nav -->
-    <div class="h-20"></div>
+    {% block nav_spacer %}<div class="h-20"></div>{% endblock %}
 
+    {% block messages %}
     {% if messages %}
         <div class="container mx-auto px-4 sm:px-6 lg:px-8 mt-4">
             {% for message in messages %}
@@ -137,6 +140,7 @@
             {% endfor %}
         </div>
     {% endif %}
+    {% endblock messages %}
 
     <main>
         {% block content %}{% endblock %}

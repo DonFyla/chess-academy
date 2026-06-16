@@ -1,0 +1,69 @@
+{% extends "admin_portal/base.html" %}
+
+{% block title %}Coaches - Admin Portal{% endblock %}
+
+{% block admin_content %}
+<section class="p-4 lg:p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8">
+            <h1 class="text-2xl lg:text-3xl font-bold text-brand-900">Coaches</h1>
+            <p class="text-brand-600 mt-1">Manage coach profiles and settings.</p>
+        </header>
+
+        <div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-brand-50 text-brand-700">
+                        <tr>
+                            <th class="px-6 py-3 font-medium">Coach</th>
+                            <th class="px-6 py-3 font-medium">Specialization</th>
+                            <th class="px-6 py-3 font-medium">Rate</th>
+                            <th class="px-6 py-3 font-medium">Points Cost</th>
+                            <th class="px-6 py-3 font-medium">Type</th>
+                            <th class="px-6 py-3 font-medium">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-brand-100">
+                        {% for coach in coaches %}
+                            <tr class="hover:bg-brand-50/50">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        {% if coach.photo_url %}
+                                            <img src="{{ coach.photo_url }}" alt="" class="w-10 h-10 rounded-full object-cover">
+                                        {% else %}
+                                            <div class="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold">
+                                                {{ coach.name|first }}
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <p class="font-medium text-brand-900">{{ coach.name }}</p>
+                                            <p class="text-brand-500">{{ coach.email|default:"No email" }}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">{{ coach.specialization|default:"—" }}</td>
+                                <td class="px-6 py-4">₦{{ coach.hourly_rate|default:"—" }}</td>
+                                <td class="px-6 py-4">{{ coach.points_cost }} pts</td>
+                                <td class="px-6 py-4">
+                                    {% if coach.is_special %}
+                                        <span class="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">Elite</span>
+                                    {% else %}
+                                        <span class="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-brand-100 text-brand-700">Regular</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <a href="{% url 'admin_portal:coach_edit' coach.id %}" class="inline-flex items-center px-3 py-1.5 bg-brand-600 text-white text-xs font-medium rounded-lg hover:bg-brand-700 transition-colors">Edit</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="px-6 py-12 text-center text-brand-600">No coaches found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "admin_portal/base.html" %}
+
+{% block title %}Students - Admin Portal{% endblock %}
+
+{% block admin_content %}
+<section class="p-4 lg:p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8">
+            <h1 class="text-2xl lg:text-3xl font-bold text-brand-900">Students</h1>
+            <p class="text-brand-600 mt-1">View student accounts and activity.</p>
+        </header>
+
+        <div class="bg-white rounded-2xl p-5 border border-brand-100 shadow-sm mb-6">
+            <form method="get" class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-1">
+                    <input type="text" name="q" value="{{ search }}" placeholder="Search by email or name" class="w-full px-4 py-2.5 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none">
+                </div>
+                <button type="submit" class="px-6 py-2.5 bg-brand-600 text-white font-medium rounded-xl hover:bg-brand-700 transition-colors">Search</button>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-brand-50 text-brand-700">
+                        <tr>
+                            <th class="px-6 py-3 font-medium">Student</th>
+                            <th class="px-6 py-3 font-medium">Phone</th>
+                            <th class="px-6 py-3 font-medium">Joined</th>
+                            <th class="px-6 py-3 font-medium">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-brand-100">
+                        {% for student in students %}
+                            <tr class="hover:bg-brand-50/50">
+                                <td class="px-6 py-4">
+                                    <p class="font-medium text-brand-900">{{ student.full_name|default:student.email }}</p>
+                                    <p class="text-brand-500">{{ student.email }}</p>
+                                </td>
+                                <td class="px-6 py-4">{{ student.phone|default:"—" }}</td>
+                                <td class="px-6 py-4">{{ student.date_joined|date:"M j, Y" }}</td>
+                                <td class="px-6 py-4">
+                                    <a href="{% url 'admin_portal:student_detail' student.id %}" class="inline-flex items-center px-3 py-1.5 bg-brand-600 text-white text-xs font-medium rounded-lg hover:bg-brand-700 transition-colors">View Details</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4" class="px-6 py-12 text-center text-brand-600">No students found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
