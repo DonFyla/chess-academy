@@ -33,8 +33,29 @@
                     {% endfor %}
                 </div>
 
-                <!-- CTA -->
+                <!-- Auth / CTA -->
                 <div class="hidden lg:flex items-center gap-3">
+                    {% if user.is_authenticated %}
+                        {% if user.is_coach %}
+                            <a href="{% url 'scheduling:coach_dashboard' %}" class="px-4 py-2 text-sm font-medium text-brand-700 rounded-full hover:bg-brand-100 transition-colors">
+                                Dashboard
+                            </a>
+                        {% else %}
+                            <a href="{% url 'accounts:dashboard' %}" class="px-4 py-2 text-sm font-medium text-brand-700 rounded-full hover:bg-brand-100 transition-colors">
+                                Dashboard
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'accounts:logout' %}" class="px-4 py-2 text-sm font-medium text-brand-700 rounded-full hover:bg-brand-100 transition-colors">
+                            Logout
+                        </a>
+                    {% else %}
+                        <a href="{% url 'accounts:login' %}" class="px-4 py-2 text-sm font-medium text-brand-700 rounded-full hover:bg-brand-100 transition-colors">
+                            Login
+                        </a>
+                        <a href="{% url 'accounts:signup' %}" class="btn-primary text-sm">
+                            Sign Up
+                        </a>
+                    {% endif %}
                     <a href="https://wa.link/uj48gk" target="_blank" rel="noopener noreferrer" class="btn-primary text-sm">
                         Contact Us
                     </a>
@@ -62,6 +83,27 @@
                         {{ item.label }}
                     </a>
                 {% endfor %}
+                {% if user.is_authenticated %}
+                    {% if user.is_coach %}
+                        <a href="{% url 'scheduling:coach_dashboard' %}" class="block px-4 py-3 text-base font-medium rounded-xl text-brand-700 hover:bg-brand-100 transition-colors">
+                            Dashboard
+                        </a>
+                    {% else %}
+                        <a href="{% url 'accounts:dashboard' %}" class="block px-4 py-3 text-base font-medium rounded-xl text-brand-700 hover:bg-brand-100 transition-colors">
+                            Dashboard
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'accounts:logout' %}" class="block px-4 py-3 text-base font-medium rounded-xl text-brand-700 hover:bg-brand-100 transition-colors">
+                        Logout
+                    </a>
+                {% else %}
+                    <a href="{% url 'accounts:login' %}" class="block px-4 py-3 text-base font-medium rounded-xl text-brand-700 hover:bg-brand-100 transition-colors">
+                        Login
+                    </a>
+                    <a href="{% url 'accounts:signup' %}" class="block px-4 py-3 text-base font-medium rounded-xl text-brand-700 hover:bg-brand-100 transition-colors">
+                        Sign Up
+                    </a>
+                {% endif %}
                 <a href="https://wa.link/uj48gk" target="_blank" rel="noopener noreferrer" class="block w-full text-center btn-primary mt-4">
                     Contact Us
                 </a>

@@ -1,4 +1,6 @@
+from django.http import Http404
 from django.shortcuts import render
+from scheduling.models import Coach
 from .data import (
     TUTORS,
     EVENTS,
@@ -11,9 +13,11 @@ from .data import (
 
 
 def home(request):
+    featured_coaches = Coach.objects.filter(featured_order__isnull=False).order_by("featured_order")[:4]
     context = {
         "courses": COURSES[:3],
         "tutors": TUTORS,
+        "coaches": featured_coaches,
         "testimonials": TESTIMONIALS,
         "gallery": GALLERY[:6],
         "hero_cards": GALLERY[6:10],
@@ -26,7 +30,8 @@ def courses(request):
 
 
 def tutors(request):
-    return render(request, "web/tutors.html", {"tutors": TUTORS})
+    coaches = Coach.objects.all().order_by("featured_order", "name")
+    return render(request, "web/tutors.html", {"coaches": coaches})
 
 
 def gallery(request):
@@ -36,8 +41,6 @@ def gallery(request):
 def course_detail(request, slug):
     course = COURSE_CURRICULA.get(slug)
     if not course:
-        from django.http import Http404
-
         raise Http404("Course not found")
     context = {
         "course": course,

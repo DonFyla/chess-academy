@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Book {{ coach.name }} - Moving Train Chess Academy{% endblock %}
+
+{% block content %}
+<section class="min-h-screen bg-brand-50 py-16 lg:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <a href="{% url 'tutors' %}" class="inline-flex items-center text-brand-700 hover:text-brand-900 font-medium mb-8">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back to Coaches
+        </a>
+
+        <div class="max-w-5xl mx-auto">
+            <div class="text-center mb-10">
+                <h1 class="text-3xl lg:text-4xl font-bold text-brand-900 mb-3">Book {{ coach.name }}</h1>
+                {% if coach.specialization %}
+                    <p class="text-brand-600 text-lg">{{ coach.specialization }}</p>
+                {% endif %}
+            </div>
+
+            <form method="post" class="space-y-8" id="booking-form" onsubmit="return validateBookingForm()">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="p-4 bg-red-50 text-red-700 rounded-xl">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <!-- Booking Mode -->
+                <div class="card p-6 md:p-8">
+                    <h2 class="text-xl font-bold text-brand-900 mb-5">How Many Sessions Per Week?</h2>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        {% for value, label in form.fields.booking_mode.choices %}
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="booking_mode" value="{{ value }}" class="peer sr-only" {% if form.booking_mode.value == value or value == 'single' %}checked{% endif %} onchange="updateBookingMode()">
+                                <div class="p-5 rounded-xl border-2 border-brand-200 hover:border-brand-400 peer-checked:border-brand-600 peer-checked:bg-brand-600 peer-checked:text-white transition-all">
+                                    <p class="font-semibold text-lg">{{ label }}</p>
+                                    <p class="text-sm mt-1 opacity-90">
+                                        {% if value == 'single' %}
+                                            ₦{{ price_per_session|floatformat:0 }} × 4 sessions
+                                        {% else %}
+                                            ₦{{ price_per_session|floatformat:0 }} × 8 sessions with 5% discount
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </label>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4 p-4 bg-brand-50 rounded-xl">
+                        <p class="text-brand-700">
+                            Total sessions: <span id="total-sessions" class="font-bold">4</span>
+                            <span class="mx-2">|</span>
+                            Amount due: <span id="total-amount" class="font-bold text-brand-900">₦<span id="total-amount-value">{{ price_per_session|floatformat:0 }}</span></span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Session 1 -->
+                <div class="card p-6 md:p-8">
+                    <h2 class="text-xl font-bold text-brand-900 mb-5">1. Select First Weekly Day</h2>
+                    <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-6">
+                        {% for day_name in day_order %}
+                            {% with day_index=forloop.counter0 %}
+                                <button type="button"
+                                    data-day="{{ day_index }}"
+                                    data-session="1"
+                                    onclick="selectDay({{ day_index }}, 1)"
+                                    {% if day_index not in available_days %}disabled{% endif %}
+                                    class="day-btn-1 p-3 rounded-xl text-sm font-medium border-2 transition-all
+                                        {% if day_index in available_days %}
+                                            border-brand-200 text-brand-700 hover:border-brand-400 bg-white
+                                        {% else %}
+                                            border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed
+                                        {% endif %}">
+                                    <span class="block sm:hidden">{{ day_name.0 }}</span>
+                                    <span class="hidden sm:block">{{ day_name|slice:':3' }}</span>
+                                </button>
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="day_of_week_1" id="day-of-week-1" value="{{ form.day_of_week_1.value|default:'' }}">
+                    {{ form.time_slot_1 }}
+
+                    <div id="slots-container-1" class="hidden">
+                        <p class="text-sm font-medium text-brand-700 mb-3">Select Time</p>
+                        <div class="flex flex-wrap gap-3" id="slots-list-1"></div>
+                    </div>
+                </div>
+
+                <!-- Session 2 -->
+                <div id="session-2" class="card p-6 md:p-8 hidden border-dashed border-2 border-brand-300">
+                    <h2 class="text-xl font-bold text-brand-900 mb-5">2. Select Second Weekly Day</h2>
+                    <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-6">
+                        {% for day_name in day_order %}
+                            {% with day_index=forloop.counter0 %}
+                                <button type="button"
+                                    data-day="{{ day_index }}"
+                                    data-session="2"
+                                    onclick="selectDay({{ day_index }}, 2)"
+                                    {% if day_index not in available_days %}disabled{% endif %}
+                                    class="day-btn-2 p-3 rounded-xl text-sm font-medium border-2 transition-all
+                                        {% if day_index in available_days %}
+                                            border-brand-200 text-brand-700 hover:border-brand-400 bg-white
+                                        {% else %}
+                                            border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed
+                                        {% endif %}">
+                                    <span class="block sm:hidden">{{ day_name.0 }}</span>
+                                    <span class="hidden sm:block">{{ day_name|slice:':3' }}</span>
+                                </button>
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="day_of_week_2" id="day-of-week-2" value="{{ form.day_of_week_2.value|default:'' }}">
+                    {{ form.time_slot_2 }}
+
+                    <div id="slots-container-2" class="hidden">
+                        <p class="text-sm font-medium text-brand-700 mb-3">Select Time</p>
+                        <div class="flex flex-wrap gap-3" id="slots-list-2"></div>
+                    </div>
+                </div>
+
+                <!-- Student Info + Summary -->
+                <div id="student-form" class="card p-6 md:p-8 hidden">
+                    <h2 class="text-xl font-bold text-brand-900 mb-5">Your Information</h2>
+
+                    <div class="bg-brand-50 p-5 rounded-xl mb-6">
+                        <h3 class="font-semibold text-brand-900 mb-2">Booking Summary</h3>
+                        <p class="text-sm text-brand-700"><strong>Coach:</strong> {{ coach.name }}</p>
+                        <p class="text-sm text-brand-700"><strong>Schedule:</strong></p>
+                        <ul class="list-disc list-inside ml-2 text-sm text-brand-700 mb-2" id="summary-schedule"></ul>
+                        <p class="text-sm text-brand-700"><strong>Total Sessions:</strong> <span id="summary-sessions">4</span></p>
+                        <p class="text-xl font-bold text-brand-900 mt-2">Amount Due: <span id="summary-amount">₦<span id="summary-amount-value">{{ price_per_session|floatformat:0 }}</span></span></p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label for="{{ form.student_name.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Full Name *</label>
+                            {{ form.student_name|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            {% if form.student_name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.student_name.errors|first }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.student_email.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Email *</label>
+                            {{ form.student_email|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            {% if form.student_email.errors %}<p class="mt-1 text-sm text-red-600">{{ form.student_email.errors|first }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.student_phone.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Phone</label>
+                            {{ form.student_phone|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            {% if form.student_phone.errors %}<p class="mt-1 text-sm text-red-600">{{ form.student_phone.errors|first }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.course_type.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Course Type</label>
+                            {{ form.course_type|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            {% if form.course_type.errors %}<p class="mt-1 text-sm text-red-600">{{ form.course_type.errors|first }}</p>{% endif %}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Notes</label>
+                            {{ form.notes|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            {% if form.notes.errors %}<p class="mt-1 text-sm text-red-600">{{ form.notes.errors|first }}</p>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="pt-6">
+                        <button type="submit" class="w-full px-8 py-4 bg-brand-600 text-white font-semibold rounded-full hover:bg-brand-700 transition-colors" id="submit-btn">
+                            Complete Booking
+                        </button>
+                        <p class="text-sm text-brand-500 text-center mt-3">You'll receive an email with payment details.</p>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<script>
+    const slotsByDay = JSON.parse('{{ slots_by_day_json|escapejs }}');
+    const bookedSlots = JSON.parse('{{ booked_slots_json|escapejs }}');
+    const dayNames = JSON.parse('{{ day_order_json|escapejs }}');
+    const pricePerSession = {{ price_per_session }};
+
+    let selectedDay1 = null;
+    let selectedSlot1 = null;
+    let selectedDay2 = null;
+    let selectedSlot2 = null;
+
+    function formatTime(timeStr) {
+        const [hours, minutes] = timeStr.split(':');
+        const hour = parseInt(hours, 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 || 12;
+        return `${displayHour}:${minutes} ${ampm}`;
+    }
+
+    function isSlotBooked(dayIndex, slot) {
+        const booked = bookedSlots[dayIndex] || [];
+        return booked.some(b => b.start < slot.end_time && b.end > slot.start_time);
+    }
+
+    function updateBookingMode() {
+        const mode = document.querySelector('input[name="booking_mode"]:checked').value;
+        const session2 = document.getElementById('session-2');
+        const totalSessions = document.getElementById('total-sessions');
+        const totalAmount = document.getElementById('total-amount');
+        const summarySessions = document.getElementById('summary-sessions');
+
+        if (mode === 'double') {
+            session2.classList.remove('hidden');
+            totalSessions.textContent = '8';
+            summarySessions.textContent = '8';
+            const total = Math.round(pricePerSession * 8 * 0.95);
+            document.getElementById('total-amount-value').textContent = total.toLocaleString();
+        } else {
+            session2.classList.add('hidden');
+            selectedDay2 = null;
+            selectedSlot2 = null;
+            document.getElementById('day-of-week-2').value = '';
+            document.querySelector('[name="time_slot_2"]').value = '';
+            totalSessions.textContent = '4';
+            summarySessions.textContent = '4';
+            document.getElementById('total-amount-value').textContent = (pricePerSession * 4).toLocaleString();
+        }
+        updateSummary();
+        updateStudentFormVisibility();
+    }
+
+    function selectDay(dayIndex, session) {
+        if (!slotsByDay[dayIndex]) return;
+
+        if (session === 1) {
+            selectedDay1 = dayIndex;
+            selectedSlot1 = null;
+            document.getElementById('day-of-week-1').value = dayIndex;
+            document.querySelector('[name="time_slot_1"]').value = '';
+            // Re-render session 2 buttons so the same day is disabled
+            renderDayButtons(2);
+            renderSlots(2);
+        } else {
+            if (dayIndex === selectedDay1) return;
+            selectedDay2 = dayIndex;
+            selectedSlot2 = null;
+            document.getElementById('day-of-week-2').value = dayIndex;
+            document.querySelector('[name="time_slot_2"]').value = '';
+        }
+
+        renderDayButtons(session);
+        renderSlots(session);
+        updateStudentFormVisibility();
+    }
+
+    function renderDayButtons(session) {
+        document.querySelectorAll(`.day-btn-${session}`).forEach(btn => {
+            const day = parseInt(btn.dataset.day);
+            const isSelected = session === 1 ? day === selectedDay1 : day === selectedDay2;
+            const isAvailable = slotsByDay[day] !== undefined;
+            const isSameAsDay1 = session === 2 && day === selectedDay1;
+
+            btn.classList.remove('bg-brand-600', 'text-white', 'border-brand-600', 'bg-white', 'text-brand-700', 'border-brand-200', 'bg-gray-50', 'text-gray-300', 'border-gray-100', 'cursor-not-allowed');
+            btn.disabled = false;
+
+            if (isSelected) {
+                btn.classList.add('bg-brand-600', 'text-white', 'border-brand-600');
+            } else if (isSameAsDay1) {
+                btn.classList.add('bg-gray-100', 'text-gray-400', 'border-gray-100', 'cursor-not-allowed');
+                btn.disabled = true;
+                btn.title = 'Already selected as first weekly day';
+            } else if (isAvailable) {
+                btn.classList.add('bg-white', 'text-brand-700', 'border-brand-200');
+            } else {
+                btn.classList.add('bg-gray-50', 'text-gray-300', 'border-gray-100', 'cursor-not-allowed');
+                btn.disabled = true;
+            }
+        });
+    }
+
+    function renderSlots(session) {
+        const dayIndex = session === 1 ? selectedDay1 : selectedDay2;
+        const container = document.getElementById(`slots-container-${session}`);
+        const list = document.getElementById(`slots-list-${session}`);
+
+        if (dayIndex === null || !slotsByDay[dayIndex]) {
+            container.classList.add('hidden');
+            return;
+        }
+
+        list.innerHTML = '';
+        const selectedSlot = session === 1 ? selectedSlot1 : selectedSlot2;
+        slotsByDay[dayIndex].forEach(slot => {
+            const booked = isSlotBooked(dayIndex, slot);
+            const isSelected = selectedSlot && selectedSlot.start_time === slot.start_time && selectedSlot.end_time === slot.end_time;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `px-4 py-2 rounded-full text-sm font-medium border-2 transition-all ${
+                booked
+                    ? 'bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed'
+                    : isSelected
+                        ? 'bg-brand-600 text-white border-brand-600'
+                        : 'border-brand-200 text-brand-700 hover:border-brand-400 bg-white'
+            }`;
+            btn.textContent = formatTime(slot.start_time) + ' - ' + formatTime(slot.end_time) + (booked ? ' (Booked)' : '');
+
+            if (!booked) {
+                btn.onclick = () => selectSlot(session, slot);
+            }
+            list.appendChild(btn);
+        });
+
+        container.classList.remove('hidden');
+    }
+
+    function selectSlot(session, slot) {
+        if (session === 1) {
+            selectedSlot1 = slot;
+            document.querySelector('[name="time_slot_1"]').value = slot.start_time + '|' + slot.end_time;
+        } else {
+            selectedSlot2 = slot;
+            document.querySelector('[name="time_slot_2"]').value = slot.start_time + '|' + slot.end_time;
+        }
+        renderSlots(session);
+        updateSummary();
+        updateStudentFormVisibility();
+    }
+
+    function updateSummary() {
+        const schedule = document.getElementById('summary-schedule');
+        schedule.innerHTML = '';
+        if (selectedDay1 !== null && selectedSlot1) {
+            const li = document.createElement('li');
+            li.textContent = dayNames[selectedDay1] + 's at ' + formatTime(selectedSlot1.start_time);
+            schedule.appendChild(li);
+        }
+        const mode = document.querySelector('input[name="booking_mode"]:checked').value;
+        if (mode === 'double' && selectedDay2 !== null && selectedSlot2) {
+            const li = document.createElement('li');
+            li.textContent = dayNames[selectedDay2] + 's at ' + formatTime(selectedSlot2.start_time);
+            schedule.appendChild(li);
+        }
+
+        const summaryAmount = document.getElementById('summary-amount');
+        const sessions = mode === 'double' ? 8 : 4;
+        const total = mode === 'double' ? Math.round(pricePerSession * sessions * 0.95) : pricePerSession * sessions;
+        document.getElementById('summary-amount-value').textContent = total.toLocaleString();
+    }
+
+    function updateStudentFormVisibility() {
+        const mode = document.querySelector('input[name="booking_mode"]:checked').value;
+        const ready = selectedDay1 !== null && selectedSlot1 &&
+            (mode === 'single' || (selectedDay2 !== null && selectedSlot2));
+        // Also ensure hidden fields are set before showing the form
+        if (ready) {
+            document.getElementById('day-of-week-1').value = selectedDay1;
+            document.querySelector('[name="time_slot_1"]').value = selectedSlot1.start_time + '|' + selectedSlot1.end_time;
+            if (mode === 'double' && selectedDay2 !== null && selectedSlot2) {
+                document.getElementById('day-of-week-2').value = selectedDay2;
+                document.querySelector('[name="time_slot_2"]').value = selectedSlot2.start_time + '|' + selectedSlot2.end_time;
+            }
+        }
+        const studentForm = document.getElementById('student-form');
+        if (ready) {
+            studentForm.classList.remove('hidden');
+        } else {
+            studentForm.classList.add('hidden');
+        }
+    }
+
+    function validateBookingForm() {
+        const mode = document.querySelector('input[name="booking_mode"]:checked').value;
+        if (selectedDay1 === null || !selectedSlot1) {
+            alert('Please select a day and time for your first weekly session.');
+            return false;
+        }
+        if (mode === 'double' && (selectedDay2 === null || !selectedSlot2)) {
+            alert('Please select a day and time for your second weekly session.');
+            return false;
+        }
+        return true;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        updateBookingMode();
+        renderDayButtons(1);
+        renderDayButtons(2);
+    });
+</script>
+{% endblock %}

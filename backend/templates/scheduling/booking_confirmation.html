@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% load scheduling_extras %}
+
+{% block title %}Booking Confirmed - Moving Train Chess Academy{% endblock %}
+
+{% block content %}
+<section class="min-h-screen bg-brand-50 py-20 lg:py-28">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl mx-auto text-center">
+            <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mx-auto mb-6">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h1 class="text-3xl font-bold text-brand-900 mb-4">Booking Request Received</h1>
+            <p class="text-brand-600 mb-8">Thank you, {{ booking.student_name }}. Your recurring booking with {{ booking.coach.name }} has been submitted.</p>
+
+            <div class="card p-8 text-left mb-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <p class="text-sm text-brand-500 mb-1">Coach</p>
+                        <p class="font-semibold text-brand-900">{{ booking.coach.name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-brand-500 mb-1">Schedule</p>
+                        <p class="font-semibold text-brand-900">
+                            {% for day in booking.recurring_days %}
+                                {{ day|day_name }}{% if not forloop.last %} & {% endif %}
+                            {% endfor %}
+                            at {{ booking.start_time|time:"g:i A" }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-brand-500 mb-1">Total Sessions</p>
+                        <p class="font-semibold text-brand-900">{{ booking.sessions_per_month }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-brand-500 mb-1">Amount Due</p>
+                        <p class="font-semibold text-brand-900">₦{{ booking.monthly_amount|floatformat:0|intcomma }}</p>
+                    </div>
+                </div>
+
+                {% if booking.recurring_dates %}
+                    <div class="pt-6 border-t border-brand-100">
+                        <p class="text-sm text-brand-500 mb-3">Upcoming Session Dates</p>
+                        <div class="max-h-48 overflow-y-auto space-y-2">
+                            {% for session in booking.recurring_dates %}
+                                <div class="flex justify-between items-center p-3 bg-brand-50 rounded-lg text-sm">
+                                    <span class="font-medium text-brand-900">{{ session.date|parse_iso_date|date:"l, F j, Y" }}</span>
+                                    <span class="text-brand-600">{{ session.start_time }} - {{ session.end_time }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="mt-6 pt-6 border-t border-brand-100">
+                    <p class="text-sm text-brand-500 mb-1">Status</p>
+                    <span class="inline-block px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700">Pending payment</span>
+                </div>
+
+                {% if booking.notes %}
+                    <div class="mt-6 pt-6 border-t border-brand-100">
+                        <p class="text-sm text-brand-500 mb-1">Notes</p>
+                        <p class="text-brand-700">{{ booking.notes }}</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <a href="{% url 'home' %}" class="btn-primary inline-flex items-center justify-center">Return Home</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

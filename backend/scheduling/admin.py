@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import (
     Coach,
+    Student,
     AvailabilitySlot,
     Booking,
     FlexibleBooking,
@@ -81,6 +82,20 @@ class SpecialBookingAdmin(admin.ModelAdmin):
     ]
     list_filter = ["status", "coach"]
     search_fields = ["student_name", "student_email"]
+
+
+@admin.register(Student)
+class StudentAdmin(admin.ModelAdmin):
+    list_display = [
+        "user",
+        "parent_name",
+        "school",
+        "chess_rating",
+        "created_at",
+    ]
+    list_filter = ["school"]
+    search_fields = ["user__email", "user__full_name", "parent_name", "school"]
+    readonly_fields = ["created_at", "updated_at"]
 
 
 @admin.register(CoachBlockedDate)

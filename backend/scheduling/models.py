@@ -25,7 +25,7 @@ class Coach(models.Model):
     achievements = models.JSONField(default=list, blank=True)
     special_bio = models.TextField(blank=True, default="")
     featured_order = models.PositiveIntegerField(blank=True, null=True)
-    points_cost = models.PositiveIntegerField(default=1)
+    points_cost = models.PositiveIntegerField(default=1, blank=True)
     meeting_link = models.URLField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -36,6 +36,58 @@ class Coach(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_available_slots_for_date(self, date):
+        """Return available (start_time, end_time) tuples for the given date,
+        with blocked-date ranges subtracted from weekly availability slots."""
+        from datetime import datetime, time
+
+        day_of_week = date.weekday()
+        # Django's weekday() returns Monday=0, Sunday=6. Our DAY_CHOICES use Sunday=0.
+        day_of_week = (day_of_week + 1) % 7
+
+        slots = self.availability_slots.filter(day_of_week=day_of_week)
+        blocked_ranges = self.blocked_dates.filter(blocked_date=date)
+
+        def to_minutes(t):
+            return t.hour * 60 + t.minute
+
+        def to_time(m):
+            return time(m // 60, m % 60)
+
+        available = []
+        for slot in slots:
+            slot_start = to_minutes(slot.start_time)
+            slot_end = to_minutes(slot.end_time)
+            intervals = [(slot_start, slot_end)]
+
+            for blocked in blocked_ranges:
+                if blocked.start_time is None or blocked.end_time is None:
+                    # Full-day block cancels this slot entirely.
+                    intervals = []
+                    break
+
+                block_start = to_minutes(blocked.start_time)
+                block_end = to_minutes(blocked.end_time)
+                new_intervals = []
+                for start, end in intervals:
+                    if block_end <= start or block_start >= end:
+                        # No overlap
+                        new_intervals.append((start, end))
+                    else:
+                        if start < block_start:
+                            new_intervals.append((start, block_start))
+                        if block_end < end:
+                            new_intervals.append((block_end, end))
+                intervals = new_intervals
+                if not intervals:
+                    break
+
+            for start, end in intervals:
+                if end > start:
+                    available.append((to_time(start), to_time(end)))
+
+        return sorted(available)
 
 
 class AvailabilitySlot(models.Model):
@@ -230,6 +282,32 @@ class SpecialBooking(models.Model):
 
     def __str__(self):
         return f"{self.student_name} - {self.coach.name} ({self.status})"
+
+
+class Student(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="student_profile",
+    )
+    date_of_birth = models.DateField(blank=True, null=True)
+    parent_name = models.CharField(max_length=255, blank=True, default="")
+    parent_phone = models.CharField(max_length=20, blank=True, default="")
+    address = models.TextField(blank=True, default="")
+    school = models.CharField(max_length=255, blank=True, default="")
+    chess_rating = models.PositiveIntegerField(blank=True, null=True)
+    bio = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["user__email"]
+        verbose_name = "Student"
+        verbose_name_plural = "Students"
+
+    def __str__(self):
+        return self.user.email
 
 
 class CoachBlockedDate(models.Model):
