@@ -285,7 +285,7 @@
                             <div class="grid sm:grid-cols-2 gap-4">
                                 {% for value, label in special_form.fields.booking_mode.choices %}
                                     <label class="relative cursor-pointer">
-                                        <input type="radio" name="booking_mode" value="{{ value }}" class="peer sr-only" {% if special_form.booking_mode.value == value or value == 'individual' %}checked{% endif %} onchange="updateSpecialMode()">
+                                        <input type="radio" name="booking_mode" value="{{ value }}" class="peer sr-only sp-booking-mode" {% if special_form.booking_mode.value == value or value == 'individual' %}checked{% endif %} onchange="updateSpecialMode()">
                                         <div class="p-5 rounded-xl border-2 border-brand-200 hover:border-brand-400 peer-checked:border-brand-600 peer-checked:bg-brand-600 peer-checked:text-white transition-all">
                                             <p class="font-semibold text-lg">{{ label }}</p>
                                             <p class="text-sm mt-1 opacity-90">
@@ -905,7 +905,7 @@
     }
 
     function updateSpecialSummary() {
-        const mode = document.querySelector('input[name="booking_mode"]:checked')?.value || 'individual';
+        const mode = document.querySelector('.sp-booking-mode:checked')?.value || 'individual';
         const count = selectedSpecialSlots.length;
         const discount = getSpecialDiscount(count);
         const total = calculateSpecialTotal(count);
@@ -980,7 +980,7 @@
     }
 
     function updateSpecialMode() {
-        const mode = document.querySelector('input[name="booking_mode"]:checked')?.value || 'individual';
+        const mode = document.querySelector('.sp-booking-mode:checked')?.value || 'individual';
         const individualPanel = document.getElementById('special-individual-panel');
         const recurringPanel = document.getElementById('special-recurring-panel');
 
@@ -1000,7 +1000,7 @@
     }
 
     function updateRecurringSpecialSummary() {
-        const mode = document.querySelector('input[name="booking_mode"]:checked')?.value || 'individual';
+        const mode = document.querySelector('.sp-booking-mode:checked')?.value || 'individual';
         if (mode !== 'recurring') {
             updateSpecialSummary();
             return;
@@ -1053,7 +1053,7 @@
     }
 
     function validateSpecialForm() {
-        const mode = document.querySelector('input[name="booking_mode"]:checked')?.value || 'individual';
+        const mode = document.querySelector('.sp-booking-mode:checked')?.value || 'individual';
         if (selectedSpecialSlots.length === 0) {
             if (mode === 'recurring') {
                 alert('Please select at least one day of the week and number of weeks.');
@@ -1075,7 +1075,7 @@
 
         // Special booking initial state
         updateSpecialMode();
-        document.querySelectorAll('input[name="booking_mode"]').forEach(el => {
+        document.querySelectorAll('.sp-booking-mode').forEach(el => {
             el.addEventListener('change', updateSpecialMode);
         });
         document.querySelectorAll('.sp-rec-day').forEach(el => {
