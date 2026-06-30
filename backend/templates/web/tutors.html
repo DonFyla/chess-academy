@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Our Coaches - Moving Train Chess Academy{% endblock %}
-{% block meta_description %}Learn from Nigeria's top chess coaches including FIDE Masters and titled players.{% endblock %}
+{% block title %}Elite & Regular Chess Coaches - Moving Train Chess Academy{% endblock %}
+{% block meta_description %}Train with Nigeria's top chess coaches including FIDE Masters, National Champions, and elite titled players. Book private lessons by the session or join a monthly program.{% endblock %}
 
 {% block content %}
 <section class="py-20 lg:py-28 bg-brand-50">
@@ -10,23 +10,23 @@
         <div class="text-center mb-12">
             <span class="text-brand-600 font-semibold text-sm uppercase tracking-wider">Expert Coaches</span>
             <h1 class="section-title mt-3 mb-6">Meet Our Team Leaders</h1>
-            <p class="text-lg text-brand-700 max-w-2xl mx-auto">Our coaches are champions, masters, and passionate educators dedicated to your growth.</p>
+            <p class="text-lg text-brand-700 max-w-2xl mx-auto">From FIDE Masters and National Champions to passionate educators, find the perfect coach for your chess journey.</p>
         </div>
 
         <!-- Tabs -->
         <div class="flex justify-center mb-10">
             <div class="inline-flex p-1 bg-white rounded-xl border border-brand-200 shadow-sm">
-                <button type="button" onclick="switchTab('normal')" id="tab-normal" class="tab-btn px-6 py-2.5 rounded-lg text-sm font-medium transition-all bg-brand-600 text-white">
+                <button type="button" onclick="switchTab('normal')" id="tab-normal" class="tab-btn px-6 py-2.5 rounded-lg text-sm font-medium transition-all text-brand-700 hover:bg-brand-100">
                     Regular Coaches
                 </button>
-                <button type="button" onclick="switchTab('special')" id="tab-special" class="tab-btn px-6 py-2.5 rounded-lg text-sm font-medium transition-all text-brand-700 hover:bg-brand-100">
+                <button type="button" onclick="switchTab('special')" id="tab-special" class="tab-btn px-6 py-2.5 rounded-lg text-sm font-medium transition-all bg-brand-600 text-white">
                     Elite / Special Coaches
                 </button>
             </div>
         </div>
 
         <!-- Normal Coaches -->
-        <div id="panel-normal" class="tab-panel">
+        <div id="panel-normal" class="tab-panel hidden">
             {% if normal_coaches %}
                 <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
                     {% for coach in normal_coaches %}
@@ -41,8 +41,21 @@
         </div>
 
         <!-- Special Coaches -->
-        <div id="panel-special" class="tab-panel hidden">
+        <div id="panel-special" class="tab-panel">
             {% if special_coaches %}
+                <!-- Elite banner -->
+                <div class="max-w-4xl mx-auto mb-12 p-6 md:p-8 rounded-2xl bg-gradient-to-r from-amber-50 via-white to-amber-50 border-2 border-amber-200 shadow-sm">
+                    <div class="flex flex-col md:flex-row items-center gap-6">
+                        <div class="p-4 bg-amber-100 rounded-full">
+                            <svg class="w-10 h-10 text-amber-600" fill="currentColor" viewBox="0 0 24 24"><path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5M19 19A1 1 0 0120 20H4A1 1 0 013 20V19H19Z"/></svg>
+                        </div>
+                        <div class="text-center md:text-left">
+                            <h2 class="text-2xl font-bold text-brand-900 mb-2">Elite Coaching Program</h2>
+                            <p class="text-brand-700">Book one-on-one sessions with Nigeria's highest-ranked chess players. Flexible per-session pricing with no long-term commitment. Perfect for tournament preparation, opening deep-dives, and master-level training.</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
                     {% for coach in special_coaches %}
                         {% include "web/_coach_card.html" %}

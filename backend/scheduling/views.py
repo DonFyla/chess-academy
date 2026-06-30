@@ -270,7 +270,7 @@ def book_coach_view(request, coach_id):
 
     recurring_form = BookingForm(initial=initial)
     points_form = PointsBookingForm(initial=initial)
-    special_form = SpecialBookingForm(initial=initial)
+    special_form = SpecialBookingForm(initial=initial, coach=coach)
 
     if request.method == "POST":
         booking_type = request.POST.get("booking_type", "recurring")
@@ -327,11 +327,19 @@ def book_coach_view(request, coach_id):
                 messages.error(request, "Please correct the errors below.")
 
         elif booking_type == "special":
-            special_form = SpecialBookingForm(request.POST)
+            special_form = SpecialBookingForm(request.POST, coach=coach)
             if special_form.is_valid():
-                slots = special_form.cleaned_data["selected_slots"]
+                slots = special_form.cleaned_data["computed_slots"]
                 hourly_rate = coach.hourly_rate or 10000
-                total_amount = len(slots) * hourly_rate
+                base_amount = len(slots) * hourly_rate
+
+                # Discount tiers
+                discount_percent = 0
+                if len(slots) >= 12:
+                    discount_percent = 15
+                elif len(slots) >= 8:
+                    discount_percent = 10
+                total_amount = int(base_amount * (1 - discount_percent / 100))
 
                 session_dates = []
                 for slot in slots:
@@ -345,6 +353,7 @@ def book_coach_view(request, coach_id):
                     })
 
                 payment_reference = generate_reference(prefix="SP")
+                is_recurring = special_form.cleaned_data.get("booking_mode") == "recurring"
                 special_booking = SpecialBooking.objects.create(
                     coach=coach,
                     student=request.user,
@@ -353,7 +362,9 @@ def book_coach_view(request, coach_id):
                     student_phone=special_form.cleaned_data.get("student_phone", ""),
                     total_sessions=len(slots),
                     session_dates=session_dates,
-                    is_recurring=False,
+                    is_recurring=is_recurring,
+                    recurring_days=[int(d) for d in (special_form.cleaned_data.get("recurring_days") or [])] if is_recurring else [],
+                    recurring_weeks=(special_form.cleaned_data.get("recurring_weeks") or 4) if is_recurring else 4,
                     hourly_rate=hourly_rate,
                     total_amount=total_amount,
                     status="pending_payment",

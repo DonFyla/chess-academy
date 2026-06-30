@@ -269,66 +269,157 @@
 
             {% if coach.is_special %}
             <div id="panel-special" class="tab-panel hidden">
-                <form method="post" class="space-y-8" id="special-form" onsubmit="return validateSpecialForm()">
+                <form method="post" class="space-y-8 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-8 items-start" id="special-form" onsubmit="return validateSpecialForm()">
                     {% csrf_token %}
                     <input type="hidden" name="booking_type" value="special">
                     <input type="hidden" name="selected_slots" id="special-selected-slots" value="">
 
-                    {% if special_form.non_field_errors %}
-                        <div class="p-4 bg-red-50 text-red-700 rounded-xl">{{ special_form.non_field_errors }}</div>
-                    {% endif %}
+                    <div class="lg:col-span-2 space-y-8">
+                        {% if special_form.non_field_errors %}
+                            <div class="p-4 bg-red-50 text-red-700 rounded-xl">{{ special_form.non_field_errors }}</div>
+                        {% endif %}
 
-                    <div class="card p-6 md:p-8">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                            <h2 class="text-xl font-bold text-brand-900">Select Sessions</h2>
-                            <div class="text-sm text-brand-600">
-                                Selected: <span id="special-selected-count" class="font-bold text-brand-900">0</span>
-                                <span class="mx-2">|</span>
-                                Rate: ₦{{ price_per_session|floatformat:0 }} / session
+                        <!-- Booking Mode -->
+                        <div class="card p-6 md:p-8">
+                            <h2 class="text-xl font-bold text-brand-900 mb-5">Booking Mode</h2>
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                {% for value, label in special_form.fields.booking_mode.choices %}
+                                    <label class="relative cursor-pointer">
+                                        <input type="radio" name="booking_mode" value="{{ value }}" class="peer sr-only" {% if special_form.booking_mode.value == value or value == 'individual' %}checked{% endif %} onchange="updateSpecialMode()">
+                                        <div class="p-5 rounded-xl border-2 border-brand-200 hover:border-brand-400 peer-checked:border-brand-600 peer-checked:bg-brand-600 peer-checked:text-white transition-all">
+                                            <p class="font-semibold text-lg">{{ label }}</p>
+                                            <p class="text-sm mt-1 opacity-90">
+                                                {% if value == 'individual' %}
+                                                    Pick specific dates from the calendar
+                                                {% else %}
+                                                    Automatically schedule weekly sessions
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    </label>
+                                {% endfor %}
                             </div>
                         </div>
-                        <div id="special-calendar-container" class="space-y-6"></div>
+
+                        <!-- Discount Tiers -->
+                        <div class="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
+                            <h3 class="font-semibold text-brand-900 mb-2 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21L16.54 13.97L22 9.24L14.81 8.62L12 2L9.19 8.62L2 9.24L7.45 13.97L5.82 21L12 17.27Z"/></svg>
+                                Session Discounts
+                            </h3>
+                            <ul class="text-sm text-brand-700 space-y-1">
+                                <li id="tier-8" class="opacity-60">8+ sessions: 10% off</li>
+                                <li id="tier-12" class="opacity-60">12+ sessions: 15% off</li>
+                            </ul>
+                        </div>
+
+                        <!-- Individual Selection -->
+                        <div id="special-individual-panel" class="card p-6 md:p-8">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                <h2 class="text-xl font-bold text-brand-900">Select Sessions</h2>
+                                <div class="text-sm text-brand-600">
+                                    Selected: <span id="special-selected-count" class="font-bold text-brand-900">0</span>
+                                    <span class="mx-2">|</span>
+                                    Rate: ₦{{ price_per_session|floatformat:0 }} / session
+                                </div>
+                            </div>
+                            <div id="special-calendar-container" class="space-y-6"></div>
+                        </div>
+
+                        <!-- Recurring Selection -->
+                        <div id="special-recurring-panel" class="card p-6 md:p-8 hidden">
+                            <h2 class="text-xl font-bold text-brand-900 mb-5">Recurring Schedule</h2>
+                            <div class="mb-6">
+                                <p class="text-sm font-medium text-brand-700 mb-3">Select days of the week</p>
+                                <div class="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                                    {% for value, label in special_form.fields.recurring_days.choices %}
+                                        <label class="relative cursor-pointer">
+                                            <input type="checkbox" name="recurring_days" value="{{ value }}" class="peer sr-only sp-rec-day" onchange="updateRecurringSpecialSummary()">
+                                            <div class="p-3 rounded-xl border-2 border-brand-200 hover:border-brand-400 peer-checked:border-brand-600 peer-checked:bg-brand-600 peer-checked:text-white transition-all text-center text-sm font-medium text-brand-700 peer-checked:text-white">
+                                                {{ label|slice:':3' }}
+                                            </div>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="mb-6">
+                                <label for="{{ special_form.recurring_weeks.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Number of weeks</label>
+                                {{ special_form.recurring_weeks|add_class:"w-full sm:w-48 px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
+                            <div id="special-recurring-preview" class="hidden">
+                                <h3 class="font-semibold text-brand-900 mb-2">Generated Schedule</h3>
+                                <div id="special-recurring-list" class="flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+
+                        <!-- Selected Sessions Summary (inline) -->
+                        <div id="special-selected-summary" class="card p-6 md:p-8 hidden">
+                            <h2 class="text-xl font-bold text-brand-900 mb-4">Selected Sessions</h2>
+                            <div id="special-selected-list" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <!-- Student Info -->
+                        <div class="card p-6 md:p-8">
+                            <h2 class="text-xl font-bold text-brand-900 mb-5">Your Information</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div>
+                                    <label for="{{ special_form.student_name.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Full Name *</label>
+                                    {{ special_form.student_name|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                                </div>
+                                <div>
+                                    <label for="{{ special_form.student_email.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Email *</label>
+                                    {{ special_form.student_email|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                                </div>
+                                <div>
+                                    <label for="{{ special_form.student_phone.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Phone</label>
+                                    {{ special_form.student_phone|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label for="{{ special_form.admin_notes.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Notes</label>
+                                    {{ special_form.admin_notes|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div id="special-selected-summary" class="card p-6 md:p-8 hidden">
-                        <h2 class="text-xl font-bold text-brand-900 mb-4">Selected Sessions</h2>
-                        <div id="special-selected-list" class="flex flex-wrap gap-2"></div>
-                    </div>
-
-                    <div class="card p-6 md:p-8">
-                        <h2 class="text-xl font-bold text-brand-900 mb-5">Your Information</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <div>
-                                <label for="{{ special_form.student_name.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Full Name *</label>
-                                {{ special_form.student_name|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                    <!-- Sticky Summary Sidebar -->
+                    <div class="lg:col-span-1">
+                        <div class="sticky top-24 card p-6 md:p-8 border-2 border-amber-200 bg-gradient-to-b from-amber-50/50 to-white">
+                            <h2 class="text-xl font-bold text-brand-900 mb-5">Booking Summary</h2>
+                            <div class="space-y-3 text-sm text-brand-700">
+                                <div class="flex justify-between">
+                                    <span>Coach</span>
+                                    <span class="font-semibold text-brand-900">{{ coach.name }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Sessions</span>
+                                    <span class="font-semibold text-brand-900" id="summary-session-count">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Rate</span>
+                                    <span class="font-semibold text-brand-900">₦{{ price_per_session|floatformat:0 }} / session</span>
+                                </div>
+                                <div class="flex justify-between" id="summary-discount-row">
+                                    <span>Discount</span>
+                                    <span class="font-semibold text-green-700" id="summary-discount">0%</span>
+                                </div>
+                                <div class="border-t border-brand-200 pt-3 mt-3">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-brand-700">Total</span>
+                                        <span class="text-2xl font-bold text-brand-900">₦<span id="summary-total">0</span></span>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label for="{{ special_form.student_email.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Email *</label>
-                                {{ special_form.student_email|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            <div id="summary-dates" class="mt-5 hidden">
+                                <h3 class="font-semibold text-brand-900 mb-2 text-sm">Selected Dates</h3>
+                                <div id="summary-dates-list" class="max-h-64 overflow-y-auto space-y-1.5 text-sm text-brand-700"></div>
                             </div>
-                            <div>
-                                <label for="{{ special_form.student_phone.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Phone</label>
-                                {{ special_form.student_phone|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            <div class="mt-6">
+                                <button type="submit" id="special-submit-btn" class="w-full px-6 py-4 bg-gradient-to-r from-amber-600 to-orange-700 text-white font-semibold rounded-full hover:from-amber-700 hover:to-orange-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                    Proceed to Payment
+                                </button>
                             </div>
-                            <div class="md:col-span-2">
-                                <label for="{{ special_form.admin_notes.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Notes</label>
-                                {{ special_form.admin_notes|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
-                            </div>
-                        </div>
-
-                        <div class="mt-6 p-4 bg-brand-50 rounded-xl">
-                            <p class="text-brand-700">
-                                Total Sessions: <span id="special-total-sessions" class="font-bold text-brand-900">0</span>
-                                <span class="mx-2">|</span>
-                                Total Amount: <span class="text-2xl font-bold text-brand-900">₦<span id="special-total-amount">0</span></span>
-                            </p>
-                            <p class="text-sm text-brand-600 mt-2">Payment will be arranged offline before sessions are confirmed.</p>
-                        </div>
-
-                        <div class="mt-6">
-                            <button type="submit" id="special-submit-btn" class="w-full sm:w-auto px-8 py-4 bg-brand-600 text-white font-semibold rounded-full hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                                Request Special Booking
-                            </button>
+                            <p class="text-xs text-brand-500 mt-3 text-center">Secure payment via Paystack</p>
                         </div>
                     </div>
                 </form>
@@ -802,36 +893,173 @@
         generateSpecialCalendar();
     }
 
-    function updateSpecialSummary() {
-        const count = selectedSpecialSlots.length;
-        const totalAmount = count * pricePerSession;
+    function getSpecialDiscount(count) {
+        if (count >= 12) return 15;
+        if (count >= 8) return 10;
+        return 0;
+    }
 
-        document.getElementById('special-selected-count').textContent = count;
-        document.getElementById('special-total-sessions').textContent = count;
-        document.getElementById('special-total-amount').textContent = totalAmount.toLocaleString();
+    function calculateSpecialTotal(count) {
+        const discount = getSpecialDiscount(count);
+        return Math.round(count * pricePerSession * (1 - discount / 100));
+    }
+
+    function updateSpecialSummary() {
+        const mode = document.querySelector('input[name="booking_mode"]:checked')?.value || 'individual';
+        const count = selectedSpecialSlots.length;
+        const discount = getSpecialDiscount(count);
+        const total = calculateSpecialTotal(count);
+        const baseAmount = count * pricePerSession;
+
+        // Inline display
+        const countEl = document.getElementById('special-selected-count');
+        if (countEl) countEl.textContent = count;
+        const sessionsEl = document.getElementById('special-total-sessions');
+        if (sessionsEl) sessionsEl.textContent = count;
+        const amountEl = document.getElementById('special-total-amount');
+        if (amountEl) amountEl.textContent = total.toLocaleString();
+
         document.getElementById('special-selected-slots').value = JSON.stringify(selectedSpecialSlots);
 
+        // Inline selected list
         const summary = document.getElementById('special-selected-summary');
         const list = document.getElementById('special-selected-list');
-        if (count > 0) {
-            summary.classList.remove('hidden');
-            list.innerHTML = selectedSpecialSlots.map(slot => `
-                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100 text-brand-700 text-sm">
-                    ${dayNames[slot.day_of_week].slice(0, 3)} ${slot.date} · ${formatTime(slot.start_time)}
-                    <button type="button" onclick="toggleSpecialSlot('${slot.date}', ${slot.day_of_week}, '${slot.start_time}', '${slot.end_time}')" class="text-brand-500 hover:text-red-600">×</button>
-                </span>
-            `).join('');
-        } else {
-            summary.classList.add('hidden');
+        if (summary && list) {
+            if (count > 0 && mode === 'individual') {
+                summary.classList.remove('hidden');
+                list.innerHTML = selectedSpecialSlots.map(slot => `
+                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100 text-brand-700 text-sm">
+                        ${dayNames[slot.day_of_week].slice(0, 3)} ${slot.date} · ${formatTime(slot.start_time)}
+                        <button type="button" onclick="toggleSpecialSlot('${slot.date}', ${slot.day_of_week}, '${slot.start_time}', '${slot.end_time}')" class="text-brand-500 hover:text-red-600">×</button>
+                    </span>
+                `).join('');
+            } else {
+                summary.classList.add('hidden');
+            }
+        }
+
+        // Sticky sidebar summary
+        const summaryCount = document.getElementById('summary-session-count');
+        if (summaryCount) summaryCount.textContent = count;
+        const summaryDiscount = document.getElementById('summary-discount');
+        if (summaryDiscount) {
+            summaryDiscount.textContent = discount + '%';
+            summaryDiscount.parentElement.classList.toggle('hidden', discount === 0);
+        }
+        const summaryTotal = document.getElementById('summary-total');
+        if (summaryTotal) summaryTotal.textContent = total.toLocaleString();
+
+        const summaryDates = document.getElementById('summary-dates');
+        const summaryDatesList = document.getElementById('summary-dates-list');
+        if (summaryDates && summaryDatesList) {
+            if (count > 0) {
+                summaryDates.classList.remove('hidden');
+                summaryDatesList.innerHTML = selectedSpecialSlots.map(slot => `
+                    <div class="flex justify-between">
+                        <span>${dayNames[slot.day_of_week].slice(0, 3)} ${slot.date}</span>
+                        <span class="font-medium">${formatTime(slot.start_time)} - ${formatTime(slot.end_time)}</span>
+                    </div>
+                `).join('');
+            } else {
+                summaryDates.classList.add('hidden');
+            }
+        }
+
+        // Discount tier highlights
+        const tier8 = document.getElementById('tier-8');
+        const tier12 = document.getElementById('tier-12');
+        if (tier8 && tier12) {
+            tier8.classList.toggle('opacity-60', count < 8);
+            tier8.classList.toggle('font-semibold', count >= 8);
+            tier12.classList.toggle('opacity-60', count < 12);
+            tier12.classList.toggle('font-semibold', count >= 12);
         }
 
         const submitBtn = document.getElementById('special-submit-btn');
-        submitBtn.disabled = count === 0;
+        if (submitBtn) submitBtn.disabled = count === 0;
+    }
+
+    function updateSpecialMode() {
+        const mode = document.querySelector('input[name="booking_mode"]:checked')?.value || 'individual';
+        const individualPanel = document.getElementById('special-individual-panel');
+        const recurringPanel = document.getElementById('special-recurring-panel');
+
+        if (mode === 'individual') {
+            individualPanel.classList.remove('hidden');
+            recurringPanel.classList.add('hidden');
+        } else {
+            individualPanel.classList.add('hidden');
+            recurringPanel.classList.remove('hidden');
+        }
+        updateRecurringSpecialSummary();
+    }
+
+    function getFirstSlotForDay(dayIndex) {
+        const slots = slotsByDay[dayIndex] || [];
+        return slots[0] || { start_time: '10:00', end_time: '11:00' };
+    }
+
+    function updateRecurringSpecialSummary() {
+        const mode = document.querySelector('input[name="booking_mode"]:checked')?.value || 'individual';
+        if (mode !== 'recurring') {
+            updateSpecialSummary();
+            return;
+        }
+
+        const selectedDays = Array.from(document.querySelectorAll('.sp-rec-day:checked')).map(cb => parseInt(cb.value, 10));
+        const weeksInput = document.querySelector('input[name="recurring_weeks"]');
+        const weeks = weeksInput ? parseInt(weeksInput.value, 10) || 4 : 4;
+
+        selectedSpecialSlots = [];
+        const today = getLagosToday();
+        selectedDays.forEach(dayIndex => {
+            const slot = getFirstSlotForDay(dayIndex);
+            const daysAhead = dayIndex - today.getDay();
+            let firstDate = new Date(today);
+            firstDate.setDate(today.getDate() + daysAhead);
+            if (firstDate <= today) {
+                firstDate.setDate(firstDate.getDate() + 7);
+            }
+            for (let week = 0; week < weeks; week++) {
+                const sessionDate = new Date(firstDate);
+                sessionDate.setDate(firstDate.getDate() + week * 7);
+                selectedSpecialSlots.push({
+                    date: formatDateLagos(sessionDate),
+                    day_of_week: dayIndex,
+                    start_time: slot.start_time,
+                    end_time: slot.end_time,
+                });
+            }
+        });
+        selectedSpecialSlots.sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
+
+        // Show generated schedule preview
+        const preview = document.getElementById('special-recurring-preview');
+        const list = document.getElementById('special-recurring-list');
+        if (preview && list) {
+            if (selectedSpecialSlots.length > 0) {
+                preview.classList.remove('hidden');
+                list.innerHTML = selectedSpecialSlots.map(slot => `
+                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100 text-brand-700 text-sm">
+                        ${dayNames[slot.day_of_week].slice(0, 3)} ${slot.date} · ${formatTime(slot.start_time)}
+                    </span>
+                `).join('');
+            } else {
+                preview.classList.add('hidden');
+            }
+        }
+
+        updateSpecialSummary();
     }
 
     function validateSpecialForm() {
+        const mode = document.querySelector('input[name="booking_mode"]:checked')?.value || 'individual';
         if (selectedSpecialSlots.length === 0) {
-            alert('Please select at least one session.');
+            if (mode === 'recurring') {
+                alert('Please select at least one day of the week and number of weeks.');
+            } else {
+                alert('Please select at least one session.');
+            }
             return false;
         }
         return true;
@@ -844,6 +1072,26 @@
         updateRecurringMode();
         renderRecurringDayButtons(1);
         renderRecurringDayButtons(2);
+
+        // Special booking initial state
+        updateSpecialMode();
+        document.querySelectorAll('input[name="booking_mode"]').forEach(el => {
+            el.addEventListener('change', updateSpecialMode);
+        });
+        document.querySelectorAll('.sp-rec-day').forEach(el => {
+            el.addEventListener('change', updateRecurringSpecialSummary);
+        });
+        const weeksInput = document.querySelector('input[name="recurring_weeks"]');
+        if (weeksInput) {
+            weeksInput.addEventListener('change', updateRecurringSpecialSummary);
+            weeksInput.addEventListener('input', updateRecurringSpecialSummary);
+        }
+
+        // Handle ?tab=special query param
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('tab') === 'special' && document.getElementById('tab-special')) {
+            switchTab('special');
+        }
     });
 </script>
 {% endblock %}

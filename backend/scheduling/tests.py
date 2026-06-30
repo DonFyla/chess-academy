@@ -951,6 +951,7 @@ class SpecialBookingFlowTests(TestCase):
             reverse("scheduling:book_coach", args=[self.special_coach.id]),
             {
                 "booking_type": "special",
+                "booking_mode": "individual",
                 "selected_slots": selected_slots,
                 "student_name": "Test Student",
                 "student_email": "student@example.com",
@@ -1000,6 +1001,7 @@ class SpecialBookingFlowTests(TestCase):
             reverse("scheduling:book_coach", args=[self.special_coach.id]),
             {
                 "booking_type": "special",
+                "booking_mode": "individual",
                 "selected_slots": selected_slots,
                 "student_name": "Test Student",
                 "student_email": "student@example.com",
@@ -1013,3 +1015,128 @@ class SpecialBookingFlowTests(TestCase):
         self.assertEqual(booking.total_amount, 30000)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "scheduling/special_booking_payment.html")
+
+    @patch("scheduling.views.initialize_transaction", side_effect=_mock_initialize_success)
+    def test_special_recurring_booking_creates_sessions(self, mock_init):
+        self.client.force_login(self.student)
+        from scheduling.models import SpecialBooking
+
+        response = self.client.post(
+            reverse("scheduling:book_coach", args=[self.special_coach.id]),
+            {
+                "booking_type": "special",
+                "booking_mode": "recurring",
+                "recurring_days": ["2"],
+                "recurring_weeks": 4,
+                "student_name": "Test Student",
+                "student_email": "student@example.com",
+                "student_phone": "08012345678",
+            },
+        )
+
+        self.assertEqual(SpecialBooking.objects.count(), 1)
+        booking = SpecialBooking.objects.first()
+        self.assertTrue(booking.is_recurring)
+        self.assertEqual(booking.recurring_days, [2])
+        self.assertEqual(booking.recurring_weeks, 4)
+        self.assertEqual(booking.total_sessions, 4)
+        self.assertEqual(booking.total_amount, 60000)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "scheduling/special_booking_payment.html")
+
+    @patch("scheduling.views.initialize_transaction", side_effect=_mock_initialize_success)
+    def test_special_booking_discount_tier_10_percent(self, mock_init):
+        self.client.force_login(self.student)
+        from scheduling.models import SpecialBooking
+        today = timezone.now().date()
+        days_until_tuesday = (1 - today.weekday()) % 7
+        next_tuesday = today + timedelta(days=days_until_tuesday if days_until_tuesday else 7)
+
+        # Create 8 individual sessions across 4 weeks on Tuesday and Thursday
+        selected_slots = []
+        for week in range(4):
+            tuesday = next_tuesday + timedelta(weeks=week)
+            thursday = tuesday + timedelta(days=2)
+            selected_slots.append({
+                "date": tuesday.isoformat(),
+                "day_of_week": 2,
+                "start_time": "14:00",
+                "end_time": "15:00",
+            })
+            selected_slots.append({
+                "date": thursday.isoformat(),
+                "day_of_week": 4,
+                "start_time": "14:00",
+                "end_time": "15:00",
+            })
+
+        response = self.client.post(
+            reverse("scheduling:book_coach", args=[self.special_coach.id]),
+            {
+                "booking_type": "special",
+                "booking_mode": "individual",
+                "selected_slots": json.dumps(selected_slots),
+                "student_name": "Test Student",
+                "student_email": "student@example.com",
+                "student_phone": "08012345678",
+            },
+        )
+
+        self.assertEqual(SpecialBooking.objects.count(), 1)
+        booking = SpecialBooking.objects.first()
+        self.assertEqual(booking.total_sessions, 8)
+        # 8 * 15000 = 120000, 10% discount = 108000
+        self.assertEqual(booking.total_amount, 108000)
+        self.assertEqual(response.status_code, 200)
+
+    @patch("scheduling.views.initialize_transaction", side_effect=_mock_initialize_success)
+    def test_special_booking_discount_tier_15_percent(self, mock_init):
+        self.client.force_login(self.student)
+        from scheduling.models import SpecialBooking
+        today = timezone.now().date()
+        days_until_tuesday = (1 - today.weekday()) % 7
+        next_tuesday = today + timedelta(days=days_until_tuesday if days_until_tuesday else 7)
+
+        # Create 12 individual sessions across 4 weeks on Tuesday, Wednesday, Thursday
+        selected_slots = []
+        for week in range(4):
+            tuesday = next_tuesday + timedelta(weeks=week)
+            wednesday = tuesday + timedelta(days=1)
+            thursday = tuesday + timedelta(days=2)
+            selected_slots.append({
+                "date": tuesday.isoformat(),
+                "day_of_week": 2,
+                "start_time": "14:00",
+                "end_time": "15:00",
+            })
+            selected_slots.append({
+                "date": wednesday.isoformat(),
+                "day_of_week": 3,
+                "start_time": "14:00",
+                "end_time": "15:00",
+            })
+            selected_slots.append({
+                "date": thursday.isoformat(),
+                "day_of_week": 4,
+                "start_time": "14:00",
+                "end_time": "15:00",
+            })
+
+        response = self.client.post(
+            reverse("scheduling:book_coach", args=[self.special_coach.id]),
+            {
+                "booking_type": "special",
+                "booking_mode": "individual",
+                "selected_slots": json.dumps(selected_slots),
+                "student_name": "Test Student",
+                "student_email": "student@example.com",
+                "student_phone": "08012345678",
+            },
+        )
+
+        self.assertEqual(SpecialBooking.objects.count(), 1)
+        booking = SpecialBooking.objects.first()
+        self.assertEqual(booking.total_sessions, 12)
+        # 12 * 15000 = 180000, 15% discount = 153000
+        self.assertEqual(booking.total_amount, 153000)
+        self.assertEqual(response.status_code, 200)
