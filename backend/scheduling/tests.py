@@ -860,3 +860,122 @@ class PointsBookingFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "scheduling/flexible_booking_confirmation.html")
         self.assertContains(response, self.coach.name)
+
+
+class SpecialBookingFlowTests(TestCase):
+    def setUp(self):
+        self.student = User.objects.create_user(
+            email="student@example.com",
+            username="studentuser",
+            password="testpass123",
+            full_name="Test Student",
+        )
+        self.special_coach = Coach.objects.create(
+            name="Elite Coach",
+            email="elite@example.com",
+            is_special=True,
+            hourly_rate=15000,
+        )
+        AvailabilitySlot.objects.create(
+            coach=self.special_coach,
+            day_of_week=2,  # Tuesday
+            start_time=time(14, 0),
+            end_time=time(15, 0),
+        )
+        self.normal_coach = Coach.objects.create(
+            name="Regular Coach",
+            email="regular@example.com",
+            is_special=False,
+        )
+
+    def test_special_tab_shown_for_special_coach(self):
+        self.client.force_login(self.student)
+        response = self.client.get(reverse("scheduling:book_coach", args=[self.special_coach.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Special Package")
+
+    def test_special_tab_hidden_for_normal_coach(self):
+        self.client.force_login(self.student)
+        response = self.client.get(reverse("scheduling:book_coach", args=[self.normal_coach.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Special Package")
+
+    @patch("scheduling.views.initialize_transaction", side_effect=_mock_initialize_success)
+    def test_special_booking_creation_redirects_to_payment(self, mock_init):
+        self.client.force_login(self.student)
+        from scheduling.models import SpecialBooking
+        today = timezone.now().date()
+        # Find next Tuesday
+        days_until_tuesday = (1 - today.weekday()) % 7
+        next_tuesday = today + timedelta(days=days_until_tuesday if days_until_tuesday else 7)
+        selected_slots = json.dumps([
+            {
+                "date": next_tuesday.isoformat(),
+                "day_of_week": 2,
+                "start_time": "14:00",
+                "end_time": "15:00",
+            }
+        ])
+
+        response = self.client.post(
+            reverse("scheduling:book_coach", args=[self.special_coach.id]),
+            {
+                "booking_type": "special",
+                "selected_slots": selected_slots,
+                "student_name": "Test Student",
+                "student_email": "student@example.com",
+                "student_phone": "08012345678",
+            },
+        )
+
+        self.assertEqual(SpecialBooking.objects.count(), 1)
+        booking = SpecialBooking.objects.first()
+        self.assertEqual(booking.total_sessions, 1)
+        self.assertEqual(booking.total_amount, 15000)
+        self.assertEqual(booking.status, "pending_payment")
+        self.assertEqual(booking.payment_status, "pending")
+        self.assertTrue(booking.payment_reference.startswith("SP-"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "scheduling/special_booking_payment.html")
+        self.assertContains(response, "https://checkout.paystack.com/test-booking-url")
+
+    @patch("scheduling.views.initialize_transaction", side_effect=_mock_initialize_success)
+    def test_special_booking_creation_multiple_sessions(self, mock_init):
+        self.client.force_login(self.student)
+        from scheduling.models import SpecialBooking
+        today = timezone.now().date()
+        days_until_tuesday = (1 - today.weekday()) % 7
+        next_tuesday = today + timedelta(days=days_until_tuesday if days_until_tuesday else 7)
+        next_thursday = next_tuesday + timedelta(days=2)
+        selected_slots = json.dumps([
+            {
+                "date": next_tuesday.isoformat(),
+                "day_of_week": 2,
+                "start_time": "14:00",
+                "end_time": "15:00",
+            },
+            {
+                "date": next_thursday.isoformat(),
+                "day_of_week": 4,
+                "start_time": "14:00",
+                "end_time": "15:00",
+            }
+        ])
+
+        response = self.client.post(
+            reverse("scheduling:book_coach", args=[self.special_coach.id]),
+            {
+                "booking_type": "special",
+                "selected_slots": selected_slots,
+                "student_name": "Test Student",
+                "student_email": "student@example.com",
+                "student_phone": "08012345678",
+            },
+        )
+
+        self.assertEqual(SpecialBooking.objects.count(), 1)
+        booking = SpecialBooking.objects.first()
+        self.assertEqual(booking.total_sessions, 2)
+        self.assertEqual(booking.total_amount, 30000)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "scheduling/special_booking_payment.html")

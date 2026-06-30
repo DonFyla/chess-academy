@@ -1,14 +1,14 @@
 import json
 from collections import OrderedDict, defaultdict
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.utils import timezone
-from .models import Coach, AvailabilitySlot, CoachBlockedDate
-from .forms import BookingForm, CoachProfileForm, AvailabilitySlotForm, CoachBlockedDateForm, PointsBookingForm
+from .models import Coach, AvailabilitySlot, CoachBlockedDate, SpecialBooking
+from .forms import BookingForm, CoachProfileForm, AvailabilitySlotForm, CoachBlockedDateForm, PointsBookingForm, SpecialBookingForm
 from payments.paystack_service import generate_reference, initialize_transaction
 
 
@@ -21,6 +21,32 @@ DAY_ORDER = [
     "Friday",
     "Saturday",
 ]
+
+
+def _parse_session_date(value):
+    if isinstance(value, date):
+        return value
+    if isinstance(value, dict):
+        value = value.get("date") or value.get("session_date")
+    if not value:
+        return None
+    try:
+        return datetime.strptime(str(value), "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _parse_session_time(value):
+    if isinstance(value, time):
+        return value
+    if not value:
+        return None
+    for fmt in ("%H:%M", "%H:%M:%S", "%I:%M %p"):
+        try:
+            return datetime.strptime(str(value), fmt).time()
+        except ValueError:
+            continue
+    return None
 
 
 @login_required
@@ -206,6 +232,20 @@ def book_coach_view(request, coach_id):
             "end": booking.end_time.strftime("%H:%M"),
         })
 
+    # Existing special bookings block their chosen slots too
+    existing_special = coach.special_bookings.exclude(status__in=["cancelled"])
+    booked_slots_special = defaultdict(list)
+    for booking in existing_special:
+        for session in booking.session_dates or []:
+            session_date = _parse_session_date(session)
+            start = _parse_session_time(session.get("start_time")) if isinstance(session, dict) else None
+            end = _parse_session_time(session.get("end_time")) if isinstance(session, dict) else None
+            if session_date and start and end:
+                booked_slots_special[session_date.isoformat()].append({
+                    "start": start.strftime("%H:%M"),
+                    "end": end.strftime("%H:%M"),
+                })
+
     # Blocked dates
     blocked_dates_list = list(coach.blocked_dates.all())
     blocked_dates_json = {}
@@ -225,6 +265,7 @@ def book_coach_view(request, coach_id):
 
     recurring_form = BookingForm(initial=initial)
     points_form = PointsBookingForm(initial=initial)
+    special_form = SpecialBookingForm(initial=initial)
 
     if request.method == "POST":
         booking_type = request.POST.get("booking_type", "recurring")
@@ -278,6 +319,81 @@ def book_coach_view(request, coach_id):
             else:
                 messages.error(request, "Please correct the errors below.")
 
+        elif booking_type == "special":
+            special_form = SpecialBookingForm(request.POST)
+            if special_form.is_valid():
+                slots = special_form.cleaned_data["selected_slots"]
+                hourly_rate = coach.hourly_rate or 10000
+                total_amount = len(slots) * hourly_rate
+
+                session_dates = []
+                for slot in slots:
+                    session_date = dt_date.fromisoformat(slot["date"])
+                    start_time = datetime.strptime(slot["start_time"], "%H:%M").time()
+                    end_time = datetime.strptime(slot["end_time"], "%H:%M").time()
+                    session_dates.append({
+                        "date": session_date.isoformat(),
+                        "start_time": start_time.strftime("%H:%M"),
+                        "end_time": end_time.strftime("%H:%M"),
+                    })
+
+                payment_reference = generate_reference(prefix="SP")
+                special_booking = SpecialBooking.objects.create(
+                    coach=coach,
+                    student=request.user,
+                    student_name=special_form.cleaned_data["student_name"],
+                    student_email=special_form.cleaned_data["student_email"],
+                    student_phone=special_form.cleaned_data.get("student_phone", ""),
+                    total_sessions=len(slots),
+                    session_dates=session_dates,
+                    is_recurring=False,
+                    hourly_rate=hourly_rate,
+                    total_amount=total_amount,
+                    status="pending_payment",
+                    payment_status="pending",
+                    payment_reference=payment_reference,
+                    payment_amount=total_amount,
+                    admin_notes=special_form.cleaned_data.get("admin_notes", ""),
+                )
+
+                # Initialize Paystack payment for the special booking
+                amount_kobo = int(total_amount * 100)
+                callback_url = request.build_absolute_uri(reverse("payments:special_booking_callback"))
+
+                result = initialize_transaction(
+                    email=special_booking.student_email,
+                    amount_kobo=amount_kobo,
+                    reference=payment_reference,
+                    callback_url=callback_url,
+                    metadata={
+                        "booking_id": str(special_booking.id),
+                        "type": "special_booking",
+                        "coach_id": str(coach.id),
+                        "amount": str(total_amount),
+                    },
+                )
+
+                if result["success"]:
+                    return render(request, "scheduling/special_booking_payment.html", {
+                        "booking": special_booking,
+                        "payment_reference": payment_reference,
+                        "authorization_url": result["authorization_url"],
+                        "paystack_public_key": settings.PAYSTACK_PUBLIC_KEY,
+                    })
+                else:
+                    messages.error(
+                        request,
+                        f"Booking saved, but we could not start payment: {result['message']}. Please retry from your dashboard."
+                    )
+                    return render(request, "scheduling/special_booking_payment.html", {
+                        "booking": special_booking,
+                        "payment_reference": payment_reference,
+                        "paystack_error": result["message"],
+                        "paystack_public_key": settings.PAYSTACK_PUBLIC_KEY,
+                    })
+            else:
+                messages.error(request, "Please correct the errors below.")
+
         elif booking_type == "points":
             points_form = PointsBookingForm(request.POST)
             if points_form.is_valid():
@@ -293,7 +409,6 @@ def book_coach_view(request, coach_id):
                 else:
                     created_bookings = []
                     for slot in slots:
-                        from datetime import datetime
                         session_date = dt_date.fromisoformat(slot["date"])
                         start_time = datetime.strptime(slot["start_time"], "%H:%M").time()
                         end_time = datetime.strptime(slot["end_time"], "%H:%M").time()
@@ -345,10 +460,12 @@ def book_coach_view(request, coach_id):
         "coach": coach,
         "recurring_form": recurring_form,
         "points_form": points_form,
+        "special_form": special_form,
         "slots_by_day_json": json.dumps(slots_json),
         "available_days": available_days,
         "booked_slots_recurring_json": json.dumps(booked_recurring_json),
         "booked_slots_flexible_json": json.dumps(booked_slots_flexible),
+        "booked_slots_special_json": json.dumps(booked_slots_special),
         "blocked_dates_json": json.dumps(blocked_dates_json),
         "day_order": DAY_ORDER,
         "day_order_json": json.dumps(DAY_ORDER),
@@ -371,3 +488,9 @@ def flexible_booking_confirmation_view(request, booking_id):
     from .models import FlexibleBooking
     booking = get_object_or_404(FlexibleBooking, id=booking_id)
     return render(request, "scheduling/flexible_booking_confirmation.html", {"booking": booking})
+
+
+@login_required
+def special_booking_confirmation_view(request, booking_id):
+    booking = get_object_or_404(SpecialBooking, id=booking_id)
+    return render(request, "scheduling/special_booking_confirmation.html", {"booking": booking})

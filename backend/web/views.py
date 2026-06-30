@@ -30,8 +30,12 @@ def courses(request):
 
 
 def tutors(request):
-    coaches = Coach.objects.all().order_by("featured_order", "name")
-    return render(request, "web/tutors.html", {"coaches": coaches})
+    special_coaches = Coach.objects.filter(is_special=True).order_by("featured_order", "name")
+    normal_coaches = Coach.objects.filter(is_special=False).order_by("featured_order", "name")
+    return render(request, "web/tutors.html", {
+        "special_coaches": special_coaches,
+        "normal_coaches": normal_coaches,
+    })
 
 
 def gallery(request):

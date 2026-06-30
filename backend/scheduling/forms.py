@@ -1,6 +1,6 @@
 import json
 from django import forms
-from .models import Booking, Coach, AvailabilitySlot, CoachBlockedDate
+from .models import Booking, Coach, AvailabilitySlot, CoachBlockedDate, SpecialBooking
 
 
 class CoachProfileForm(forms.ModelForm):
@@ -241,4 +241,24 @@ class PointsBookingForm(forms.Form):
             raise forms.ValidationError("Invalid slot data.")
         if not isinstance(slots, list) or len(slots) == 0:
             raise forms.ValidationError("Please select at least one time slot.")
+        return slots
+
+
+class SpecialBookingForm(forms.Form):
+    selected_slots = forms.CharField(widget=forms.HiddenInput())
+    student_name = forms.CharField(max_length=255)
+    student_email = forms.EmailField()
+    student_phone = forms.CharField(max_length=20, required=False)
+    admin_notes = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False)
+
+    def clean_selected_slots(self):
+        raw = self.cleaned_data.get("selected_slots", "")
+        if not raw:
+            raise forms.ValidationError("Please select at least one session.")
+        try:
+            slots = json.loads(raw)
+        except json.JSONDecodeError:
+            raise forms.ValidationError("Invalid session data.")
+        if not isinstance(slots, list) or len(slots) == 0:
+            raise forms.ValidationError("Please select at least one session.")
         return slots

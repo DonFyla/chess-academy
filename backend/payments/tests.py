@@ -225,6 +225,111 @@ class PaystackWebhookTests(TestCase):
         self.assertEqual(booking.payment_status, "paid")
         self.assertIsNotNone(booking.payment_date)
 
+    @patch("payments.webhook_views.verify_transaction")
+    def test_webhook_confirms_special_booking_on_charge_success(self, mock_verify):
+        from scheduling.models import SpecialBooking, Coach
+
+        coach = Coach.objects.create(name="Special Webhook Coach", email="specialwebhookcoach@example.com")
+        booking = SpecialBooking.objects.create(
+            coach=coach,
+            student_name="Webhook Student",
+            student_email="webhookstudent@example.com",
+            total_sessions=2,
+            session_dates=[
+                {"date": "2030-12-25", "start_time": "11:00", "end_time": "12:00"},
+                {"date": "2030-12-26", "start_time": "11:00", "end_time": "12:00"},
+            ],
+            hourly_rate=15000,
+            total_amount=30000,
+            payment_reference="SP-WEBHOOK-123",
+            payment_status="pending",
+            status="pending_payment",
+        )
+        mock_verify.return_value = {
+            "success": True,
+            "data": {
+                "status": "success",
+                "amount": 3000000,  # 30000 NGN in kobo
+                "reference": "SP-WEBHOOK-123",
+            },
+        }
+
+        payload = {
+            "event": "charge.success",
+            "data": {"reference": "SP-WEBHOOK-123", "status": "success"},
+        }
+        body = json.dumps(payload).encode("utf-8")
+        response = self.client.post(
+            reverse("payments:paystack_webhook"),
+            data=body,
+            content_type="application/json",
+            HTTP_X_PAYSTACK_SIGNATURE=self._signature(body),
+        )
+        self.assertEqual(response.status_code, 200)
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, "confirmed")
+        self.assertEqual(booking.payment_status, "paid")
+        self.assertIsNotNone(booking.payment_date)
+
+
+class SpecialBookingPaymentCallbackTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="specialcallback@example.com",
+            username="specialcallbackuser",
+            password="testpass123",
+        )
+        from scheduling.models import SpecialBooking, Coach
+        self.coach = Coach.objects.create(name="Special Coach", email="specialcoach@example.com")
+        self.booking = SpecialBooking.objects.create(
+            coach=self.coach,
+            student=self.user,
+            student_name="Special Student",
+            student_email="specialcallback@example.com",
+            total_sessions=1,
+            session_dates=[{"date": "2030-12-25", "start_time": "11:00", "end_time": "12:00"}],
+            hourly_rate=15000,
+            total_amount=15000,
+            payment_reference="SP-CALLBACK-123",
+            payment_status="pending",
+            status="pending_payment",
+        )
+
+    @patch("payments.views.verify_transaction")
+    def test_special_booking_callback_confirms_on_success(self, mock_verify):
+        mock_verify.return_value = {
+            "success": True,
+            "status": "success",
+            "reference": "SP-CALLBACK-123",
+        }
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse("payments:special_booking_callback"),
+            {"reference": "SP-CALLBACK-123"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "confirmed")
+        self.assertEqual(self.booking.payment_status, "paid")
+        self.assertIsNotNone(self.booking.payment_date)
+
+    @patch("payments.views.verify_transaction")
+    def test_special_booking_callback_shows_error_on_failure(self, mock_verify):
+        mock_verify.return_value = {
+            "success": True,
+            "status": "failed",
+            "reference": "SP-CALLBACK-123",
+        }
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse("payments:special_booking_callback"),
+            {"reference": "SP-CALLBACK-123"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "pending_payment")
+        self.assertEqual(self.booking.payment_status, "pending")
+
 
 class PointsServiceTests(TestCase):
     def setUp(self):

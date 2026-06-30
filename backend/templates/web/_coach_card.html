@@ -1,0 +1,24 @@
+<div class="card p-6 md:p-8 hover:shadow-xl transition-shadow flex flex-col">
+    <div class="relative mb-6">
+        {% if coach.photo %}
+            <img src="{{ coach.photo.url }}" alt="{{ coach.name }}" class="w-full h-72 object-cover rounded-xl">
+        {% elif coach.photo_url %}
+            <img src="{{ coach.photo_url }}" alt="{{ coach.name }}" class="w-full h-72 object-cover rounded-xl">
+        {% else %}
+            <div class="w-full h-72 bg-brand-200 rounded-xl flex items-center justify-center">
+                <svg class="w-24 h-24 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            </div>
+        {% endif %}
+        {% if coach.rank_title %}
+            <span class="absolute top-3 right-3 px-3 py-1 bg-brand-900 text-white text-xs font-semibold rounded-full">{{ coach.rank_title }}</span>
+        {% endif %}
+    </div>
+    <h2 class="text-2xl font-bold text-brand-900 mb-1 text-center">{{ coach.name }}</h2>
+    {% if coach.specialization %}
+        <p class="text-brand-600 text-center text-sm mb-4">{{ coach.specialization }}</p>
+    {% endif %}
+    {% if coach.bio %}
+        <p class="text-brand-700 text-center text-sm mb-6 line-clamp-3 flex-grow">{{ coach.bio }}</p>
+    {% endif %}
+    <a href="{% url 'scheduling:book_coach' coach.id %}" class="btn-primary w-full justify-center">Book a Session</a>
+</div>

@@ -1,0 +1,80 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize scheduling_extras %}
+
+{% block title %}Schedule - Admin Portal{% endblock %}
+{% block admin_page_title %}Weekly Schedule{% endblock %}
+
+{% block admin_content %}
+<section class="p-4 lg:p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl lg:text-3xl font-bold text-brand-900">Weekly Schedule</h1>
+                <p class="text-brand-600 mt-1">All classes happening this week.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="{% url 'admin_portal:schedule' %}?week={{ prev_week }}" class="px-4 py-2 bg-white border border-brand-200 text-brand-700 font-medium rounded-xl hover:bg-brand-50 transition-colors">← Previous</a>
+                <span class="px-4 py-2 bg-brand-100 text-brand-900 font-semibold rounded-xl">{{ week_start|date:"M j" }} – {{ week_end|date:"M j, Y" }}</span>
+                <a href="{% url 'admin_portal:schedule' %}?week={{ next_week }}" class="px-4 py-2 bg-white border border-brand-200 text-brand-700 font-medium rounded-xl hover:bg-brand-50 transition-colors">Next →</a>
+                {% if week_offset != 0 %}
+                    <a href="{% url 'admin_portal:schedule' %}" class="px-4 py-2 bg-brand-600 text-white font-medium rounded-xl hover:bg-brand-700 transition-colors">Today</a>
+                {% endif %}
+            </div>
+        </header>
+
+        <div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-brand-50 text-brand-700">
+                        <tr>
+                            <th class="px-6 py-3 font-medium">Date</th>
+                            <th class="px-6 py-3 font-medium">Time</th>
+                            <th class="px-6 py-3 font-medium">Coach</th>
+                            <th class="px-6 py-3 font-medium">Student</th>
+                            <th class="px-6 py-3 font-medium">Type</th>
+                            <th class="px-6 py-3 font-medium">Status</th>
+                            <th class="px-6 py-3 font-medium">Payment</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-brand-100">
+                        {% for session in sessions %}
+                            <tr class="hover:bg-brand-50/50">
+                                <td class="px-6 py-4">
+                                    <p class="font-medium text-brand-900">{{ session.date|date:"l, M j" }}</p>
+                                </td>
+                                <td class="px-6 py-4">
+                                    {% if session.start_time and session.end_time %}
+                                        {{ session.start_time|time:"g:i A" }} – {{ session.end_time|time:"g:i A" }}
+                                    {% else %}
+                                        <span class="text-brand-500">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4">{{ session.coach }}</td>
+                                <td class="px-6 py-4">
+                                    <p class="font-medium text-brand-900">{{ session.student_name }}</p>
+                                    <p class="text-brand-500">{{ session.student_email }}</p>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-block px-2.5 py-1 rounded-full text-xs font-medium
+                                        {% if session.type == 'Recurring' %}bg-blue-100 text-blue-700
+                                        {% elif session.type == 'Flexible' %}bg-emerald-100 text-emerald-700
+                                        {% elif session.type == 'Special' %}bg-purple-100 text-purple-700
+                                        {% else %}bg-brand-100 text-brand-700{% endif %}">
+                                        {{ session.type }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">{{ session.status }}</td>
+                                <td class="px-6 py-4">{{ session.payment_status }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7" class="px-6 py-12 text-center text-brand-600">No classes scheduled for this week.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,11 +1,12 @@
-from datetime import date, time
+from datetime import date, datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from payments.models import PointTransaction, UserPoints
-from scheduling.models import Booking, Coach, FlexibleBooking
+from scheduling.models import AvailabilitySlot, Booking, Coach, FlexibleBooking, SpecialBooking, CoachBlockedDate
 
 User = get_user_model()
 
@@ -35,6 +36,192 @@ class AdminPortalAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "admin_portal/dashboard.html")
         self.assertContains(response, "Dashboard")
+
+    def test_admin_base_has_back_to_home_link(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("admin_portal:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Back to Home")
+        self.assertContains(response, reverse("home"))
+
+
+class AdminPortalDashboardStatsTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="admin@example.com",
+            username="adminuser",
+            password="adminpass123",
+        )
+        self.coach = Coach.objects.create(name="Coach A", email="coacha@example.com")
+        self.student = User.objects.create_user(
+            email="student@example.com",
+            username="studentuser",
+            password="testpass123",
+            is_student=True,
+        )
+        today = timezone.now().date()
+        self.week_start = today - timedelta(days=today.weekday())
+        self.week_end = self.week_start + timedelta(days=6)
+        self.next_week = self.week_end + timedelta(days=1)
+
+    def _get_confirmed_classes_count(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("admin_portal:dashboard"))
+        return response.context["confirmed_bookings_this_week"]
+
+    def test_recurring_confirmed_sessions_this_week_counted(self):
+        Booking.objects.create(
+            coach=self.coach,
+            student_name="Student A",
+            student_email="studenta@example.com",
+            booking_date=date(2030, 12, 25),
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            recurring_days=[1, 3],
+            sessions_per_month=4,
+            monthly_amount=40000,
+            status="confirmed",
+            payment_status="paid",
+            recurring_dates=[
+                {"date": self.week_start.isoformat(), "start_time": "10:00", "end_time": "11:00"},
+                {"date": self.next_week.isoformat(), "start_time": "10:00", "end_time": "11:00"},
+            ],
+        )
+        self.assertEqual(self._get_confirmed_classes_count(), 1)
+
+    def test_pending_recurring_sessions_not_counted(self):
+        Booking.objects.create(
+            coach=self.coach,
+            student_name="Student A",
+            student_email="studenta@example.com",
+            booking_date=date(2030, 12, 25),
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            recurring_days=[1, 3],
+            sessions_per_month=4,
+            monthly_amount=40000,
+            status="pending",
+            payment_status="pending",
+            recurring_dates=[
+                {"date": self.week_start.isoformat(), "start_time": "10:00", "end_time": "11:00"},
+            ],
+        )
+        self.assertEqual(self._get_confirmed_classes_count(), 0)
+
+    def test_flexible_confirmed_sessions_this_week_counted(self):
+        FlexibleBooking.objects.create(
+            user=self.student,
+            coach=self.coach,
+            session_date=self.week_start,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            day_of_week=1,
+            points_used=1,
+            status="confirmed",
+        )
+        FlexibleBooking.objects.create(
+            user=self.student,
+            coach=self.coach,
+            session_date=self.next_week,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            day_of_week=1,
+            points_used=1,
+            status="confirmed",
+        )
+        self.assertEqual(self._get_confirmed_classes_count(), 1)
+
+    def test_cancelled_flexible_sessions_not_counted(self):
+        FlexibleBooking.objects.create(
+            user=self.student,
+            coach=self.coach,
+            session_date=self.week_start,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            day_of_week=1,
+            points_used=1,
+            status="cancelled",
+        )
+        self.assertEqual(self._get_confirmed_classes_count(), 0)
+
+    def test_special_confirmed_sessions_this_week_counted(self):
+        SpecialBooking.objects.create(
+            coach=self.coach,
+            student=self.student,
+            student_name="Student A",
+            student_email="studenta@example.com",
+            total_sessions=2,
+            sessions_completed=0,
+            session_dates=[
+                {"date": self.week_start.isoformat(), "start_time": "10:00", "end_time": "11:00"},
+                {"date": self.next_week.isoformat(), "start_time": "10:00", "end_time": "11:00"},
+            ],
+            hourly_rate=10000,
+            total_amount=20000,
+            status="confirmed",
+        )
+        self.assertEqual(self._get_confirmed_classes_count(), 1)
+
+    def test_pending_payment_special_sessions_not_counted(self):
+        SpecialBooking.objects.create(
+            coach=self.coach,
+            student=self.student,
+            student_name="Student A",
+            student_email="studenta@example.com",
+            total_sessions=1,
+            sessions_completed=0,
+            session_dates=[
+                {"date": self.week_start.isoformat(), "start_time": "10:00", "end_time": "11:00"},
+            ],
+            hourly_rate=10000,
+            total_amount=10000,
+            status="pending_payment",
+        )
+        self.assertEqual(self._get_confirmed_classes_count(), 0)
+
+    def test_multiple_session_types_summed(self):
+        Booking.objects.create(
+            coach=self.coach,
+            student_name="Student A",
+            student_email="studenta@example.com",
+            booking_date=date(2030, 12, 25),
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            recurring_days=[1],
+            sessions_per_month=4,
+            monthly_amount=40000,
+            status="confirmed",
+            payment_status="paid",
+            recurring_dates=[
+                {"date": self.week_start.isoformat(), "start_time": "10:00", "end_time": "11:00"},
+                {"date": (self.week_start + timedelta(days=2)).isoformat(), "start_time": "10:00", "end_time": "11:00"},
+            ],
+        )
+        FlexibleBooking.objects.create(
+            user=self.student,
+            coach=self.coach,
+            session_date=self.week_start + timedelta(days=1),
+            start_time=time(12, 0),
+            end_time=time(13, 0),
+            day_of_week=2,
+            points_used=1,
+            status="confirmed",
+        )
+        SpecialBooking.objects.create(
+            coach=self.coach,
+            student=self.student,
+            student_name="Student B",
+            student_email="studentb@example.com",
+            total_sessions=1,
+            sessions_completed=0,
+            session_dates=[
+                {"date": (self.week_start + timedelta(days=3)).isoformat(), "start_time": "14:00", "end_time": "15:00"},
+            ],
+            hourly_rate=10000,
+            total_amount=10000,
+            status="confirmed",
+        )
+        self.assertEqual(self._get_confirmed_classes_count(), 4)
 
 
 class AdminPortalBookingsTests(TestCase):
@@ -193,6 +380,40 @@ class AdminPortalCoachesTests(TestCase):
         self.assertEqual(self.coach.photo_url, "https://example.com/new.jpg")
         self.assertEqual(self.coach.bio, "Updated bio")
 
+    def test_coach_edit_can_add_blocked_date(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse("admin_portal:coach_edit", args=[self.coach.id]),
+            {
+                "action": "add_blocked_date",
+                "blocked_date": "2030-12-25",
+                "start_time": "10:00",
+                "end_time": "12:00",
+                "reason": "Holiday",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(CoachBlockedDate.objects.filter(coach=self.coach).count(), 1)
+        block = CoachBlockedDate.objects.first()
+        self.assertEqual(block.blocked_date, date(2030, 12, 25))
+        self.assertEqual(block.reason, "Holiday")
+
+    def test_coach_edit_can_delete_blocked_date(self):
+        block = CoachBlockedDate.objects.create(
+            coach=self.coach,
+            blocked_date=date(2030, 12, 25),
+        )
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse("admin_portal:coach_edit", args=[self.coach.id]),
+            {
+                "action": "delete_blocked_date",
+                "block_id": str(block.id),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(CoachBlockedDate.objects.filter(coach=self.coach).count(), 0)
+
 
 class AdminPortalStudentsTests(TestCase):
     def setUp(self):
@@ -266,6 +487,139 @@ class AdminPortalStudentsTests(TestCase):
         self.assertContains(response, "Points Transactions")
 
 
+class AdminPortalScheduleTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="admin@example.com",
+            username="adminuser",
+            password="adminpass123",
+        )
+        self.student = User.objects.create_user(
+            email="student@example.com",
+            username="studentuser",
+            password="testpass123",
+            is_student=True,
+            full_name="Test Student",
+        )
+        self.coach = Coach.objects.create(name="Coach A", email="coacha@example.com")
+
+    def test_schedule_renders_current_week(self):
+        from django.utils import timezone
+        today = timezone.now().date()
+        Booking.objects.create(
+            coach=self.coach,
+            student_name="Weekly Student",
+            student_email="weekly@example.com",
+            booking_date=today,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            recurring_days=[today.weekday()],
+            recurring_dates=[{"date": today.isoformat(), "start_time": "10:00", "end_time": "11:00"}],
+            sessions_per_month=4,
+            monthly_amount=40000,
+            status="confirmed",
+            payment_status="paid",
+        )
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("admin_portal:schedule"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "admin_portal/schedule.html")
+        self.assertContains(response, "Weekly Student")
+        self.assertContains(response, "Recurring")
+
+    def test_schedule_includes_flexible_and_special_bookings(self):
+        from django.utils import timezone
+        today = timezone.now().date()
+        FlexibleBooking.objects.create(
+            user=self.student,
+            coach=self.coach,
+            session_date=today,
+            start_time=time(14, 0),
+            end_time=time(15, 0),
+            day_of_week=today.weekday(),
+            points_used=3,
+            status="confirmed",
+        )
+        SpecialBooking.objects.create(
+            coach=self.coach,
+            student=self.student,
+            student_name="Special Student",
+            student_email="special@example.com",
+            total_sessions=1,
+            session_dates=[today.isoformat()],
+            hourly_rate=5000,
+            total_amount=5000,
+            status="confirmed",
+        )
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("admin_portal:schedule"))
+        self.assertContains(response, "Flexible")
+        self.assertContains(response, "Special")
+        self.assertContains(response, "Special Student")
+
+    def test_schedule_week_navigation(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("admin_portal:schedule"), {"week": "2"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Next →")
+        self.assertContains(response, "← Previous")
+
+
+class AdminPortalBookingActionLogicTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="admin@example.com",
+            username="adminuser",
+            password="adminpass123",
+        )
+        self.coach = Coach.objects.create(name="Coach A", email="coacha@example.com")
+
+    def test_pending_unpaid_booking_shows_confirm_reject_cancel(self):
+        booking = Booking.objects.create(
+            coach=self.coach,
+            student_name="Pending Student",
+            student_email="pending@example.com",
+            booking_date=date(2030, 12, 25),
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            recurring_days=[1],
+            sessions_per_month=4,
+            monthly_amount=40000,
+            status="pending",
+            payment_status="pending",
+        )
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("admin_portal:bookings"))
+        self.assertContains(response, f"bookings/{booking.id}/action")
+        # Confirm, Reject and Cancel buttons should all be present
+        self.assertContains(response, ">Confirm<")
+        self.assertContains(response, ">Reject<")
+        self.assertContains(response, ">Cancel<")
+
+    def test_paid_booking_only_shows_cancel(self):
+        booking = Booking.objects.create(
+            coach=self.coach,
+            student_name="Paid Student",
+            student_email="paid@example.com",
+            booking_date=date(2030, 12, 25),
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            recurring_days=[1],
+            sessions_per_month=4,
+            monthly_amount=40000,
+            status="confirmed",
+            payment_status="paid",
+        )
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("admin_portal:bookings"))
+        content = response.content.decode()
+        # Action cell for this booking
+        action_cell = content.split(str(booking.id))[1].split("</tr>")[0]
+        self.assertNotIn(">Confirm<", action_cell)
+        self.assertNotIn(">Reject<", action_cell)
+        self.assertIn(">Cancel<", action_cell)
+
+
 class AdminPortalShellTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
@@ -281,3 +635,128 @@ class AdminPortalShellTests(TestCase):
         self.assertTemplateUsed(response, "payments/points_admin.html")
         self.assertContains(response, "Admin Portal")
         self.assertContains(response, "Points")
+
+
+class AdminPortalScheduleDashboardTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="admin@example.com",
+            username="adminuser",
+            password="adminpass123",
+        )
+        self.coach = Coach.objects.create(name="Coach A", email="coacha@example.com")
+        self.student = User.objects.create_user(
+            email="student@example.com",
+            username="studentuser",
+            password="testpass123",
+            is_student=True,
+        )
+
+    def test_schedule_dashboard_renders(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("admin_portal:schedule_dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "admin_portal/schedule_dashboard.html")
+
+    def test_confirm_pending_booking(self):
+        booking = Booking.objects.create(
+            coach=self.coach,
+            student_name="Pending Student",
+            student_email="pending@example.com",
+            booking_date=date(2030, 12, 25),
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            recurring_days=[1],
+            sessions_per_month=4,
+            monthly_amount=40000,
+            status="pending",
+            payment_status="pending",
+        )
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse("admin_portal:schedule_dashboard"),
+            {"action": "confirm_booking", "booking_id": str(booking.id)},
+        )
+        self.assertEqual(response.status_code, 302)
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, "confirmed")
+        self.assertEqual(booking.payment_status, "paid")
+        self.assertIsNotNone(booking.payment_date)
+
+    def test_confirm_special_booking(self):
+        special = SpecialBooking.objects.create(
+            coach=self.coach,
+            student=self.student,
+            student_name="Special Student",
+            student_email="special@example.com",
+            total_sessions=2,
+            session_dates=[
+                {"date": "2030-12-25", "start_time": "10:00", "end_time": "11:00"},
+                {"date": "2030-12-26", "start_time": "10:00", "end_time": "11:00"},
+            ],
+            hourly_rate=20000,
+            total_amount=40000,
+            status="pending_payment",
+        )
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse("admin_portal:schedule_dashboard"),
+            {"action": "confirm_special", "booking_id": str(special.id)},
+        )
+        self.assertEqual(response.status_code, 302)
+        special.refresh_from_db()
+        self.assertEqual(special.status, "confirmed")
+        self.assertIsNotNone(special.payment_date)
+
+    def test_admin_add_delete_availability(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            f"{reverse('admin_portal:schedule_dashboard')}?coach={self.coach.id}",
+            {
+                "action": "add_availability",
+                "coach_id": str(self.coach.id),
+                "day_of_week": "1",
+                "start_time": "09:00",
+                "end_time": "10:00",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(AvailabilitySlot.objects.filter(coach=self.coach).count(), 1)
+        slot = AvailabilitySlot.objects.first()
+
+        response = self.client.post(
+            f"{reverse('admin_portal:schedule_dashboard')}?coach={self.coach.id}",
+            {
+                "action": "delete_availability",
+                "coach_id": str(self.coach.id),
+                "slot_id": str(slot.id),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(AvailabilitySlot.objects.filter(coach=self.coach).count(), 0)
+
+    def test_admin_add_delete_blocked_date(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            f"{reverse('admin_portal:schedule_dashboard')}?coach={self.coach.id}",
+            {
+                "action": "add_block",
+                "coach_id": str(self.coach.id),
+                "blocked_date": "2030-12-25",
+                "reason": "Holiday",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(CoachBlockedDate.objects.filter(coach=self.coach).count(), 1)
+        block = CoachBlockedDate.objects.first()
+
+        response = self.client.post(
+            f"{reverse('admin_portal:schedule_dashboard')}?coach={self.coach.id}",
+            {
+                "action": "delete_block",
+                "coach_id": str(self.coach.id),
+                "block_id": str(block.id),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(CoachBlockedDate.objects.filter(coach=self.coach).count(), 0)

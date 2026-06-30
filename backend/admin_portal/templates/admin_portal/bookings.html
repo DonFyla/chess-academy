@@ -2,6 +2,7 @@
 {% load humanize scheduling_extras %}
 
 {% block title %}Bookings - Admin Portal{% endblock %}
+{% block admin_page_title %}Bookings{% endblock %}
 
 {% block admin_content %}
 <section class="p-4 lg:p-8">
@@ -99,21 +100,19 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        {% if booking.status == 'pending' %}
+                                        {% if booking.status == 'pending' and booking.payment_status != 'paid' %}
                                             <form method="post" action="{% url 'admin_portal:booking_action' booking.id %}">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="action" value="confirm">
                                                 <button type="submit" class="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors">Confirm</button>
                                             </form>
-                                        {% endif %}
-                                        {% if booking.status != 'rejected' and booking.status != 'cancelled' %}
                                             <form method="post" action="{% url 'admin_portal:booking_action' booking.id %}" onsubmit="return confirm('Reject this booking?')">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="action" value="reject">
                                                 <button type="submit" class="px-3 py-1.5 bg-red-100 text-red-700 text-xs font-medium rounded-lg hover:bg-red-200 transition-colors">Reject</button>
                                             </form>
                                         {% endif %}
-                                        {% if booking.status != 'cancelled' %}
+                                        {% if booking.status != 'rejected' and booking.status != 'cancelled' %}
                                             <form method="post" action="{% url 'admin_portal:booking_action' booking.id %}" onsubmit="return confirm('Cancel this booking?')">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="action" value="cancel">

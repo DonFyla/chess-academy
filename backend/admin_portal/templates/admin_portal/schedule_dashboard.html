@@ -1,0 +1,370 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize widget_tweaks scheduling_extras %}
+
+{% block title %}Schedule Dashboard - Admin Portal{% endblock %}
+{% block admin_page_title %}Schedule Dashboard{% endblock %}
+
+{% block admin_content %}
+<section class="p-4 lg:p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8">
+            <h1 class="text-2xl lg:text-3xl font-bold text-brand-900">Schedule Dashboard</h1>
+            <p class="text-brand-600 mt-1">Manage bookings, availability, and blocked dates.</p>
+        </header>
+
+        <div class="flex flex-wrap gap-2 mb-6">
+            <button type="button" onclick="switchTab('pending')" id="tab-pending" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition-all bg-brand-600 text-white">
+                Pending Payment
+                {% if pending_payment_bookings %}<span class="ml-1 bg-white text-brand-700 px-1.5 py-0.5 rounded-full text-xs">{{ pending_payment_bookings.count }}</span>{% endif %}
+            </button>
+            <button type="button" onclick="switchTab('confirmed')" id="tab-confirmed" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition-all text-brand-700 hover:bg-brand-100">
+                Confirmed Bookings
+            </button>
+            <button type="button" onclick="switchTab('flexible')" id="tab-flexible" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition-all text-brand-700 hover:bg-brand-100">
+                Flexible Bookings
+            </button>
+            <button type="button" onclick="switchTab('special')" id="tab-special" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition-all text-brand-700 hover:bg-brand-100">
+                Special Coaching
+                {% if pending_special %}<span class="ml-1 bg-white text-brand-700 px-1.5 py-0.5 rounded-full text-xs">{{ pending_special.count }}</span>{% endif %}
+            </button>
+            <button type="button" onclick="switchTab('availability')" id="tab-availability" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition-all text-brand-700 hover:bg-brand-100">
+                Availability
+            </button>
+            <button type="button" onclick="switchTab('blocks')" id="tab-blocks" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition-all text-brand-700 hover:bg-brand-100">
+                Block Dates
+            </button>
+        </div>
+
+        <!-- Pending Payment Bookings -->
+        <div id="panel-pending" class="tab-panel space-y-6">
+            {% include "admin_portal/_booking_table.html" with bookings=pending_payment_bookings empty_message="No bookings awaiting payment." show_actions=True action_type="pending" only %}
+        </div>
+
+        <!-- Confirmed Bookings -->
+        <div id="panel-confirmed" class="tab-panel hidden space-y-6">
+            {% include "admin_portal/_booking_table.html" with bookings=confirmed_bookings empty_message="No confirmed bookings." show_actions=True action_type="confirmed" only %}
+        </div>
+
+        <!-- Flexible Bookings -->
+        <div id="panel-flexible" class="tab-panel hidden">
+            <div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-brand-50 text-brand-700">
+                            <tr>
+                                <th class="px-6 py-3 font-medium">Student</th>
+                                <th class="px-6 py-3 font-medium">Coach</th>
+                                <th class="px-6 py-3 font-medium">Date & Time</th>
+                                <th class="px-6 py-3 font-medium">Points</th>
+                                <th class="px-6 py-3 font-medium">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-brand-100">
+                            {% for fb in flexible_bookings %}
+                                <tr class="hover:bg-brand-50/50">
+                                    <td class="px-6 py-4">
+                                        <p class="font-medium text-brand-900">{{ fb.user.full_name|default:fb.user.email }}</p>
+                                        <p class="text-brand-500">{{ fb.user.email }}</p>
+                                    </td>
+                                    <td class="px-6 py-4">{{ fb.coach.name }}</td>
+                                    <td class="px-6 py-4">{{ fb.session_date|date:"M j, Y" }} · {{ fb.start_time|time:"g:i A" }} - {{ fb.end_time|time:"g:i A" }}</td>
+                                    <td class="px-6 py-4">{{ fb.points_used }} pts</td>
+                                    <td class="px-6 py-4">{{ fb.get_status_display }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="5" class="px-6 py-12 text-center text-brand-600">{{ empty_message|default:"No flexible bookings." }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Special Bookings -->
+        <div id="panel-special" class="tab-panel hidden space-y-6">
+            {% if pending_special %}
+                <div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-brand-100">
+                        <h2 class="font-bold text-brand-900">Awaiting Payment</h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-brand-50 text-brand-700">
+                                <tr>
+                                    <th class="px-6 py-3 font-medium">Student</th>
+                                    <th class="px-6 py-3 font-medium">Coach</th>
+                                    <th class="px-6 py-3 font-medium">Sessions</th>
+                                    <th class="px-6 py-3 font-medium">Amount</th>
+                                    <th class="px-6 py-3 font-medium">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-brand-100">
+                                {% for booking in pending_special %}
+                                    <tr class="hover:bg-brand-50/50">
+                                        <td class="px-6 py-4">
+                                            <p class="font-medium text-brand-900">{{ booking.student_name }}</p>
+                                            <p class="text-brand-500">{{ booking.student_email }}</p>
+                                        </td>
+                                        <td class="px-6 py-4">{{ booking.coach.name }}</td>
+                                        <td class="px-6 py-4">{{ booking.total_sessions }}</td>
+                                        <td class="px-6 py-4">₦{{ booking.total_amount|intcomma }}</td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center gap-2">
+                                                <form method="post" class="inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="confirm_special">
+                                                    <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                                                    <button type="submit" class="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700">Confirm</button>
+                                                </form>
+                                                <form method="post" class="inline" onsubmit="return confirm('Cancel this special booking?')">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="cancel_special">
+                                                    <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                                                    <button type="submit" class="px-3 py-1.5 bg-red-100 text-red-700 text-xs font-medium rounded-lg hover:bg-red-200">Cancel</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if confirmed_special %}
+                <div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-brand-100">
+                        <h2 class="font-bold text-brand-900">Confirmed</h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-brand-50 text-brand-700">
+                                <tr>
+                                    <th class="px-6 py-3 font-medium">Student</th>
+                                    <th class="px-6 py-3 font-medium">Coach</th>
+                                    <th class="px-6 py-3 font-medium">Sessions</th>
+                                    <th class="px-6 py-3 font-medium">Amount</th>
+                                    <th class="px-6 py-3 font-medium">Paid</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-brand-100">
+                                {% for booking in confirmed_special %}
+                                    <tr class="hover:bg-brand-50/50">
+                                        <td class="px-6 py-4">
+                                            <p class="font-medium text-brand-900">{{ booking.student_name }}</p>
+                                            <p class="text-brand-500">{{ booking.student_email }}</p>
+                                        </td>
+                                        <td class="px-6 py-4">{{ booking.coach.name }}</td>
+                                        <td class="px-6 py-4">{{ booking.total_sessions }}</td>
+                                        <td class="px-6 py-4">₦{{ booking.total_amount|intcomma }}</td>
+                                        <td class="px-6 py-4">{{ booking.payment_date|date:"M j, Y" }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if not pending_special and not confirmed_special %}
+                <div class="bg-white rounded-2xl border border-brand-100 shadow-sm p-8 text-center text-brand-600">No special coaching bookings.</div>
+            {% endif %}
+        </div>
+
+        <!-- Availability -->
+        <div id="panel-availability" class="tab-panel hidden">
+            <div class="bg-white rounded-2xl border border-brand-100 shadow-sm p-6 mb-6">
+                <form method="get" class="flex flex-col sm:flex-row gap-4 items-end">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-brand-700 mb-1">Select Coach</label>
+                        <select name="coach" class="w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none bg-white" onchange="this.form.submit()">
+                            <option value="">-- Choose a coach --</option>
+                            {% for c in coaches %}
+                                <option value="{{ c.id }}" {% if selected_coach == c %}selected{% endif %}>{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+
+            {% if selected_coach %}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-2xl border border-brand-100 shadow-sm p-6">
+                        <h2 class="text-lg font-bold text-brand-900 mb-4">Add Availability</h2>
+                        <form method="post" class="space-y-4">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_availability">
+                            <input type="hidden" name="coach_id" value="{{ selected_coach.id }}">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-brand-700 mb-1">Day</label>
+                                    {{ availability_form.day_of_week|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none bg-white" }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-brand-700 mb-1">Start</label>
+                                    {{ availability_form.start_time|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none" }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-brand-700 mb-1">End</label>
+                                    {{ availability_form.end_time|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none" }}
+                                </div>
+                            </div>
+                            <button type="submit" class="px-6 py-3 bg-brand-600 text-white font-medium rounded-xl hover:bg-brand-700 transition-colors">Add Slot</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-brand-100">
+                            <h2 class="font-bold text-brand-900">{{ selected_coach.name }}&apos;s Slots</h2>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-brand-50 text-brand-700">
+                                    <tr>
+                                        <th class="px-6 py-3 font-medium">Day</th>
+                                        <th class="px-6 py-3 font-medium">Time</th>
+                                        <th class="px-6 py-3 font-medium"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-brand-100">
+                                    {% for slot in availability_slots %}
+                                        <tr>
+                                            <td class="px-6 py-4">{{ slot.get_day_of_week_display }}</td>
+                                            <td class="px-6 py-4">{{ slot.start_time|time:"g:i A" }} - {{ slot.end_time|time:"g:i A" }}</td>
+                                            <td class="px-6 py-4 text-right">
+                                                <form method="post" class="inline" onsubmit="return confirm('Remove this slot?')">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="delete_availability">
+                                                    <input type="hidden" name="coach_id" value="{{ selected_coach.id }}">
+                                                    <input type="hidden" name="slot_id" value="{{ slot.id }}">
+                                                    <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">Remove</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr><td colspan="3" class="px-6 py-8 text-center text-brand-600">No availability slots.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="bg-white rounded-2xl border border-brand-100 shadow-sm p-8 text-center text-brand-600">Select a coach to manage availability.</div>
+            {% endif %}
+        </div>
+
+        <!-- Block Dates -->
+        <div id="panel-blocks" class="tab-panel hidden">
+            <div class="bg-white rounded-2xl border border-brand-100 shadow-sm p-6 mb-6">
+                <form method="get" class="flex flex-col sm:flex-row gap-4 items-end">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-brand-700 mb-1">Select Coach</label>
+                        <select name="coach" class="w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none bg-white" onchange="this.form.submit()">
+                            <option value="">-- Choose a coach --</option>
+                            {% for c in coaches %}
+                                <option value="{{ c.id }}" {% if selected_coach == c %}selected{% endif %}>{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+
+            {% if selected_coach %}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-2xl border border-brand-100 shadow-sm p-6">
+                        <h2 class="text-lg font-bold text-brand-900 mb-4">Block a Date</h2>
+                        <form method="post" class="space-y-4">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_block">
+                            <input type="hidden" name="coach_id" value="{{ selected_coach.id }}">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-brand-700 mb-1">Date</label>
+                                    {{ blocked_date_form.blocked_date|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none" }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-brand-700 mb-1">Start</label>
+                                    {{ blocked_date_form.start_time|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none" }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-brand-700 mb-1">End</label>
+                                    {{ blocked_date_form.end_time|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none" }}
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-brand-700 mb-1">Reason</label>
+                                {{ blocked_date_form.reason|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none" }}
+                            </div>
+                            <button type="submit" class="px-6 py-3 bg-brand-600 text-white font-medium rounded-xl hover:bg-brand-700 transition-colors">Block Date</button>
+                            <p class="text-xs text-brand-500">Leave start/end blank to block the entire day.</p>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-brand-100">
+                            <h2 class="font-bold text-brand-900">{{ selected_coach.name }}&apos;s Blocked Dates</h2>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-brand-50 text-brand-700">
+                                    <tr>
+                                        <th class="px-6 py-3 font-medium">Date</th>
+                                        <th class="px-6 py-3 font-medium">Time</th>
+                                        <th class="px-6 py-3 font-medium">Reason</th>
+                                        <th class="px-6 py-3 font-medium"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-brand-100">
+                                    {% for block in blocked_dates %}
+                                        <tr>
+                                            <td class="px-6 py-4">{{ block.blocked_date|date:"M j, Y" }}</td>
+                                            <td class="px-6 py-4">
+                                                {% if block.start_time and block.end_time %}
+                                                    {{ block.start_time|time:"g:i A" }} - {{ block.end_time|time:"g:i A" }}
+                                                {% else %}
+                                                    All day
+                                                {% endif %}
+                                            </td>
+                                            <td class="px-6 py-4">{{ block.reason|default:"—" }}</td>
+                                            <td class="px-6 py-4 text-right">
+                                                <form method="post" class="inline" onsubmit="return confirm('Remove this blocked date?')">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="delete_block">
+                                                    <input type="hidden" name="coach_id" value="{{ selected_coach.id }}">
+                                                    <input type="hidden" name="block_id" value="{{ block.id }}">
+                                                    <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">Remove</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr><td colspan="4" class="px-6 py-8 text-center text-brand-600">No blocked dates.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="bg-white rounded-2xl border border-brand-100 shadow-sm p-8 text-center text-brand-600">Select a coach to manage blocked dates.</div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<script>
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+        document.getElementById('panel-' + tab).classList.remove('hidden');
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('bg-brand-600', 'text-white');
+            btn.classList.add('text-brand-700', 'hover:bg-brand-100');
+        });
+        const activeBtn = document.getElementById('tab-' + tab);
+        activeBtn.classList.remove('text-brand-700', 'hover:bg-brand-100');
+        activeBtn.classList.add('bg-brand-600', 'text-white');
+    }
+</script>
+{% endblock %}

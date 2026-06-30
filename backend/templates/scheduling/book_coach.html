@@ -41,6 +41,12 @@
                         <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                         Book Recurring Classes
                     </button>
+                    {% if coach.is_special %}
+                        <button type="button" onclick="switchTab('special')" id="tab-special" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-medium transition-all text-brand-700 hover:bg-brand-100">
+                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                            Special Package
+                        </button>
+                    {% endif %}
                 </div>
             </div>
 
@@ -260,6 +266,74 @@
                     </div>
                 </form>
             </div>
+
+            {% if coach.is_special %}
+            <div id="panel-special" class="tab-panel hidden">
+                <form method="post" class="space-y-8" id="special-form" onsubmit="return validateSpecialForm()">
+                    {% csrf_token %}
+                    <input type="hidden" name="booking_type" value="special">
+                    <input type="hidden" name="selected_slots" id="special-selected-slots" value="">
+
+                    {% if special_form.non_field_errors %}
+                        <div class="p-4 bg-red-50 text-red-700 rounded-xl">{{ special_form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="card p-6 md:p-8">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                            <h2 class="text-xl font-bold text-brand-900">Select Sessions</h2>
+                            <div class="text-sm text-brand-600">
+                                Selected: <span id="special-selected-count" class="font-bold text-brand-900">0</span>
+                                <span class="mx-2">|</span>
+                                Rate: ₦{{ price_per_session|floatformat:0 }} / session
+                            </div>
+                        </div>
+                        <div id="special-calendar-container" class="space-y-6"></div>
+                    </div>
+
+                    <div id="special-selected-summary" class="card p-6 md:p-8 hidden">
+                        <h2 class="text-xl font-bold text-brand-900 mb-4">Selected Sessions</h2>
+                        <div id="special-selected-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <div class="card p-6 md:p-8">
+                        <h2 class="text-xl font-bold text-brand-900 mb-5">Your Information</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label for="{{ special_form.student_name.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Full Name *</label>
+                                {{ special_form.student_name|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
+                            <div>
+                                <label for="{{ special_form.student_email.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Email *</label>
+                                {{ special_form.student_email|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
+                            <div>
+                                <label for="{{ special_form.student_phone.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Phone</label>
+                                {{ special_form.student_phone|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="{{ special_form.admin_notes.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Notes</label>
+                                {{ special_form.admin_notes|add_class:"w-full px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
+                            </div>
+                        </div>
+
+                        <div class="mt-6 p-4 bg-brand-50 rounded-xl">
+                            <p class="text-brand-700">
+                                Total Sessions: <span id="special-total-sessions" class="font-bold text-brand-900">0</span>
+                                <span class="mx-2">|</span>
+                                Total Amount: <span class="text-2xl font-bold text-brand-900">₦<span id="special-total-amount">0</span></span>
+                            </p>
+                            <p class="text-sm text-brand-600 mt-2">Payment will be arranged offline before sessions are confirmed.</p>
+                        </div>
+
+                        <div class="mt-6">
+                            <button type="submit" id="special-submit-btn" class="w-full sm:w-auto px-8 py-4 bg-brand-600 text-white font-semibold rounded-full hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                Request Special Booking
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
         </div>
     </div>
 </section>
@@ -268,6 +342,7 @@
     const slotsByDay = JSON.parse('{{ slots_by_day_json|escapejs }}');
     const bookedSlotsRecurring = JSON.parse('{{ booked_slots_recurring_json|escapejs }}');
     const bookedSlotsFlexible = JSON.parse('{{ booked_slots_flexible_json|escapejs }}');
+    const bookedSlotsSpecial = JSON.parse('{{ booked_slots_special_json|escapejs }}');
     const blockedDates = JSON.parse('{{ blocked_dates_json|escapejs }}');
     const dayNames = JSON.parse('{{ day_order_json|escapejs }}');
     const pricePerSession = {{ price_per_session }};
@@ -301,6 +376,11 @@
 
     function isSlotBookedFlexible(dateStr, startTime, endTime) {
         const booked = bookedSlotsFlexible[dateStr] || [];
+        return booked.some(b => b.start < endTime && b.end > startTime);
+    }
+
+    function isSlotBookedSpecial(dateStr, startTime, endTime) {
+        const booked = bookedSlotsSpecial[dateStr] || [];
         return booked.some(b => b.start < endTime && b.end > startTime);
     }
 
@@ -357,7 +437,7 @@
                 const availableSlots = slots.filter(slot => {
                     const start = slot.start_time;
                     const end = slot.end_time;
-                    return !isSlotBookedFlexible(dateStr, start, end) && !isSlotBlocked(dateStr, start, end) && !isSlotBookedRecurring(dayIndex, slot);
+                    return !isSlotBookedFlexible(dateStr, start, end) && !isSlotBookedSpecial(dateStr, start, end) && !isSlotBlocked(dateStr, start, end) && !isSlotBookedRecurring(dayIndex, slot);
                 });
 
                 if (isPast) {
@@ -632,9 +712,135 @@
         return true;
     }
 
+    // ================= SPECIAL PACKAGE BOOKING =================
+    let selectedSpecialSlots = [];
+
+    function isSlotUnavailable(dateStr, dayIndex, slot) {
+        const start = slot.start_time;
+        const end = slot.end_time;
+        return isSlotBookedFlexible(dateStr, start, end) ||
+               isSlotBookedSpecial(dateStr, start, end) ||
+               isSlotBlocked(dateStr, start, end) ||
+               isSlotBookedRecurring(dayIndex, slot);
+    }
+
+    function generateSpecialCalendar() {
+        const container = document.getElementById('special-calendar-container');
+        if (!container) return;
+        container.innerHTML = '';
+        const today = getLagosToday();
+
+        for (let week = 0; week < 4; week++) {
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() + 1 + week * 7);
+            const dayOfWeek = weekStart.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            const monday = new Date(weekStart);
+            monday.setDate(weekStart.getDate() + mondayOffset);
+
+            const weekDiv = document.createElement('div');
+            weekDiv.className = 'border border-brand-200 rounded-xl p-4';
+            weekDiv.innerHTML = `<h4 class="font-semibold text-brand-900 mb-3">Week of ${monday.toLocaleDateString('en-US', { timeZone: 'Africa/Lagos', month: 'short', day: 'numeric', year: 'numeric' })}</h4>`;
+
+            const daysDiv = document.createElement('div');
+            daysDiv.className = 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2';
+
+            for (let d = 0; d < 7; d++) {
+                const date = new Date(monday);
+                date.setDate(monday.getDate() + d);
+                const dateStr = formatDateLagos(date);
+                const dayIndex = date.getDay();
+                const slots = slotsByDay[dayIndex] || [];
+                const isPast = date < today;
+
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'min-h-[120px] p-2 bg-brand-50 rounded-lg';
+
+                let content = '';
+                const availableSlots = slots.filter(slot => !isSlotUnavailable(dateStr, dayIndex, slot));
+
+                if (isPast) {
+                    content = '<span class="text-xs text-gray-400">—</span>';
+                } else if (slots.length === 0) {
+                    content = '<span class="text-xs text-gray-400">—</span>';
+                } else if (availableSlots.length === 0) {
+                    content = '<div class="text-xs text-orange-500 font-medium">Fully Booked</div>';
+                } else {
+                    content = '<div class="space-y-1">' + availableSlots.map(slot => {
+                        const isSelected = selectedSpecialSlots.some(s => s.date === dateStr && s.start_time === slot.start_time);
+                        return `<button type="button" onclick="toggleSpecialSlot('${dateStr}', ${dayIndex}, '${slot.start_time}', '${slot.end_time}')" class="w-full text-xs py-1.5 px-1 rounded transition-colors ${isSelected ? 'bg-brand-600 text-white' : 'bg-white hover:bg-brand-100 border border-brand-200 text-brand-700'}">${formatTime(slot.start_time)}</button>`;
+                    }).join('') + '</div>';
+                }
+
+                const displayDay = parseInt(date.toLocaleDateString('en-GB', { timeZone: 'Africa/Lagos', day: 'numeric' }), 10);
+                dayDiv.innerHTML = `
+                    <div class="text-xs text-brand-500 mb-1">${dayNames[dayIndex].slice(0, 3)}</div>
+                    <div class="text-sm font-semibold text-brand-900 mb-2">${displayDay}</div>
+                    ${content}
+                `;
+                daysDiv.appendChild(dayDiv);
+            }
+
+            weekDiv.appendChild(daysDiv);
+            container.appendChild(weekDiv);
+        }
+    }
+
+    function toggleSpecialSlot(dateStr, dayOfWeek, startTime, endTime) {
+        const existingIndex = selectedSpecialSlots.findIndex(s => s.date === dateStr && s.start_time === startTime);
+        if (existingIndex >= 0) {
+            selectedSpecialSlots.splice(existingIndex, 1);
+        } else {
+            if (selectedSpecialSlots.length >= 20) {
+                alert('You can book up to 20 special sessions at a time');
+                return;
+            }
+            selectedSpecialSlots.push({ date: dateStr, day_of_week: dayOfWeek, start_time: startTime, end_time: endTime });
+        }
+        selectedSpecialSlots.sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
+        updateSpecialSummary();
+        generateSpecialCalendar();
+    }
+
+    function updateSpecialSummary() {
+        const count = selectedSpecialSlots.length;
+        const totalAmount = count * pricePerSession;
+
+        document.getElementById('special-selected-count').textContent = count;
+        document.getElementById('special-total-sessions').textContent = count;
+        document.getElementById('special-total-amount').textContent = totalAmount.toLocaleString();
+        document.getElementById('special-selected-slots').value = JSON.stringify(selectedSpecialSlots);
+
+        const summary = document.getElementById('special-selected-summary');
+        const list = document.getElementById('special-selected-list');
+        if (count > 0) {
+            summary.classList.remove('hidden');
+            list.innerHTML = selectedSpecialSlots.map(slot => `
+                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100 text-brand-700 text-sm">
+                    ${dayNames[slot.day_of_week].slice(0, 3)} ${slot.date} · ${formatTime(slot.start_time)}
+                    <button type="button" onclick="toggleSpecialSlot('${slot.date}', ${slot.day_of_week}, '${slot.start_time}', '${slot.end_time}')" class="text-brand-500 hover:text-red-600">×</button>
+                </span>
+            `).join('');
+        } else {
+            summary.classList.add('hidden');
+        }
+
+        const submitBtn = document.getElementById('special-submit-btn');
+        submitBtn.disabled = count === 0;
+    }
+
+    function validateSpecialForm() {
+        if (selectedSpecialSlots.length === 0) {
+            alert('Please select at least one session.');
+            return false;
+        }
+        return true;
+    }
+
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
         generateCalendar();
+        generateSpecialCalendar();
         updateRecurringMode();
         renderRecurringDayButtons(1);
         renderRecurringDayButtons(2);

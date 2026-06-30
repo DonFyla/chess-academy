@@ -1,0 +1,71 @@
+{% load humanize scheduling_extras %}
+
+<div class="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-brand-50 text-brand-700">
+                <tr>
+                    <th class="px-6 py-3 font-medium">Student</th>
+                    <th class="px-6 py-3 font-medium">Coach</th>
+                    <th class="px-6 py-3 font-medium">Schedule</th>
+                    <th class="px-6 py-3 font-medium">Amount</th>
+                    {% if show_actions %}
+                        <th class="px-6 py-3 font-medium">Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-brand-100">
+                {% for booking in bookings %}
+                    <tr class="hover:bg-brand-50/50">
+                        <td class="px-6 py-4">
+                            <p class="font-medium text-brand-900">{{ booking.student_name }}</p>
+                            <p class="text-brand-500">{{ booking.student_email }}</p>
+                        </td>
+                        <td class="px-6 py-4">{{ booking.coach.name }}</td>
+                        <td class="px-6 py-4">
+                            <p class="text-brand-900">
+                                {% for day in booking.recurring_days %}
+                                    {{ day|day_name }}{% if not forloop.last %} & {% endif %}
+                                {% endfor %}
+                                at {{ booking.start_time|time:"g:i A" }}
+                            </p>
+                            <p class="text-xs text-brand-500">{{ booking.sessions_per_month }} sessions · starts {{ booking.booking_date|date:"M j, Y" }}</p>
+                        </td>
+                        <td class="px-6 py-4">₦{{ booking.monthly_amount|floatformat:0|intcomma }}</td>
+                        {% if show_actions %}
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-2">
+                                    {% if action_type == "pending" %}
+                                        <form method="post" class="inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="confirm_booking">
+                                            <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                                            <button type="submit" class="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700">Confirm</button>
+                                        </form>
+                                        <form method="post" class="inline" onsubmit="return confirm('Reject this booking?')">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="reject_booking">
+                                            <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                                            <button type="submit" class="px-3 py-1.5 bg-red-100 text-red-700 text-xs font-medium rounded-lg hover:bg-red-200">Reject</button>
+                                        </form>
+                                    {% elif action_type == "confirmed" %}
+                                        <form method="post" class="inline" onsubmit="return confirm('Cancel this confirmed booking?')">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="cancel_booking">
+                                            <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                                            <button type="submit" class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-200">Cancel</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="{% if show_actions %}5{% else %}4{% endif %}" class="px-6 py-12 text-center text-brand-600">{{ empty_message }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

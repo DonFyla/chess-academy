@@ -2,6 +2,7 @@
 {% load humanize scheduling_extras %}
 
 {% block title %}{{ student.full_name|default:student.email }} - Admin Portal{% endblock %}
+{% block admin_page_title %}{{ student.full_name|default:student.email }}{% endblock %}
 
 {% block admin_content %}
 <section class="p-4 lg:p-8">

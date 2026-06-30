@@ -80,4 +80,22 @@ def paystack_webhook_view(request):
             except Booking.DoesNotExist:
                 pass
 
+            # 3. Try special coaching booking
+            try:
+                from scheduling.models import SpecialBooking
+                booking = SpecialBooking.objects.get(payment_reference=reference, payment_status="pending")
+
+                verified = verify_transaction(reference)
+                if verified.get("success") and verified.get("data", {}).get("status") == "success":
+                    expected_kobo = int(booking.total_amount * 100)
+                    actual_kobo = verified["data"].get("amount", 0)
+                    if actual_kobo == expected_kobo:
+                        booking.payment_status = "paid"
+                        booking.payment_date = timezone.now()
+                        booking.status = "confirmed"
+                        booking.save(update_fields=["payment_status", "payment_date", "status"])
+                        return JsonResponse({"status": "ok"})
+            except SpecialBooking.DoesNotExist:
+                pass
+
     return JsonResponse({"status": "ok"})

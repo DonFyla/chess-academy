@@ -219,3 +219,46 @@ def booking_callback_view(request):
     else:
         messages.error(request, f"Payment was not successful. Status: {status}")
         return redirect("accounts:dashboard")
+
+
+@login_required
+def special_booking_callback_view(request):
+    """Handle Paystack redirect after payment for a special coaching booking."""
+    from scheduling.models import SpecialBooking
+
+    reference = request.GET.get("reference")
+    if not reference:
+        messages.error(request, "No payment reference provided.")
+        return redirect("accounts:dashboard")
+
+    result = verify_transaction(reference)
+
+    if not result["success"]:
+        messages.error(request, f"Payment verification failed: {result['message']}")
+        return redirect("accounts:dashboard")
+
+    status = result["status"]
+
+    try:
+        booking = SpecialBooking.objects.get(payment_reference=reference)
+    except SpecialBooking.DoesNotExist:
+        messages.error(request, "Special booking record not found.")
+        return redirect("accounts:dashboard")
+
+    if status == "success":
+        if booking.payment_status != "paid":
+            booking.payment_status = "paid"
+            booking.payment_date = timezone.now()
+            booking.status = "confirmed"
+            booking.save(update_fields=["payment_status", "payment_date", "status"])
+        messages.success(
+            request,
+            f"Payment successful! Your special coaching with {booking.coach.name} is confirmed.",
+        )
+        return redirect("scheduling:special_booking_confirmation", booking_id=booking.id)
+    elif status == "abandoned":
+        messages.warning(request, "Payment was not completed. You can retry from your dashboard.")
+        return redirect("accounts:dashboard")
+    else:
+        messages.error(request, f"Payment was not successful. Status: {status}")
+        return redirect("accounts:dashboard")
