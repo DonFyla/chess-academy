@@ -9,6 +9,11 @@ from django.urls import reverse
 from django.utils import timezone
 from .models import Coach, AvailabilitySlot, CoachBlockedDate, SpecialBooking
 from .forms import BookingForm, CoachProfileForm, AvailabilitySlotForm, CoachBlockedDateForm, PointsBookingForm, SpecialBookingForm
+from .emails import (
+    send_recurring_booking_created,
+    send_flexible_booking_created,
+    send_special_booking_created,
+)
 from payments.paystack_service import generate_reference, initialize_transaction
 
 
@@ -285,6 +290,8 @@ def book_coach_view(request, coach_id):
                 booking.payment_status = "pending"
                 booking.save(update_fields=["payment_reference", "payment_amount", "payment_status"])
 
+                send_recurring_booking_created(booking)
+
                 result = initialize_transaction(
                     email=booking.student_email,
                     amount_kobo=amount_kobo,
@@ -355,6 +362,8 @@ def book_coach_view(request, coach_id):
                     payment_amount=total_amount,
                     admin_notes=special_form.cleaned_data.get("admin_notes", ""),
                 )
+
+                send_special_booking_created(special_booking)
 
                 # Initialize Paystack payment for the special booking
                 amount_kobo = int(total_amount * 100)
@@ -433,6 +442,8 @@ def book_coach_view(request, coach_id):
                             flexible_booking=created_bookings[0],
                             description=f"Booked {len(created_bookings)} session(s) with {coach.name}",
                         )
+                        for flex_booking in created_bookings:
+                            send_flexible_booking_created(flex_booking)
                         messages.success(
                             request,
                             f"Successfully booked {len(created_bookings)} session(s) with {coach.name}. Your remaining balance is {get_balance(request.user)} points."

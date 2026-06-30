@@ -17,6 +17,12 @@ from scheduling.models import (
     CoachBlockedDate,
 )
 from scheduling.forms import AvailabilitySlotForm, CoachBlockedDateForm
+from scheduling.emails import (
+    send_recurring_booking_confirmed,
+    send_recurring_booking_cancelled,
+    send_special_booking_confirmed,
+    send_special_booking_cancelled,
+)
 
 
 User = get_user_model()
@@ -148,14 +154,17 @@ def booking_action_view(request, booking_id):
         booking.payment_status = "paid"
         booking.payment_date = timezone.now()
         booking.save(update_fields=["status", "payment_status", "payment_date"])
+        send_recurring_booking_confirmed(booking)
         messages.success(request, f"Booking for {booking.student_name} confirmed.")
     elif action == "reject":
         booking.status = "rejected"
         booking.save(update_fields=["status"])
+        send_recurring_booking_cancelled(booking)
         messages.success(request, f"Booking for {booking.student_name} rejected.")
     elif action == "cancel":
         booking.status = "cancelled"
         booking.save(update_fields=["status"])
+        send_recurring_booking_cancelled(booking)
         messages.success(request, f"Booking for {booking.student_name} cancelled.")
     else:
         messages.error(request, "Unknown action.")
@@ -380,6 +389,7 @@ def schedule_dashboard_view(request):
             booking.payment_method = "admin_confirmed"
             booking.payment_date = timezone.now()
             booking.save(update_fields=["status", "payment_status", "payment_method", "payment_date"])
+            send_recurring_booking_confirmed(booking)
             messages.success(request, f"Booking for {booking.student_name} confirmed.")
             return redirect("admin_portal:schedule_dashboard")
 
@@ -387,6 +397,7 @@ def schedule_dashboard_view(request):
             booking = get_object_or_404(Booking, id=request.POST.get("booking_id"), status="pending")
             booking.status = "rejected"
             booking.save(update_fields=["status"])
+            send_recurring_booking_cancelled(booking)
             messages.success(request, f"Booking for {booking.student_name} rejected.")
             return redirect("admin_portal:schedule_dashboard")
 
@@ -394,6 +405,7 @@ def schedule_dashboard_view(request):
             booking = get_object_or_404(Booking, id=request.POST.get("booking_id"))
             booking.status = "cancelled"
             booking.save(update_fields=["status"])
+            send_recurring_booking_cancelled(booking)
             messages.success(request, f"Booking for {booking.student_name} cancelled.")
             return redirect("admin_portal:schedule_dashboard")
 
@@ -406,6 +418,7 @@ def schedule_dashboard_view(request):
             booking.payment_method = "admin_confirmed"
             booking.payment_date = timezone.now()
             booking.save(update_fields=["status", "payment_status", "payment_method", "payment_date"])
+            send_special_booking_confirmed(booking)
             messages.success(request, f"Special booking for {booking.student_name} confirmed.")
             return redirect("admin_portal:schedule_dashboard")
 
@@ -413,6 +426,7 @@ def schedule_dashboard_view(request):
             booking = get_object_or_404(SpecialBooking, id=request.POST.get("booking_id"))
             booking.status = "cancelled"
             booking.save(update_fields=["status"])
+            send_special_booking_cancelled(booking)
             messages.success(request, f"Special booking for {booking.student_name} cancelled.")
             return redirect("admin_portal:schedule_dashboard")
 

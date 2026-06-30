@@ -1,6 +1,7 @@
 import json
 from datetime import date, time
 from unittest.mock import patch
+from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -100,6 +101,8 @@ class PaystackCallbackTests(TestCase):
         self.tx.refresh_from_db()
         self.assertEqual(self.tx.status, "completed")
         self.assertEqual(get_balance(self.user), 4)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, "Your Points Purchase is Confirmed")
 
     @patch("payments.views.verify_transaction")
     def test_callback_shows_error_on_failure(self, mock_verify):
@@ -312,6 +315,10 @@ class SpecialBookingPaymentCallbackTests(TestCase):
         self.assertEqual(self.booking.status, "confirmed")
         self.assertEqual(self.booking.payment_status, "paid")
         self.assertIsNotNone(self.booking.payment_date)
+        self.assertEqual(len(mail.outbox), 2)
+        subjects = [m.subject for m in mail.outbox]
+        self.assertIn("Payment Received! Your Special Coaching is Confirmed", subjects)
+        self.assertIn(f"Special Booking Confirmed - {self.booking.student_name}", subjects)
 
     @patch("payments.views.verify_transaction")
     def test_special_booking_callback_shows_error_on_failure(self, mock_verify):

@@ -1,0 +1,34 @@
+{% extends "emails/base.html" %}
+{% load humanize scheduling_extras %}
+
+{% block content %}
+<h2 style="color: #5E5044; margin-top: 0;">Your Spot is Reserved!</h2>
+<p>Hello {{ booking.student_name }},</p>
+<p>Great news! We've reserved your spot with <strong>{{ coach.name }}</strong>. Your booking is pending payment to be fully confirmed.</p>
+
+<div style="background: #F5EFE7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <h3 style="margin-top: 0; color: #5E5044;">Your Booking Details</h3>
+    <p><strong>Coach:</strong> {{ coach.name }}</p>
+    <p><strong>Schedule:</strong>
+        {% for day in booking.recurring_days %}{{ day|day_name }}{% if not forloop.last %} & {% endif %}{% endfor %}
+        at {{ booking.start_time|time:"g:i A" }}
+    </p>
+    <p><strong>Total Sessions:</strong> {{ booking.sessions_per_month }}</p>
+    <p><strong>Amount Due:</strong> ₦{{ booking.monthly_amount|floatformat:0|intcomma }}</p>
+    <p><strong>Booking Reference:</strong> {{ booking.payment_reference|default:booking.id }}</p>
+</div>
+
+<div style="background: #E8F5E9; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #4CAF50;">
+    <h3 style="margin-top: 0; color: #2E7D32;">💳 Next Step</h3>
+    <p>Please complete payment on the website to confirm your booking. If you were not redirected, visit your dashboard to retry.</p>
+    <p style="text-align: center; margin: 24px 0;">
+        <a href="{{ site_url }}/accounts/dashboard/" style="display: inline-block; background: #5E5044; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">Go to Dashboard</a>
+    </p>
+</div>
+
+<div style="background: #E3F2FD; padding: 15px; border-radius: 8px; margin: 20px 0;">
+    <p style="margin: 0; color: #1565C0; font-size: 14px;">
+        <strong>⏰ Note:</strong> Your spot is held until payment is completed.
+    </p>
+</div>
+{% endblock %}

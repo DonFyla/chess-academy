@@ -1,0 +1,35 @@
+{% extends "emails/base.html" %}
+{% load humanize scheduling_extras %}
+
+{% block content %}
+<h2 style="color: #5E5044; margin-top: 0;">Special Package Confirmed</h2>
+<p>Hello {{ coach.name }},</p>
+<p><strong>{{ booking.student_name }}</strong> has completed payment, and the special coaching package is now confirmed.</p>
+
+<div style="background: #F5EFE7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <h3 style="margin-top: 0; color: #5E5044;">Package Details</h3>
+    <p><strong>Student:</strong> {{ booking.student_name }}</p>
+    <p><strong>Email:</strong> {{ booking.student_email }}</p>
+    <p><strong>Phone:</strong> {{ booking.student_phone|default:"Not provided" }}</p>
+    <p><strong>Total Sessions:</strong> {{ booking.total_sessions }}</p>
+    <p><strong>Hourly Rate:</strong> ₦{{ booking.hourly_rate|intcomma }}</p>
+    <p><strong>Amount Paid:</strong> ₦{{ booking.total_amount|intcomma }}</p>
+    <p><strong>Reference:</strong> {{ booking.payment_reference|default:booking.id }}</p>
+
+    <h4 style="color: #5E5044; margin-bottom: 8px;">Scheduled Dates</h4>
+    <ul style="margin: 0; padding-left: 20px; color: #5E5044;">
+        {% for session in booking.session_dates %}
+        <li>{{ session.date|date:"M j, Y" }} at {{ session.start_time|time:"g:i A" }} - {{ session.end_time|time:"g:i A" }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div style="background: #E8F5E9; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #4CAF50;">
+    <h3 style="margin-top: 0; color: #2E7D32;">♟️ Action Required</h3>
+    <p>Please prepare your lesson plan and share the meeting link with the student before the first session.</p>
+</div>
+
+<p style="text-align: center; margin: 24px 0;">
+    <a href="{{ site_url }}/accounts/dashboard/" style="display: inline-block; background: #5E5044; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">View Dashboard</a>
+</p>
+{% endblock %}

@@ -1,6 +1,7 @@
 import json
 from datetime import date, time, timedelta
 from unittest.mock import patch
+from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -543,6 +544,30 @@ class BookingFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Fully Booked")
 
+    @patch("scheduling.views.initialize_transaction", side_effect=_mock_initialize_success)
+    def test_recurring_booking_sends_creation_emails(self, mock_init):
+        self.client.force_login(self.student_user)
+        self.coach.email = "coach@example.com"
+        self.coach.save()
+        response = self.client.post(
+            reverse("scheduling:book_coach", args=[self.coach.id]),
+            {
+                "booking_mode": "single",
+                "day_of_week_1": "1",
+                "time_slot_1": "11:00|12:00",
+                "student_name": "Booking Student",
+                "student_email": "bookingstudent@example.com",
+                "student_phone": "+2348012345678",
+                "course_type": "beginner",
+                "notes": "",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 2)
+        subjects = [m.subject for m in mail.outbox]
+        self.assertIn("Your Booking is Reserved! Complete Payment to Confirm", subjects)
+        self.assertIn("New Booking - Booking Student (Pending Payment)", subjects)
+
 
 class BookingPaymentTests(TestCase):
     def setUp(self):
@@ -797,6 +822,11 @@ class PointsBookingFlowTests(TestCase):
         self.assertEqual(tx.amount, -2)
         self.assertEqual(tx.balance_after, 8)
 
+        self.assertEqual(len(mail.outbox), 2)
+        subjects = [m.subject for m in mail.outbox]
+        self.assertIn("Your Session Has Been Booked", subjects)
+        self.assertIn("New Session Booking - Points Student", subjects)
+
     def test_points_booking_rejects_insufficient_balance(self):
         from scheduling.models import FlexibleBooking
         from payments.points_service import get_or_create_user_points
@@ -938,6 +968,10 @@ class SpecialBookingFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "scheduling/special_booking_payment.html")
         self.assertContains(response, "https://checkout.paystack.com/test-booking-url")
+        self.assertEqual(len(mail.outbox), 2)
+        subjects = [m.subject for m in mail.outbox]
+        self.assertIn("Your Special Coaching Booking is Reserved! Complete Payment to Confirm", subjects)
+        self.assertIn("New Special Booking - Test Student (Pending Payment)", subjects)
 
     @patch("scheduling.views.initialize_transaction", side_effect=_mock_initialize_success)
     def test_special_booking_creation_multiple_sessions(self, mock_init):

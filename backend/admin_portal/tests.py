@@ -1,6 +1,7 @@
 from datetime import date, datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -292,6 +293,10 @@ class AdminPortalBookingsTests(TestCase):
         self.assertEqual(self.booking.status, "confirmed")
         self.assertEqual(self.booking.payment_status, "paid")
         self.assertIsNotNone(self.booking.payment_date)
+        self.assertEqual(len(mail.outbox), 2)
+        subjects = [m.subject for m in mail.outbox]
+        self.assertIn("Payment Received! Your Lessons Are Confirmed", subjects)
+        self.assertIn("Booking Confirmed - Student A", subjects)
 
     def test_reject_booking_action(self):
         self.client.force_login(self.admin)
@@ -302,6 +307,10 @@ class AdminPortalBookingsTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.booking.refresh_from_db()
         self.assertEqual(self.booking.status, "rejected")
+        self.assertEqual(len(mail.outbox), 2)
+        subjects = [m.subject for m in mail.outbox]
+        self.assertIn("Your Booking Has Been Cancelled", subjects)
+        self.assertIn("Booking Cancelled - Student A", subjects)
 
     def test_cancel_booking_action(self):
         self.client.force_login(self.admin)
@@ -312,6 +321,10 @@ class AdminPortalBookingsTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.booking.refresh_from_db()
         self.assertEqual(self.booking.status, "cancelled")
+        self.assertEqual(len(mail.outbox), 2)
+        subjects = [m.subject for m in mail.outbox]
+        self.assertIn("Your Booking Has Been Cancelled", subjects)
+        self.assertIn("Booking Cancelled - Student A", subjects)
 
 
 class AdminPortalCoachesTests(TestCase):

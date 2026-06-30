@@ -8,6 +8,11 @@ from django.utils import timezone
 from .models import PointTransaction
 from .points_service import get_balance
 from .paystack_service import initialize_transaction, verify_transaction, generate_reference
+from .emails import send_points_purchased
+from scheduling.emails import (
+    send_recurring_booking_confirmed,
+    send_special_booking_confirmed,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -165,6 +170,7 @@ def paystack_callback_view(request):
             )
             tx.status = "completed"
             tx.save(update_fields=["status"])
+            send_points_purchased(request.user, tx)
         messages.success(
             request,
             f"Payment successful! {tx.amount} points have been added to your balance.",
@@ -208,6 +214,7 @@ def booking_callback_view(request):
             booking.payment_date = timezone.now()
             booking.status = "confirmed"
             booking.save(update_fields=["payment_status", "payment_date", "status"])
+            send_recurring_booking_confirmed(booking)
         messages.success(
             request,
             f"Payment successful! Your recurring booking with {booking.coach.name} is confirmed.",
@@ -251,6 +258,7 @@ def special_booking_callback_view(request):
             booking.payment_date = timezone.now()
             booking.status = "confirmed"
             booking.save(update_fields=["payment_status", "payment_date", "status"])
+            send_special_booking_confirmed(booking)
         messages.success(
             request,
             f"Payment successful! Your special coaching with {booking.coach.name} is confirmed.",

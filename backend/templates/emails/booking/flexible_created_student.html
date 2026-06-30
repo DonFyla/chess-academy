@@ -1,0 +1,28 @@
+{% extends "emails/base.html" %}
+{% load humanize scheduling_extras %}
+
+{% block content %}
+<h2 style="color: #5E5044; margin-top: 0;">Flexible Session Booked</h2>
+<p>Hello {{ booking.user.full_name|default:booking.user.email }},</p>
+<p>Your flexible chess session with <strong>{{ coach.name }}</strong> has been booked successfully.</p>
+
+<div style="background: #F5EFE7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <h3 style="margin-top: 0; color: #5E5044;">Session Details</h3>
+    <p><strong>Coach:</strong> {{ coach.name }}</p>
+    <p><strong>Date:</strong> {{ booking.session_date|date:"M j, Y" }}</p>
+    <p><strong>Time:</strong> {{ booking.start_time|time:"g:i A" }} - {{ booking.end_time|time:"g:i A" }}</p>
+    <p><strong>Points Used:</strong> {{ booking.points_used|intcomma }}</p>
+    <p><strong>Status:</strong> {{ booking.get_status_display }}</p>
+    {% if booking.meeting_link %}
+    <p><strong>Meeting Link:</strong> <a href="{{ booking.meeting_link }}" style="color: #5E5044;">{{ booking.meeting_link }}</a></p>
+    {% endif %}
+</div>
+
+<div style="background: #E8F5E9; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #4CAF50;">
+    <h3 style="margin-top: 0; color: #2E7D32;">♟️ Get Ready</h3>
+    <p>Join the meeting on time and come prepared with your chess questions. Good luck!</p>
+    <p style="text-align: center; margin: 24px 0;">
+        <a href="{{ site_url }}/accounts/dashboard/" style="display: inline-block; background: #5E5044; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">Go to Dashboard</a>
+    </p>
+</div>
+{% endblock %}
