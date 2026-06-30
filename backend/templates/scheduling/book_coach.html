@@ -43,8 +43,8 @@
                     </button>
                     {% if coach.is_special %}
                         <button type="button" onclick="switchTab('special')" id="tab-special" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-medium transition-all text-brand-700 hover:bg-brand-100">
-                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-                            Special Package
+                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a1 1 0 11-2 0 1 1 0 012 0z"></path></svg>
+                            Pay to Book
                         </button>
                     {% endif %}
                 </div>
@@ -279,28 +279,6 @@
                             <div class="p-4 bg-red-50 text-red-700 rounded-xl">{{ special_form.non_field_errors }}</div>
                         {% endif %}
 
-                        <!-- Booking Mode -->
-                        <div class="card p-6 md:p-8">
-                            <h2 class="text-xl font-bold text-brand-900 mb-5">Booking Mode</h2>
-                            <div class="grid sm:grid-cols-2 gap-4">
-                                {% for value, label in special_form.fields.booking_mode.choices %}
-                                    <label class="relative cursor-pointer">
-                                        <input type="radio" name="booking_mode" value="{{ value }}" class="peer sr-only sp-booking-mode" {% if special_form.booking_mode.value == value or value == 'individual' %}checked{% endif %} onchange="updateSpecialMode()">
-                                        <div class="p-5 rounded-xl border-2 border-brand-200 hover:border-brand-400 peer-checked:border-brand-600 peer-checked:bg-brand-600 peer-checked:text-white transition-all">
-                                            <p class="font-semibold text-lg">{{ label }}</p>
-                                            <p class="text-sm mt-1 opacity-90">
-                                                {% if value == 'individual' %}
-                                                    Pick specific dates from the calendar
-                                                {% else %}
-                                                    Automatically schedule weekly sessions
-                                                {% endif %}
-                                            </p>
-                                        </div>
-                                    </label>
-                                {% endfor %}
-                            </div>
-                        </div>
-
                         <!-- Discount Tiers -->
                         <div class="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
                             <h3 class="font-semibold text-brand-900 mb-2 flex items-center gap-2">
@@ -313,7 +291,7 @@
                             </ul>
                         </div>
 
-                        <!-- Individual Selection -->
+                        <!-- Session Selection -->
                         <div id="special-individual-panel" class="card p-6 md:p-8">
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                                 <h2 class="text-xl font-bold text-brand-900">Select Sessions</h2>
@@ -324,32 +302,6 @@
                                 </div>
                             </div>
                             <div id="special-calendar-container" class="space-y-6"></div>
-                        </div>
-
-                        <!-- Recurring Selection -->
-                        <div id="special-recurring-panel" class="card p-6 md:p-8 hidden">
-                            <h2 class="text-xl font-bold text-brand-900 mb-5">Recurring Schedule</h2>
-                            <div class="mb-6">
-                                <p class="text-sm font-medium text-brand-700 mb-3">Select days of the week</p>
-                                <div class="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                                    {% for value, label in special_form.fields.recurring_days.choices %}
-                                        <label class="relative cursor-pointer">
-                                            <input type="checkbox" name="recurring_days" value="{{ value }}" class="peer sr-only sp-rec-day" onchange="updateRecurringSpecialSummary()">
-                                            <div class="p-3 rounded-xl border-2 border-brand-200 hover:border-brand-400 peer-checked:border-brand-600 peer-checked:bg-brand-600 peer-checked:text-white transition-all text-center text-sm font-medium text-brand-700 peer-checked:text-white">
-                                                {{ label|slice:':3' }}
-                                            </div>
-                                        </label>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            <div class="mb-6">
-                                <label for="{{ special_form.recurring_weeks.id_for_label }}" class="block text-sm font-medium text-brand-700 mb-1">Number of weeks</label>
-                                {{ special_form.recurring_weeks|add_class:"w-full sm:w-48 px-4 py-3 rounded-xl border border-brand-200 focus:border-brand-600 focus:ring-2 focus:ring-brand-200 outline-none transition-all" }}
-                            </div>
-                            <div id="special-recurring-preview" class="hidden">
-                                <h3 class="font-semibold text-brand-900 mb-2">Generated Schedule</h3>
-                                <div id="special-recurring-list" class="flex flex-wrap gap-2"></div>
-                            </div>
                         </div>
 
                         <!-- Selected Sessions Summary (inline) -->
@@ -905,11 +857,9 @@
     }
 
     function updateSpecialSummary() {
-        const mode = document.querySelector('.sp-booking-mode:checked')?.value || 'individual';
         const count = selectedSpecialSlots.length;
         const discount = getSpecialDiscount(count);
         const total = calculateSpecialTotal(count);
-        const baseAmount = count * pricePerSession;
 
         // Inline display
         const countEl = document.getElementById('special-selected-count');
@@ -925,7 +875,7 @@
         const summary = document.getElementById('special-selected-summary');
         const list = document.getElementById('special-selected-list');
         if (summary && list) {
-            if (count > 0 && mode === 'individual') {
+            if (count > 0) {
                 summary.classList.remove('hidden');
                 list.innerHTML = selectedSpecialSlots.map(slot => `
                     <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100 text-brand-700 text-sm">
@@ -979,87 +929,9 @@
         if (submitBtn) submitBtn.disabled = count === 0;
     }
 
-    function updateSpecialMode() {
-        const mode = document.querySelector('.sp-booking-mode:checked')?.value || 'individual';
-        const individualPanel = document.getElementById('special-individual-panel');
-        const recurringPanel = document.getElementById('special-recurring-panel');
-
-        if (mode === 'individual') {
-            individualPanel.classList.remove('hidden');
-            recurringPanel.classList.add('hidden');
-        } else {
-            individualPanel.classList.add('hidden');
-            recurringPanel.classList.remove('hidden');
-        }
-        updateRecurringSpecialSummary();
-    }
-
-    function getFirstSlotForDay(dayIndex) {
-        const slots = slotsByDay[dayIndex] || [];
-        return slots[0] || { start_time: '10:00', end_time: '11:00' };
-    }
-
-    function updateRecurringSpecialSummary() {
-        const mode = document.querySelector('.sp-booking-mode:checked')?.value || 'individual';
-        if (mode !== 'recurring') {
-            updateSpecialSummary();
-            return;
-        }
-
-        const selectedDays = Array.from(document.querySelectorAll('.sp-rec-day:checked')).map(cb => parseInt(cb.value, 10));
-        const weeksInput = document.querySelector('input[name="recurring_weeks"]');
-        const weeks = weeksInput ? parseInt(weeksInput.value, 10) || 4 : 4;
-
-        selectedSpecialSlots = [];
-        const today = getLagosToday();
-        selectedDays.forEach(dayIndex => {
-            const slot = getFirstSlotForDay(dayIndex);
-            const daysAhead = dayIndex - today.getDay();
-            let firstDate = new Date(today);
-            firstDate.setDate(today.getDate() + daysAhead);
-            if (firstDate <= today) {
-                firstDate.setDate(firstDate.getDate() + 7);
-            }
-            for (let week = 0; week < weeks; week++) {
-                const sessionDate = new Date(firstDate);
-                sessionDate.setDate(firstDate.getDate() + week * 7);
-                selectedSpecialSlots.push({
-                    date: formatDateLagos(sessionDate),
-                    day_of_week: dayIndex,
-                    start_time: slot.start_time,
-                    end_time: slot.end_time,
-                });
-            }
-        });
-        selectedSpecialSlots.sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
-
-        // Show generated schedule preview
-        const preview = document.getElementById('special-recurring-preview');
-        const list = document.getElementById('special-recurring-list');
-        if (preview && list) {
-            if (selectedSpecialSlots.length > 0) {
-                preview.classList.remove('hidden');
-                list.innerHTML = selectedSpecialSlots.map(slot => `
-                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100 text-brand-700 text-sm">
-                        ${dayNames[slot.day_of_week].slice(0, 3)} ${slot.date} · ${formatTime(slot.start_time)}
-                    </span>
-                `).join('');
-            } else {
-                preview.classList.add('hidden');
-            }
-        }
-
-        updateSpecialSummary();
-    }
-
     function validateSpecialForm() {
-        const mode = document.querySelector('.sp-booking-mode:checked')?.value || 'individual';
         if (selectedSpecialSlots.length === 0) {
-            if (mode === 'recurring') {
-                alert('Please select at least one day of the week and number of weeks.');
-            } else {
-                alert('Please select at least one session.');
-            }
+            alert('Please select at least one session.');
             return false;
         }
         return true;
@@ -1072,20 +944,6 @@
         updateRecurringMode();
         renderRecurringDayButtons(1);
         renderRecurringDayButtons(2);
-
-        // Special booking initial state
-        updateSpecialMode();
-        document.querySelectorAll('.sp-booking-mode').forEach(el => {
-            el.addEventListener('change', updateSpecialMode);
-        });
-        document.querySelectorAll('.sp-rec-day').forEach(el => {
-            el.addEventListener('change', updateRecurringSpecialSummary);
-        });
-        const weeksInput = document.querySelector('input[name="recurring_weeks"]');
-        if (weeksInput) {
-            weeksInput.addEventListener('change', updateRecurringSpecialSummary);
-            weeksInput.addEventListener('input', updateRecurringSpecialSummary);
-        }
 
         // Handle ?tab=special query param
         const urlParams = new URLSearchParams(window.location.search);

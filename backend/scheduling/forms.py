@@ -245,103 +245,20 @@ class PointsBookingForm(forms.Form):
 
 
 class SpecialBookingForm(forms.Form):
-    BOOKING_MODE_CHOICES = [
-        ("individual", "Individual sessions"),
-        ("recurring", "Recurring weekly schedule"),
-    ]
-
-    DAY_CHOICES = [
-        (0, "Sunday"),
-        (1, "Monday"),
-        (2, "Tuesday"),
-        (3, "Wednesday"),
-        (4, "Thursday"),
-        (5, "Friday"),
-        (6, "Saturday"),
-    ]
-
-    booking_mode = forms.ChoiceField(
-        choices=BOOKING_MODE_CHOICES,
-        widget=forms.RadioSelect,
-        initial="individual",
-    )
-
-    def __init__(self, *args, coach=None, **kwargs):
-        self.coach = coach
-        super().__init__(*args, **kwargs)
-    selected_slots = forms.CharField(widget=forms.HiddenInput(), required=False)
-    recurring_days = forms.MultipleChoiceField(
-        choices=DAY_CHOICES,
-        required=False,
-        widget=forms.CheckboxSelectMultiple,
-    )
-    recurring_weeks = forms.IntegerField(
-        min_value=1,
-        max_value=12,
-        initial=4,
-        required=False,
-    )
+    selected_slots = forms.CharField(widget=forms.HiddenInput())
     student_name = forms.CharField(max_length=255)
     student_email = forms.EmailField()
     student_phone = forms.CharField(max_length=20, required=False)
     admin_notes = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False)
 
-    def clean(self):
-        cleaned = super().clean()
-        mode = cleaned.get("booking_mode", "individual")
-
-        if mode == "individual":
-            raw = cleaned.get("selected_slots", "")
-            if not raw:
-                raise forms.ValidationError("Please select at least one session.")
-            try:
-                slots = json.loads(raw)
-            except json.JSONDecodeError:
-                raise forms.ValidationError("Invalid session data.")
-            if not isinstance(slots, list) or len(slots) == 0:
-                raise forms.ValidationError("Please select at least one session.")
-            cleaned["computed_slots"] = slots
-        else:
-            recurring_days = cleaned.get("recurring_days") or []
-            recurring_weeks = cleaned.get("recurring_weeks") or 4
-            if not recurring_days:
-                raise forms.ValidationError("Please select at least one day of the week for recurring sessions.")
-            if not recurring_weeks or recurring_weeks < 1:
-                raise forms.ValidationError("Please select the number of weeks.")
-            cleaned["computed_slots"] = self._build_recurring_slots(
-                [int(d) for d in recurring_days], int(recurring_weeks)
-            )
-
-        return cleaned
-
-    def _build_recurring_slots(self, recurring_days, recurring_weeks):
-        from datetime import timedelta
-        from django.utils import timezone
-
-        today = timezone.now().date()
-        slots = []
-        for day_index in recurring_days:
-            days_ahead = day_index - (today.weekday() + 1) % 7
-            if days_ahead <= 0:
-                days_ahead += 7
-            first_date = today + timedelta(days=days_ahead)
-
-            # Use the coach's first available slot for this day if known.
-            start_time = "10:00"
-            end_time = "11:00"
-            if self.coach:
-                coach_slot = self.coach.availability_slots.filter(day_of_week=day_index).order_by("start_time").first()
-                if coach_slot:
-                    start_time = coach_slot.start_time.strftime("%H:%M")
-                    end_time = coach_slot.end_time.strftime("%H:%M")
-
-            for week in range(recurring_weeks):
-                session_date = first_date + timedelta(weeks=week)
-                slots.append({
-                    "date": session_date.isoformat(),
-                    "day_of_week": day_index,
-                    "start_time": start_time,
-                    "end_time": end_time,
-                })
-        slots.sort(key=lambda x: x["date"])
+    def clean_selected_slots(self):
+        raw = self.cleaned_data.get("selected_slots", "")
+        if not raw:
+            raise forms.ValidationError("Please select at least one session.")
+        try:
+            slots = json.loads(raw)
+        except json.JSONDecodeError:
+            raise forms.ValidationError("Invalid session data.")
+        if not isinstance(slots, list) or len(slots) == 0:
+            raise forms.ValidationError("Please select at least one session.")
         return slots

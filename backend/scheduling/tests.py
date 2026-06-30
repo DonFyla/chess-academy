@@ -922,13 +922,13 @@ class SpecialBookingFlowTests(TestCase):
         self.client.force_login(self.student)
         response = self.client.get(reverse("scheduling:book_coach", args=[self.special_coach.id]))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Special Package")
+        self.assertContains(response, "Pay to Book")
 
     def test_special_tab_hidden_for_normal_coach(self):
         self.client.force_login(self.student)
         response = self.client.get(reverse("scheduling:book_coach", args=[self.normal_coach.id]))
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Special Package")
+        self.assertNotContains(response, "Pay to Book")
 
     @patch("scheduling.views.initialize_transaction", side_effect=_mock_initialize_success)
     def test_special_booking_creation_redirects_to_payment(self, mock_init):
@@ -951,7 +951,6 @@ class SpecialBookingFlowTests(TestCase):
             reverse("scheduling:book_coach", args=[self.special_coach.id]),
             {
                 "booking_type": "special",
-                "booking_mode": "individual",
                 "selected_slots": selected_slots,
                 "student_name": "Test Student",
                 "student_email": "student@example.com",
@@ -1001,7 +1000,6 @@ class SpecialBookingFlowTests(TestCase):
             reverse("scheduling:book_coach", args=[self.special_coach.id]),
             {
                 "booking_type": "special",
-                "booking_mode": "individual",
                 "selected_slots": selected_slots,
                 "student_name": "Test Student",
                 "student_email": "student@example.com",
@@ -1013,34 +1011,6 @@ class SpecialBookingFlowTests(TestCase):
         booking = SpecialBooking.objects.first()
         self.assertEqual(booking.total_sessions, 2)
         self.assertEqual(booking.total_amount, 30000)
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "scheduling/special_booking_payment.html")
-
-    @patch("scheduling.views.initialize_transaction", side_effect=_mock_initialize_success)
-    def test_special_recurring_booking_creates_sessions(self, mock_init):
-        self.client.force_login(self.student)
-        from scheduling.models import SpecialBooking
-
-        response = self.client.post(
-            reverse("scheduling:book_coach", args=[self.special_coach.id]),
-            {
-                "booking_type": "special",
-                "booking_mode": "recurring",
-                "recurring_days": ["2"],
-                "recurring_weeks": 4,
-                "student_name": "Test Student",
-                "student_email": "student@example.com",
-                "student_phone": "08012345678",
-            },
-        )
-
-        self.assertEqual(SpecialBooking.objects.count(), 1)
-        booking = SpecialBooking.objects.first()
-        self.assertTrue(booking.is_recurring)
-        self.assertEqual(booking.recurring_days, [2])
-        self.assertEqual(booking.recurring_weeks, 4)
-        self.assertEqual(booking.total_sessions, 4)
-        self.assertEqual(booking.total_amount, 60000)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "scheduling/special_booking_payment.html")
 
@@ -1074,7 +1044,6 @@ class SpecialBookingFlowTests(TestCase):
             reverse("scheduling:book_coach", args=[self.special_coach.id]),
             {
                 "booking_type": "special",
-                "booking_mode": "individual",
                 "selected_slots": json.dumps(selected_slots),
                 "student_name": "Test Student",
                 "student_email": "student@example.com",
@@ -1126,7 +1095,6 @@ class SpecialBookingFlowTests(TestCase):
             reverse("scheduling:book_coach", args=[self.special_coach.id]),
             {
                 "booking_type": "special",
-                "booking_mode": "individual",
                 "selected_slots": json.dumps(selected_slots),
                 "student_name": "Test Student",
                 "student_email": "student@example.com",
